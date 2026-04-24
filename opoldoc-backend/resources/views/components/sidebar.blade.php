@@ -49,96 +49,105 @@
 
         <a href="{{ route('dashboard', ['role' => $roleKey]) }}" class="{{ $navBase }} {{ $isDashboardActive ? $navActive : $navInactive }}">
             <span class="material-symbols-outlined flex-shrink-0 text-[18px] leading-none {{ $isDashboardActive ? 'text-cyan-600' : '' }}">dashboard</span>
-            Dashboard overview
+            Dashboard
             @if ($isDashboardActive)
                 <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
             @endif
         </a>
 
         @if ($roleKey === 'admin')
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Users & Roles</div>
+            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Admin Panel</div>
             @php
-                $isManageUsers = $currentSection === 'manage-users';
-                $isRolesAssignments = $currentSection === 'roles-assignments';
+                $isUserManagement = $currentSection === 'user-management';
+                $isDoctorManagement = $currentSection === 'doctor-management';
+                $isServicesManagement = $currentSection === 'services-management';
+                $isMedicinesManagement = $currentSection === 'medicines-management';
+                $isMedicalBackgroundViewer = $currentSection === 'medical-background-viewer';
+                $isAppointments = $currentSection === 'appointments';
+                $isReports = $currentSection === 'reports';
+                $isChatbotManagement = $currentSection === 'chatbot-management';
+                $isLogs = $currentSection === 'logs';
+                $isSettings = $currentSection === 'settings';
             @endphp
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'manage-users']) }}" class="{{ $navBase }} {{ $isManageUsers ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isManageUsers ? 'text-cyan-600' : '' }}">group</span>
-                Manage users
-                @if ($isManageUsers)
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'user-management']) }}" class="{{ $navBase }} {{ $isUserManagement ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isUserManagement ? 'text-cyan-600' : '' }}">group</span>
+                Users
+                @if ($isUserManagement)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'roles-assignments']) }}" class="{{ $navBase }} {{ $isRolesAssignments ? $navActive : $navInactive }} mb-3">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isRolesAssignments ? 'text-cyan-600' : '' }}">badge</span>
-                Roles & assignments
-                @if ($isRolesAssignments)
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'doctor-management']) }}" class="{{ $navBase }} {{ $isDoctorManagement ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorManagement ? 'text-cyan-600' : '' }}">stethoscope</span>
+                Doctors
+                @if ($isDoctorManagement)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Records & Verification</div>
-
-            @php
-                $isPatientRecords = $currentSection === 'patient-records';
-                $isVerification = $currentSection === 'verification-approvals';
-                $isVisitRecords = $currentSection === 'visit-records';
-            @endphp
-
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'patient-records']) }}" class="{{ $navBase }} {{ $isPatientRecords ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isPatientRecords ? 'text-cyan-600' : '' }}">folder_shared</span>
-                Patient records
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'services-management']) }}" class="{{ $navBase }} {{ $isServicesManagement ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isServicesManagement ? 'text-cyan-600' : '' }}">medical_services</span>
+                Services
+                @if ($isServicesManagement)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-approvals']) }}" class="{{ $navBase }} {{ $isVerification ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isVerification ? 'text-cyan-600' : '' }}">verified</span>
-                PWD / Senior verification
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'medicines-management']) }}" class="{{ $navBase }} {{ $isMedicinesManagement ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isMedicinesManagement ? 'text-cyan-600' : '' }}">vaccines</span>
+                Medicines
+                @if ($isMedicinesManagement)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'visit-records']) }}" class="{{ $navBase }} {{ $isVisitRecords ? $navActive : $navInactive }} mb-3">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isVisitRecords ? 'text-cyan-600' : '' }}">history_edu</span>
-                Visit and prescription records
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'medical-background-viewer']) }}" class="{{ $navBase }} {{ $isMedicalBackgroundViewer ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isMedicalBackgroundViewer ? 'text-cyan-600' : '' }}">assignment</span>
+                Medical Background
+                @if ($isMedicalBackgroundViewer)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Logs & Reports</div>
-
-            @php
-                $isAuditLogs = $currentSection === 'audit-logs';
-                $isReportsAnalytics = $currentSection === 'reports-analytics';
-                $isTransactions = $currentSection === 'transactions-records';
-            @endphp
-
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'audit-logs']) }}" class="{{ $navBase }} {{ $isAuditLogs ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isAuditLogs ? 'text-cyan-600' : '' }}">rule_folder</span>
-                Audit logs
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'appointments']) }}" class="{{ $navBase }} {{ $isAppointments ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isAppointments ? 'text-cyan-600' : '' }}">event</span>
+                Appointments
+                @if ($isAppointments)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'reports-analytics']) }}" class="{{ $navBase }} {{ $isReportsAnalytics ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isReportsAnalytics ? 'text-cyan-600' : '' }}">insights</span>
-                Reports & analytics
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'reports']) }}" class="{{ $navBase }} {{ $isReports ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isReports ? 'text-cyan-600' : '' }}">insights</span>
+                Reports
+                @if ($isReports)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'transactions-records']) }}" class="{{ $navBase }} {{ $isTransactions ? $navActive : $navInactive }} mb-3">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isTransactions ? 'text-cyan-600' : '' }}">payments</span>
-                Transactions
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'chatbot-management']) }}" class="{{ $navBase }} {{ $isChatbotManagement ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isChatbotManagement ? 'text-cyan-600' : '' }}">smart_toy</span>
+                Chatbot
+                @if ($isChatbotManagement)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Configuration</div>
-
-            @php
-                $isSystemSettings = $currentSection === 'system-settings';
-                $isDoctorsSpecs = $currentSection === 'doctors-specializations';
-            @endphp
-
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'system-settings']) }}" class="{{ $navBase }} {{ $isSystemSettings ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isSystemSettings ? 'text-cyan-600' : '' }}">tune</span>
-                System settings
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'logs']) }}" class="{{ $navBase }} {{ $isLogs ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isLogs ? 'text-cyan-600' : '' }}">rule_folder</span>
+                Logs
+                @if ($isLogs)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'doctors-specializations']) }}" class="{{ $navBase }} {{ $isDoctorsSpecs ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorsSpecs ? 'text-cyan-600' : '' }}">stethoscope</span>
-                Doctors & specializations
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings']) }}" class="{{ $navBase }} {{ $isSettings ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isSettings ? 'text-cyan-600' : '' }}">settings</span>
+                Settings
+                @if ($isSettings)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
             </a>
         @elseif ($roleKey === 'receptionist')
             @php
@@ -194,33 +203,25 @@
             </a>
         @elseif ($roleKey === 'doctor')
             @php
-                $isMyPatients = $currentSection === 'my-patients';
-                $isDoctorAppointments = $currentSection === 'appointments';
+                $isDoctorSchedule = $currentSection === 'my-schedule';
                 $isDoctorQueue = $currentSection === 'queue';
-                $isDoctorVisits = $currentSection === 'visits';
-                $isDoctorPrescriptions = $currentSection === 'prescriptions';
-                $isDoctorActivity = $currentSection === 'my-activity';
+                $isDoctorConsultation = $currentSection === 'consultation';
+                $isDoctorPrescription = $currentSection === 'prescriptions';
+                $isDoctorHistory = $currentSection === 'history';
+                $isDoctorSettings = $currentSection === 'settings-doctor';
             @endphp
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Patients</div>
+            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Work</div>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'my-patients']) }}" class="{{ $navBase }} {{ $isMyPatients ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isMyPatients ? 'text-cyan-600' : '' }}">groups</span>
-                My patients
-                @if ($isMyPatients)
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'my-schedule']) }}" class="{{ $navBase }} {{ $isDoctorSchedule ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorSchedule ? 'text-cyan-600' : '' }}">event_note</span>
+                My Schedule
+                @if ($isDoctorSchedule)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'appointments']) }}" class="{{ $navBase }} {{ $isDoctorAppointments ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorAppointments ? 'text-cyan-600' : '' }}">event_note</span>
-                Appointments
-                @if ($isDoctorAppointments)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'queue']) }}" class="{{ $navBase }} {{ $isDoctorQueue ? $navActive : $navInactive }} mb-3">
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'queue']) }}" class="{{ $navBase }} {{ $isDoctorQueue ? $navActive : $navInactive }}">
                 <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorQueue ? 'text-cyan-600' : '' }}">lists</span>
                 Queue
                 @if ($isDoctorQueue)
@@ -228,30 +229,36 @@
                 @endif
             </a>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Clinical</div>
-
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'visits']) }}" class="{{ $navBase }} {{ $isDoctorVisits ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorVisits ? 'text-cyan-600' : '' }}">note</span>
-                Visits
-                @if ($isDoctorVisits)
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'consultation']) }}" class="{{ $navBase }} {{ $isDoctorConsultation ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorConsultation ? 'text-cyan-600' : '' }}">clinical_notes</span>
+                Consultation
+                @if ($isDoctorConsultation)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'prescriptions']) }}" class="{{ $navBase }} {{ $isDoctorPrescriptions ? $navActive : $navInactive }} mb-3">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorPrescriptions ? 'text-cyan-600' : '' }}">prescriptions</span>
-                Prescriptions
-                @if ($isDoctorPrescriptions)
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'prescriptions']) }}" class="{{ $navBase }} {{ $isDoctorPrescription ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorPrescription ? 'text-cyan-600' : '' }}">prescriptions</span>
+                Prescription
+                @if ($isDoctorPrescription)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Reports</div>
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'history']) }}" class="{{ $navBase }} {{ $isDoctorHistory ? $navActive : $navInactive }} mb-3">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorHistory ? 'text-cyan-600' : '' }}">history</span>
+                History
+                @if ($isDoctorHistory)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
+            </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'my-activity']) }}" class="{{ $navBase }} {{ $isDoctorActivity ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorActivity ? 'text-cyan-600' : '' }}">monitoring</span>
-                My activity
-                @if ($isDoctorActivity)
+            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Settings</div>
+
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings-doctor']) }}" class="{{ $navBase }} {{ $isDoctorSettings ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorSettings ? 'text-cyan-600' : '' }}">settings</span>
+                Doctor Settings
+                @if ($isDoctorSettings)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>

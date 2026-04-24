@@ -1,10 +1,10 @@
 <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
     <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-900">Manage users</h2>
+        <h2 class="text-sm font-semibold text-slate-900">User Management</h2>
         <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Accounts</span>
     </div>
     <p class="text-xs text-slate-500 mb-3">
-        Create and manage staff accounts using live data from the system.
+        Create users by email invitation, edit accounts, suspend or activate, search or filter, and view dependents.
     </p>
 
     <div id="adminUserError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
@@ -23,9 +23,8 @@
                 <option value="patient">Patient</option>
             </select>
         </div>
-        <div>
-            <label for="admin_new_password" class="block text-[0.7rem] text-slate-600 mb-1">Password</label>
-            <input id="admin_new_password" type="password" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
+        <div class="text-[0.7rem] text-slate-500">
+            A temporary password will be generated and emailed to the user.
         </div>
         <div class="flex items-center gap-2">
             <button type="submit" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
@@ -67,14 +66,23 @@
                     <th class="py-2 pr-4 font-semibold">ID</th>
                     <th class="py-2 pr-4 font-semibold">Email</th>
                     <th class="py-2 pr-4 font-semibold">Current role</th>
-                    <th class="py-2 pr-4 font-semibold">Other roles</th>
+                    <th class="py-2 pr-4 font-semibold">Status</th>
                     <th class="py-2 pr-4 font-semibold">Created</th>
                     <th class="py-2 pr-4 font-semibold">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($adminRecentUsers ?? [] as $user)
-                    <tr class="border-b border-slate-50 last:border-0 admin-user-row" data-user-id="{{ $user->user_id }}" data-email="{{ strtolower($user->email) }}" data-role="{{ strtolower($user->role ?? '') }}" data-created="{{ optional($user->created_at)->format('Y-m-d') ?? '' }}">
+                    @php
+                        $status = strtolower($user->status ?? 'active');
+                        $statusColors = [
+                            'active' => 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                            'inactive' => 'bg-slate-50 text-slate-600 border-slate-100',
+                            'suspended' => 'bg-amber-50 text-amber-700 border-amber-100',
+                        ];
+                        $statusClass = $statusColors[$status] ?? 'bg-slate-50 text-slate-600 border-slate-100';
+                    @endphp
+                    <tr class="border-b border-slate-50 last:border-0 admin-user-row" data-user-id="{{ $user->user_id }}" data-email="{{ strtolower($user->email) }}" data-role="{{ strtolower($user->role ?? '') }}" data-created="{{ optional($user->created_at)->format('Y-m-d') ?? '' }}" data-status="{{ $status }}">
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">#{{ $user->user_id }}</td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-700">{{ $user->email }}</td>
                         <td class="py-2 pr-4 text-[0.78rem]">
@@ -83,7 +91,9 @@
                             </span>
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem]">
-                            <span class="text-slate-500 text-[0.7rem]">—</span>
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border {{ $statusClass }}">
+                                {{ ucfirst($status) }}
+                            </span>
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                             {{ optional($user->created_at)->format('Y-m-d') ?? '—' }}
@@ -93,8 +103,15 @@
                                 <button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-user-edit" data-user-id="{{ $user->user_id }}">
                                     Edit
                                 </button>
-                                <button type="button" class="text-[0.72rem] text-red-600 hover:text-red-700 font-semibold admin-user-delete" data-user-id="{{ $user->user_id }}">
-                                Delete
+                                <button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
+                                    Dependents
+                                </button>
+                                <button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-user-toggle-status" data-user-id="{{ $user->user_id }}">
+                                    @if ($status === 'suspended' || $status === 'inactive')
+                                        Activate
+                                    @else
+                                        Suspend
+                                    @endif
                                 </button>
                             </div>
                         </td>
@@ -136,29 +153,21 @@
 
                 var emailInput = document.getElementById('admin_new_email')
                 var roleSelect = document.getElementById('admin_new_role')
-                var passwordInput = document.getElementById('admin_new_password')
 
                 var email = emailInput ? emailInput.value : ''
                 var role = roleSelect ? roleSelect.value : ''
-                var password = passwordInput ? passwordInput.value : ''
 
                 if (!email) {
                     showUserError('Email is required.')
                     return
                 }
 
-                if (!password) {
-                    showUserError('Password is required.')
-                    return
-                }
-
                 var body = {
                     email: email,
-                    password: password,
                     role: role || 'patient'
                 }
 
-                apiFetch("{{ url('/api/users') }}", {
+                apiFetch("{{ url('/api/users/invite') }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -213,6 +222,9 @@
         var rows = Array.prototype.slice.call(document.querySelectorAll('.admin-user-row'))
 
         var editButtons = document.querySelectorAll('.admin-user-edit')
+        var statusButtons = document.querySelectorAll('.admin-user-toggle-status')
+        var dependentsButtons = document.querySelectorAll('.admin-user-dependents')
+        var dependentsPanel = null
 
         editButtons.forEach(function (button) {
             button.addEventListener('click', function () {
@@ -283,10 +295,106 @@
                         actionsCell.innerHTML =
                             '<div class="flex items-center gap-2">' +
                             '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-user-edit" data-user-id="' + userId + '">Edit</button>' +
-                            '<button type="button" class="text-[0.72rem] text-red-600 hover:text-red-700 font-semibold admin-user-delete" data-user-id="' + userId + '">Delete</button>' +
+                            '<button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="' + userId + '">Dependents</button>' +
+                            '<button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-user-toggle-status" data-user-id="' + userId + '">Toggle status</button>' +
                             '</div>'
                     })
                 }
+            })
+        })
+
+        function toggleUserStatus(userId, row) {
+            if (!userId || !row) {
+                return
+            }
+            var currentStatus = row.getAttribute('data-status') || 'active'
+            var nextStatus = currentStatus === 'suspended' || currentStatus === 'inactive' ? 'active' : 'suspended'
+
+            apiFetch("{{ url('/api/users') }}/" + userId, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: nextStatus })
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        var message = result.data && result.data.message ? result.data.message : 'Failed to update user status.'
+                        showUserError(message)
+                        return
+                    }
+                    window.location.reload()
+                })
+                .catch(function () {
+                    showUserError('Network error while updating user status.')
+                })
+        }
+
+        function showDependents(userId) {
+            if (!userId) {
+                return
+            }
+
+            apiFetch("{{ url('/api/users') }}/" + userId + "/dependents", {
+                method: 'GET'
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        return
+                    }
+
+                    var dependents = Array.isArray(result.data) ? result.data : []
+
+                    if (!dependentsPanel) {
+                        dependentsPanel = document.createElement('div')
+                        dependentsPanel.className = 'mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.75rem] text-slate-700'
+                        var container = document.getElementById('adminCreateUserForm')
+                        if (container && container.parentNode) {
+                            container.parentNode.insertBefore(dependentsPanel, container.nextSibling)
+                        }
+                    }
+
+                    if (!dependents.length) {
+                        dependentsPanel.textContent = 'No dependents found for this user.'
+                        return
+                    }
+
+                    var html = 'Dependents for user #' + userId + ': '
+                    html += dependents
+                        .map(function (d) {
+                            var name = (d.firstname || '') + ' ' + (d.lastname || '')
+                            name = name.trim() || d.email
+                            return '#' + d.user_id + ' ' + name
+                        })
+                        .join(', ')
+                    dependentsPanel.textContent = html
+                })
+                .catch(function () {
+                })
+        }
+
+        statusButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var userId = this.getAttribute('data-user-id')
+                var row = document.querySelector('.admin-user-row[data-user-id="' + userId + '"]')
+                toggleUserStatus(userId, row)
+            })
+        })
+
+        dependentsButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var userId = this.getAttribute('data-user-id')
+                showDependents(userId)
             })
         })
 

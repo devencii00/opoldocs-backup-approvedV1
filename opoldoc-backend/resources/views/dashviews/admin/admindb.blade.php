@@ -4,36 +4,36 @@
         $sectionKey = $section ?? 'overview';
 
         $sectionTitles = [
-            'manage-users' => 'Manage users',
-            'roles-assignments' => 'Roles & assignments',
-            'patient-records' => 'Patient records',
-            'verification-approvals' => 'PWD / Senior verification',
-            'visit-records' => 'Visit and prescription records',
-            'audit-logs' => 'Audit logs',
-            'reports-analytics' => 'Reports & analytics',
-            'system-settings' => 'System settings',
-            'doctors-specializations' => 'Doctors & specializations',
-            'transactions-records' => 'Transactions records',
+            'user-management' => 'User Management',
+            'doctor-management' => 'Doctor Management',
+            'services-management' => 'Services Management',
+            'medicines-management' => 'Medicines',
+            'medical-background-viewer' => 'Medical Background',
+            'appointments' => 'Appointments',
+            'reports' => 'Reports',
+            'chatbot-management' => 'Chatbot Management',
+            'logs' => 'Logs',
+            'settings' => 'Settings',
         ];
 
         $sectionSubtitles = [
-            'manage-users' => 'Create and manage staff accounts.',
-            'roles-assignments' => 'Control which users have access to each role.',
-            'patient-records' => 'Browse and review registered patients.',
-            'verification-approvals' => 'Approve or reject senior / PWD verification requests.',
-            'visit-records' => 'Review visits that drive billing and prescriptions.',
-            'audit-logs' => 'Track system changes and record access.',
-            'reports-analytics' => 'High-level KPIs for the clinic.',
-            'system-settings' => 'Configure global system behaviour.',
-            'doctors-specializations' => 'Manage doctors and their specializations.',
-            'transactions-records' => 'Monitor billing transactions across visits.',
+            'user-management' => 'Create users, edit accounts, suspend or activate, search, and view dependents.',
+            'doctor-management' => 'Add doctors, edit information, and manage doctor schedules.',
+            'services-management' => 'Add, edit, delete, and update pricing for clinic services.',
+            'medicines-management' => 'Manage medicine reference data and active status.',
+            'medical-background-viewer' => 'Admin-only insight tool for reviewing patient medical background entries.',
+            'appointments' => 'Global appointment monitoring across doctors and dates.',
+            'reports' => 'View transactions, revenue trends, appointments, and no-show analytics.',
+            'chatbot-management' => 'Manage chatbot questions, options, and conversation flow.',
+            'logs' => 'View system logs and filter by user or action.',
+            'settings' => 'Configure clinic info, queue behavior, payment methods, and account settings.',
         ];
     @endphp
 
     @if ($sectionKey === 'overview')
         <div>
-            <h1 class="text-2xl font-semibold text-slate-900 mb-1">Admin overview</h1>
-            <p class="text-sm text-slate-500">Snapshot of key figures and sections across the clinic system.</p>
+            <h1 class="text-2xl font-semibold text-slate-900 mb-1">Admin Dashboard</h1>
+            <p class="text-sm text-slate-500">High-level overview of patients, doctors, today’s appointments, and revenue.</p>
         </div>
 
         <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -41,156 +41,206 @@
                 <div class="font-serif font-bold text-[1.6rem] text-slate-900 mb-1">
                     {{ number_format((int) ($metrics['patientCount'] ?? 0)) }}
                 </div>
-                <div class="text-[0.8rem] text-slate-500">Registered patients</div>
+                <div class="text-[0.8rem] text-slate-500">Total patients</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="font-serif font-bold text-[1.6rem] text-slate-900 mb-1">
                     {{ number_format((int) ($metrics['doctorCount'] ?? 0)) }}
                 </div>
-                <div class="text-[0.8rem] text-slate-500">Active doctors</div>
+                <div class="text-[0.8rem] text-slate-500">Total doctors</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="font-serif font-bold text-[1.6rem] text-slate-900 mb-1">
-                    {{ number_format((int) ($metrics['pendingVerificationsCount'] ?? 0)) }}
+                    {{ number_format((int) ($metrics['appointmentsToday'] ?? 0)) }}
                 </div>
-                <div class="text-[0.8rem] text-slate-500">Pending verifications</div>
+                <div class="text-[0.8rem] text-slate-500">Today’s appointments</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="font-serif font-bold text-[1.6rem] text-slate-900 mb-1">
-                    {{ number_format((int) ($metrics['recentLogsCount'] ?? 0)) }}
+                    ₱{{ number_format((float) ($metrics['revenueToday'] ?? 0), 2) }}
                 </div>
-                <div class="text-[0.8rem] text-slate-500">Total audit entries</div>
+                <div class="text-[0.8rem] text-slate-500">Today’s revenue</div>
             </div>
         </div>
 
-        <div class="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'manage-users']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(8,145,178,0.18)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Users</p>
-                        <p class="text-sm font-semibold text-slate-900">Manage users</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-cyan-600 leading-none">group</span>
-                </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ count($adminRecentUsers ?? []) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">recent staff accounts</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Create and review staff logins, then drill down for full details.</p>
-            </a>
+        @php
+            $charts = $adminCharts ?? [];
+            $appointmentsChart = $charts['appointmentsPerDay'] ?? ['labels' => [], 'values' => []];
+            $revenueChart = $charts['revenuePerMonth'] ?? ['labels' => [], 'values' => []];
+        @endphp
 
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'roles-assignments']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(8,145,178,0.18)] transition">
+        <div class="mt-6 grid gap-4 grid-cols-1 lg:grid-cols-2">
+            <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="flex items-center justify-between mb-2">
                     <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Access</p>
-                        <p class="text-sm font-semibold text-slate-900">Roles & assignments</p>
+                        <h2 class="text-sm font-semibold text-slate-900">Charts</h2>
+                        <p class="text-xs text-slate-500">Appointments per day (last 14 days)</p>
                     </div>
-                    <span class="material-symbols-outlined text-[20px] text-cyan-600 leading-none">badge</span>
+                    <span class="material-symbols-outlined text-[18px] text-cyan-600 leading-none">show_chart</span>
                 </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ count($adminUserRoleCounts ?? []) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">defined roles</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Control primary and secondary roles for staff accounts.</p>
-            </a>
+                <div id="adminAppointmentsPerDayChart" class="w-full h-[170px]"></div>
+            </div>
 
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'patient-records']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(15,118,110,0.18)] transition">
+            <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="flex items-center justify-between mb-2">
                     <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Patients</p>
-                        <p class="text-sm font-semibold text-slate-900">Patient records</p>
+                        <h2 class="text-sm font-semibold text-slate-900">Charts</h2>
+                        <p class="text-xs text-slate-500">Revenue per month (last 12 months)</p>
                     </div>
-                    <span class="material-symbols-outlined text-[20px] text-cyan-600 leading-none">folder_shared</span>
+                    <span class="material-symbols-outlined text-[18px] text-emerald-600 leading-none">bar_chart</span>
                 </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ count($adminRecentPatients ?? []) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">recent patients</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Review core demographics and verification status.</p>
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'verification-approvals']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(250,204,21,0.25)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Discounts</p>
-                        <p class="text-sm font-semibold text-slate-900">PWD / Senior verification</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-amber-500 leading-none">verified</span>
-                </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ count($adminRecentVerifications ?? []) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">recent requests</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Approve or reject discount eligibility with full context.</p>
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'visit-records']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(37,99,235,0.18)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Clinical</p>
-                        <p class="text-sm font-semibold text-slate-900">Visit & prescriptions</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-cyan-600 leading-none">history_edu</span>
-                </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ count($adminRecentTransactions ?? []) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">recent billed visits</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Trace visits that drive billing and prescriptions.</p>
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'audit-logs']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(15,23,42,0.18)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Security</p>
-                        <p class="text-sm font-semibold text-slate-900">Audit & access logs</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-slate-700 leading-none">rule_folder</span>
-                </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ number_format((int) ($metrics['recentLogsCount'] ?? 0)) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">total audit entries</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Quickly see who changed what and when.</p>
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'reports-analytics']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(56,189,248,0.22)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Insights</p>
-                        <p class="text-sm font-semibold text-slate-900">Reports & analytics</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-cyan-600 leading-none">insights</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">View aggregated KPIs for patients, staff, and compliance.</p>
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'transactions-records']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(22,163,74,0.22)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Billing</p>
-                        <p class="text-sm font-semibold text-slate-900">Transactions</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-emerald-600 leading-none">payments</span>
-                </div>
-                <div class="mt-1 flex items-baseline gap-1">
-                    <span class="font-serif font-bold text-[1.4rem] text-slate-900">{{ count($adminRecentTransactions ?? []) }}</span>
-                    <span class="text-[0.72rem] text-slate-500">recent payments</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Monitor incoming payments from recent clinical activity.</p>
-            </a>
-
-            <a href="{{ route('dashboard', ['role' => 'admin', 'section' => 'system-settings']) }}" class="group bg-white border border-slate-200 rounded-[18px] p-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] flex flex-col justify-between hover:border-cyan-400 hover:shadow-[0_4px_18px_rgba(37,99,235,0.18)] transition">
-                <div class="flex items-center justify-between mb-2">
-                    <div>
-                        <p class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Configuration</p>
-                        <p class="text-sm font-semibold text-slate-900">System settings</p>
-                    </div>
-                    <span class="material-symbols-outlined text-[20px] text-slate-700 leading-none">tune</span>
-                </div>
-                <p class="mt-2 text-[0.72rem] text-slate-500">Configure chatbot questions and recovery flows.</p>
-            </a>
+                <div id="adminRevenuePerMonthChart" class="w-full h-[170px]"></div>
+            </div>
         </div>
+
+        <script type="application/json" id="adminAppointmentsPerDayChartData">@json($appointmentsChart)</script>
+        <script type="application/json" id="adminRevenuePerMonthChartData">@json($revenueChart)</script>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                function safeParseJson(id) {
+                    var el = document.getElementById(id)
+                    if (!el) return null
+                    try {
+                        return JSON.parse(el.textContent || '{}')
+                    } catch (e) {
+                        return null
+                    }
+                }
+
+                function renderLineChart(container, labels, values, color) {
+                    if (!container) return
+                    var w = 420
+                    var h = 160
+                    var padX = 36
+                    var padY = 18
+
+                    var max = 0
+                    values.forEach(function (v) {
+                        var num = typeof v === 'number' ? v : parseFloat(v || '0')
+                        if (num > max) max = num
+                    })
+                    if (max <= 0) max = 1
+
+                    var innerW = w - padX * 2
+                    var innerH = h - padY * 2
+                    var step = values.length > 1 ? innerW / (values.length - 1) : innerW
+
+                    var points = values.map(function (v, idx) {
+                        var num = typeof v === 'number' ? v : parseFloat(v || '0')
+                        var x = padX + idx * step
+                        var y = padY + (innerH - (num / max) * innerH)
+                        return x.toFixed(2) + ',' + y.toFixed(2)
+                    }).join(' ')
+
+                    var svg =
+                        '<svg viewBox="0 0 ' + w + ' ' + h + '" class="w-full h-full">' +
+                            '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="white" />' +
+                            '<line x1="' + padX + '" y1="' + (h - padY) + '" x2="' + (w - padX) + '" y2="' + (h - padY) + '" stroke="#e2e8f0" stroke-width="1" />' +
+                            '<line x1="' + padX + '" y1="' + padY + '" x2="' + padX + '" y2="' + (h - padY) + '" stroke="#e2e8f0" stroke-width="1" />' +
+                            '<polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />' +
+                        '</svg>'
+
+                    container.innerHTML = svg
+                }
+
+                function renderBarChart(container, labels, values, color) {
+                    if (!container) return
+                    var w = 420
+                    var h = 160
+                    var padX = 36
+                    var padY = 18
+
+                    var max = 0
+                    values.forEach(function (v) {
+                        var num = typeof v === 'number' ? v : parseFloat(v || '0')
+                        if (num > max) max = num
+                    })
+                    if (max <= 0) max = 1
+
+                    var innerW = w - padX * 2
+                    var innerH = h - padY * 2
+                    var count = values.length || 1
+                    var barGap = 4
+                    var barW = Math.max(2, (innerW - barGap * (count - 1)) / count)
+
+                    var bars = values.map(function (v, idx) {
+                        var num = typeof v === 'number' ? v : parseFloat(v || '0')
+                        var barH = (num / max) * innerH
+                        var x = padX + idx * (barW + barGap)
+                        var y = padY + (innerH - barH)
+                        return '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" width="' + barW.toFixed(2) + '" height="' + barH.toFixed(2) + '" rx="3" fill="' + color + '" opacity="0.85" />'
+                    }).join('')
+
+                    var svg =
+                        '<svg viewBox="0 0 ' + w + ' ' + h + '" class="w-full h-full">' +
+                            '<rect x="0" y="0" width="' + w + '" height="' + h + '" fill="white" />' +
+                            '<line x1="' + padX + '" y1="' + (h - padY) + '" x2="' + (w - padX) + '" y2="' + (h - padY) + '" stroke="#e2e8f0" stroke-width="1" />' +
+                            '<line x1="' + padX + '" y1="' + padY + '" x2="' + padX + '" y2="' + (h - padY) + '" stroke="#e2e8f0" stroke-width="1" />' +
+                            bars +
+                        '</svg>'
+
+                    container.innerHTML = svg
+                }
+
+                var apptData = safeParseJson('adminAppointmentsPerDayChartData') || { labels: [], values: [] }
+                var revData = safeParseJson('adminRevenuePerMonthChartData') || { labels: [], values: [] }
+
+                renderLineChart(document.getElementById('adminAppointmentsPerDayChart'), apptData.labels || [], apptData.values || [], '#0891b2')
+                renderBarChart(document.getElementById('adminRevenuePerMonthChart'), revData.labels || [], revData.values || [], '#059669')
+            })
+        </script>
+
+        <div class="mt-6 bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-slate-900">Recent activities</h2>
+                <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Logs</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">
+                Latest system actions from the audit log.
+            </p>
+            <div class="overflow-x-auto scrollbar-hidden">
+                <table class="min-w-full text-left text-xs text-slate-600">
+                    <thead>
+                        <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
+                            <th class="py-2 pr-4 font-semibold">When</th>
+                            <th class="py-2 pr-4 font-semibold">User</th>
+                            <th class="py-2 pr-4 font-semibold">Action</th>
+                            <th class="py-2 pr-4 font-semibold">Record</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse (($adminRecentAuditLogs ?? []) as $log)
+                            <tr class="border-b border-slate-50 last:border-0">
+                                <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
+                                    {{ optional($log->created_at)->format('Y-m-d H:i') ?? '—' }}
+                                </td>
+                                <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
+                                    @if ($log->user)
+                                        {{ $log->user->email }}
+                                    @else
+                                        <span class="text-slate-400">System</span>
+                                    @endif
+                                </td>
+                                <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
+                                    {{ $log->action ?? 'Action' }}
+                                </td>
+                                <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
+                                    {{ $log->table_name }} #{{ $log->record_id }}
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">
+                                    No recent activities recorded yet.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     @else
         @php
             $title = $sectionTitles[$sectionKey] ?? 'Admin';
@@ -202,26 +252,26 @@
             <p class="text-sm text-slate-500">{{ $subtitle }}</p>
         </div>
 
-        @if ($sectionKey === 'manage-users')
+        @if ($sectionKey === 'user-management')
             @include('dashviews.admin.manage_user')
-        @elseif ($sectionKey === 'roles-assignments')
-            @include('dashviews.admin.roles_assignments')
-        @elseif ($sectionKey === 'patient-records')
-            @include('dashviews.admin.patient_records')
-        @elseif ($sectionKey === 'verification-approvals')
-            @include('dashviews.admin.verification_approvals')
-        @elseif ($sectionKey === 'visit-records')
-            @include('dashviews.admin.visit_prescription_records')
-        @elseif ($sectionKey === 'audit-logs')
-            @include('dashviews.admin.audit_logs')
-        @elseif ($sectionKey === 'reports-analytics')
-            @include('dashviews.admin.reports_analytics')
-        @elseif ($sectionKey === 'system-settings')
-            @include('dashviews.admin.system_settings')
-        @elseif ($sectionKey === 'doctors-specializations')
+        @elseif ($sectionKey === 'doctor-management')
             @include('dashviews.admin.doctors_specializations')
-        @elseif ($sectionKey === 'transactions-records')
-            @include('dashviews.admin.transactions_records')
+        @elseif ($sectionKey === 'services-management')
+            @include('dashviews.admin.services_management')
+        @elseif ($sectionKey === 'medicines-management')
+            @include('dashviews.admin.medicines_management')
+        @elseif ($sectionKey === 'medical-background-viewer')
+            @include('dashviews.admin.medical_background_viewer')
+        @elseif ($sectionKey === 'appointments')
+            @include('dashviews.admin.appointments_view')
+        @elseif ($sectionKey === 'reports')
+            @include('dashviews.admin.reports_analytics')
+        @elseif ($sectionKey === 'chatbot-management')
+            @include('dashviews.admin.chatbot_management')
+        @elseif ($sectionKey === 'logs')
+            @include('dashviews.admin.audit_logs')
+        @elseif ($sectionKey === 'settings')
+            @include('dashviews.admin.system_settings')
         @endif
     @endif
 </div>

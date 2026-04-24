@@ -1,16 +1,16 @@
 <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
     <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-900">Audit logs</h2>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Security</span>
+        <h2 class="text-sm font-semibold text-slate-900">Logs</h2>
+        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Activity</span>
     </div>
     <p class="text-xs text-slate-500 mb-3">
-        Recent system actions such as record changes or administrative updates.
+        View recent system activities and filter by user or action.
     </p>
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
         <div class="flex-1">
-            <label for="admin_audit_search" class="block text-[0.7rem] text-slate-600 mb-1">Search audit logs</label>
-            <input id="admin_audit_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="User, table or action">
+                <label for="admin_audit_search" class="block text-[0.7rem] text-slate-600 mb-1">Filter by user / action</label>
+                <input id="admin_audit_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type a user email or action">
         </div>
         <div class="w-full md:w-40">
             <label for="admin_audit_sort" class="block text-[0.7rem] text-slate-600 mb-1">Sort</label>

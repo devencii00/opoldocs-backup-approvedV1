@@ -2,38 +2,57 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PrescriptionItem;
+use App\Models\Medicine;
 use Illuminate\Http\Request;
 
 class MedicineController extends Controller
 {
     public function index()
     {
-        return PrescriptionItem::query()->paginate();
+        return Medicine::query()->paginate();
     }
 
-    public function show(PrescriptionItem $medicine)
+    public function show(Medicine $medicine)
     {
         return $medicine;
     }
 
     public function store(Request $request)
     {
-        $request->merge([
-            'medicine_name' => $request->input('medicine_name'),
+        $data = $request->validate([
+            'generic_name' => ['required', 'string'],
+            'brand_name' => ['nullable', 'string'],
+            'indications' => ['nullable', 'string'],
+            'contraindications' => ['nullable', 'string'],
+            'is_active' => ['nullable', 'boolean'],
         ]);
 
-        return app(PrescriptionItemController::class)->store($request);
+        $medicine = Medicine::create($data);
+
+        return response()->json($medicine, 201);
     }
 
-    public function update(Request $request, PrescriptionItem $medicine)
+    public function update(Request $request, Medicine $medicine)
     {
-        return app(PrescriptionItemController::class)->update($request, $medicine);
+        $data = $request->validate([
+            'generic_name' => ['sometimes', 'string'],
+            'brand_name' => ['sometimes', 'nullable', 'string'],
+            'indications' => ['sometimes', 'nullable', 'string'],
+            'contraindications' => ['sometimes', 'nullable', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
+        ]);
+
+        $medicine->update($data);
+
+        return $medicine->refresh();
     }
 
-    public function destroy(PrescriptionItem $medicine)
+    public function destroy(Medicine $medicine)
     {
-        return app(PrescriptionItemController::class)->destroy($medicine);
+        $medicine->delete();
+
+        return response()->json([
+            'message' => 'Medicine deleted',
+        ]);
     }
 }
-

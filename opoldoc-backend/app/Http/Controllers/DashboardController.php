@@ -10,6 +10,7 @@ use App\Models\Queue;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -43,10 +44,25 @@ class DashboardController extends Controller
         ];
 
         if ($role === 'admin') {
+            $today = now()->toDateString();
+            $startOfMonth = now()->startOfMonth()->toDateString();
+            $appointmentsChartStart = now()->subDays(13)->startOfDay();
+            $revenueChartStart = now()->subMonths(11)->startOfMonth();
+
             $patientCount = User::where('role', 'patient')->count();
             $doctorCount = User::where('role', 'doctor')->count();
             $verificationCount = PatientVerification::count();
             $recentLogsCount = LogEntry::count();
+
+            $appointmentsToday = Appointment::whereDate('appointment_datetime', $today)->count();
+
+            $revenueToday = Transaction::whereDate('transaction_datetime', $today)
+                ->where('payment_status', 'paid')
+                ->sum('amount');
+
+            $revenueThisMonth = Transaction::whereBetween('transaction_datetime', [$startOfMonth, now()])
+                ->where('payment_status', 'paid')
+                ->sum('amount');
 
             $userRoleCounts = User::selectRaw('role, COUNT(*) as users_count')
                 ->groupBy('role')
@@ -58,7 +74,7 @@ class DashboardController extends Controller
                     ];
                 });
 
-            $recentUsers = User::latest('user_id')->limit(10)->get();
+            $recentUsers = User::withCount('children')->latest('user_id')->limit(10)->get();
 
             $recentPatients = User::where('role', 'patient')
                 ->latest('user_id')
@@ -84,6 +100,9 @@ class DashboardController extends Controller
                 'doctorCount' => $doctorCount,
                 'pendingVerificationsCount' => $verificationCount,
                 'recentLogsCount' => $recentLogsCount,
+                'appointmentsToday' => $appointmentsToday,
+                'revenueToday' => $revenueToday,
+                'revenueThisMonth' => $revenueThisMonth,
             ];
 
             $data['adminUserRoleCounts'] = $userRoleCounts;
@@ -92,6 +111,66 @@ class DashboardController extends Controller
             $data['adminRecentVerifications'] = $recentVerifications;
             $data['adminRecentTransactions'] = $recentTransactions;
             $data['adminRecentAuditLogs'] = $recentAuditLogs;
+
+            $appointmentsCounts = Appointment::query()
+                ->selectRaw('DATE(appointment_datetime) as day, COUNT(*) as total_count')
+                ->whereNotNull('appointment_datetime')
+                ->where('appointment_datetime', '>=', $appointmentsChartStart)
+                ->groupBy(DB::raw('DATE(appointment_datetime)'))
+                ->orderBy('day')
+                ->get()
+                ->keyBy('day');
+
+            $appointmentLabels = [];
+            $appointmentValues = [];
+            for ($cursor = $appointmentsChartStart->copy(); $cursor->lte(now()); $cursor->addDay()) {
+                $key = $cursor->toDateString();
+                $appointmentLabels[] = $key;
+                $appointmentValues[] = (int) (($appointmentsCounts[$key]->total_count ?? 0));
+            }
+
+            $revenueRows = Transaction::query()
+                ->selectRaw("DATE_FORMAT(transaction_datetime, '%Y-%m') as month_key, SUM(amount) as total_amount")
+                ->whereNotNull('transaction_datetime')
+                ->where('transaction_datetime', '>=', $revenueChartStart)
+                ->where('payment_status', 'paid')
+                ->groupBy(DB::raw("DATE_FORMAT(transaction_datetime, '%Y-%m')"))
+                ->orderBy('month_key')
+                ->get()
+                ->keyBy('month_key');
+
+            $revenueLabels = [];
+            $revenueValues = [];
+            for ($cursor = $revenueChartStart->copy(); $cursor->lte(now()); $cursor->addMonth()) {
+                $key = $cursor->format('Y-m');
+                $revenueLabels[] = $key;
+                $revenueValues[] = (float) (($revenueRows[$key]->total_amount ?? 0));
+            }
+
+            $data['adminCharts'] = [
+                'appointmentsPerDay' => [
+                    'labels' => $appointmentLabels,
+                    'values' => $appointmentValues,
+                ],
+                'revenuePerMonth' => [
+                    'labels' => $revenueLabels,
+                    'values' => $revenueValues,
+                ],
+            ];
+
+            $appointmentsByStatusToday = Appointment::selectRaw('status, COUNT(*) as total_count')
+                ->whereDate('appointment_datetime', $today)
+                ->groupBy('status')
+                ->get();
+
+            $noShowCount = Appointment::whereDate('appointment_datetime', $today)
+                ->where('status', 'no_show')
+                ->count();
+
+            $data['adminReports'] = [
+                'appointmentsByStatusToday' => $appointmentsByStatusToday,
+                'noShowToday' => $noShowCount,
+            ];
         } elseif ($role === 'doctor') {
             $today = now()->toDateString();
 

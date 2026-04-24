@@ -9,33 +9,47 @@
 
     $sectionKey = $section ?? 'overview';
 
+    $effectiveSectionKey = $sectionKey;
+
+    if ($effectiveSectionKey === 'my-schedule') {
+        $effectiveSectionKey = 'appointments';
+    } elseif ($effectiveSectionKey === 'history') {
+        $effectiveSectionKey = 'visits';
+    }
+
     $sectionTitles = [
         'my-patients' => 'My patients',
-        'appointments' => 'Appointments',
+        'appointments' => 'My Schedule',
         'queue' => 'Queue',
-        'visits' => 'Visits',
-        'prescriptions' => 'Prescriptions',
+        'visits' => 'History',
+        'history' => 'History',
+        'prescriptions' => 'Prescription',
         'my-activity' => 'My activity',
+        'consultation' => 'Consultation',
+        'settings-doctor' => 'Settings',
     ];
 
     $sectionSubtitles = [
         'my-patients' => 'Patients you are actively seeing or have seen recently.',
         'appointments' => 'Review upcoming and recent appointments.',
         'queue' => 'See today’s queue and recent queue entries.',
-        'visits' => 'Browse recent visits for clinical context.',
+        'visits' => 'View past patient visits and records.',
+        'history' => 'View past patient visits and records.',
         'prescriptions' => 'Review prescriptions you have issued.',
         'my-activity' => 'High-level view of your recent clinical activity.',
+        'consultation' => 'Consult with a selected patient and record notes.',
+        'settings-doctor' => 'Update your profile, password, and signature.',
     ];
 @endphp
 
 <div class="space-y-6">
     @if ($sectionKey === 'overview')
         <div>
-            <h1 class="text-2xl font-semibold text-slate-900 mb-1">Doctor workspace</h1>
-            <p class="text-sm text-slate-500">Focus on consultations, diagnoses, and prescriptions for your assigned patients.</p>
+            <h1 class="text-2xl font-semibold text-slate-900 mb-1">Doctor Dashboard</h1>
+            <p class="text-sm text-slate-500">Today’s appointments, queue list, and notifications for your clinic day.</p>
         </div>
 
-        <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
+    <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 lg:col-span-2 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="flex items-center justify-between mb-3">
                     <h2 class="text-sm font-semibold text-slate-900">Today&apos;s schedule</h2>
@@ -43,7 +57,7 @@
                 </div>
                 <div class="grid gap-3 grid-cols-1 sm:grid-cols-3 text-sm text-slate-600">
                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                        <div class="text-xs text-slate-500 mb-1">Appointments</div>
+                        <div class="text-xs text-slate-500 mb-1">Today’s appointments</div>
                         <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($appointmentsToday) }}</div>
                     </div>
                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
@@ -114,7 +128,7 @@
             </div>
 
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-                <h2 class="text-sm font-semibold text-slate-900 mb-3">Queue</h2>
+                <h2 class="text-sm font-semibold text-slate-900 mb-3">Queue list</h2>
                 <div class="max-h-80 overflow-y-auto scrollbar-hidden">
                     @if (count($recentQueue))
                         <ul class="space-y-2 text-xs text-slate-600">
@@ -141,10 +155,63 @@
                 </div>
             </div>
         </div>
+
+        @php
+            $todayDate = now()->toDateString();
+            $notifications = collect($recentAppointments)->filter(function ($appointment) use ($todayDate) {
+                $dt = $appointment->appointment_datetime ?? null;
+                if ($dt instanceof \Carbon\Carbon) {
+                    return $dt->toDateString() === $todayDate;
+                }
+
+                return (string) ($appointment->appointment_date ?? '') === $todayDate;
+            })->take(5);
+        @endphp
+
+        <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
+            <div class="lg:col-span-2"></div>
+            <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-semibold text-slate-900">Notifications</h2>
+                    <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Today</span>
+                </div>
+                <p class="text-xs text-slate-500 mb-3">
+                    Quick view of today’s upcoming appointments for your patients.
+                </p>
+                <div class="max-h-64 overflow-y-auto scrollbar-hidden">
+                    @if ($notifications->count())
+                        <ul class="space-y-2 text-xs text-slate-600">
+                            @foreach ($notifications as $appointment)
+                                @php
+                                    $patientName = optional(optional($appointment->patient)->personalInformation)->full_name ?? 'Patient #' . $appointment->patient_id;
+                                    $time = $appointment->appointment_time ?? optional($appointment->appointment_datetime)->format('H:i');
+                                @endphp
+                                <li class="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                                    <div>
+                                        <div class="font-semibold text-slate-900 text-[0.8rem]">
+                                            {{ $patientName }}
+                                        </div>
+                                        <div class="text-[0.7rem] text-slate-500">
+                                            {{ \Illuminate\Support\Str::limit($appointment->reason_for_visit ?? 'No reason specified', 60) }}
+                                        </div>
+                                    </div>
+                                    <div class="text-[0.7rem] text-slate-400 text-right whitespace-nowrap">
+                                        <div>Today</div>
+                                        <div>{{ $time }}</div>
+                                    </div>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @else
+                        <p class="text-[0.72rem] text-slate-400">No notifications for today.</p>
+                    @endif
+                </div>
+            </div>
+        </div>
     @else
         @php
-            $title = $sectionTitles[$sectionKey] ?? 'Doctor workspace';
-            $subtitle = $sectionSubtitles[$sectionKey] ?? 'Clinical workspace';
+            $title = $sectionTitles[$effectiveSectionKey] ?? 'Doctor workspace';
+            $subtitle = $sectionSubtitles[$effectiveSectionKey] ?? 'Clinical workspace';
         @endphp
 
         <div>
@@ -152,18 +219,22 @@
             <p class="text-sm text-slate-500">{{ $subtitle }}</p>
         </div>
 
-        @if ($sectionKey === 'my-patients')
+        @if ($effectiveSectionKey === 'my-patients')
             @include('dashviews.doctor.doctor_my_patients')
-        @elseif ($sectionKey === 'appointments')
+        @elseif ($effectiveSectionKey === 'appointments')
             @include('dashviews.doctor.doctor_appointments')
-        @elseif ($sectionKey === 'queue')
+        @elseif ($effectiveSectionKey === 'queue')
             @include('dashviews.doctor.doctor_queue')
-        @elseif ($sectionKey === 'visits')
+        @elseif ($effectiveSectionKey === 'visits')
             @include('dashviews.doctor.doctor_visits')
-        @elseif ($sectionKey === 'prescriptions')
+        @elseif ($effectiveSectionKey === 'prescriptions')
             @include('dashviews.doctor.doctor_prescriptions')
-        @elseif ($sectionKey === 'my-activity')
+        @elseif ($effectiveSectionKey === 'my-activity')
             @include('dashviews.doctor.doctor_my_activity')
+        @elseif ($effectiveSectionKey === 'consultation')
+            @include('dashviews.doctor.doctor_consultation')
+        @elseif ($effectiveSectionKey === 'settings-doctor')
+            @include('dashviews.doctor.doctor_settings')
         @endif
     @endif
 </div>

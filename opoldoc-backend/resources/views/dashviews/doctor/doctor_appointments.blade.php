@@ -1,10 +1,10 @@
 <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
     <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-900">Appointments</h2>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Schedule</span>
+        <h2 class="text-sm font-semibold text-slate-900">My Schedule</h2>
+        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Time &amp; days</span>
     </div>
     <p class="text-xs text-slate-500 mb-3">
-        Upcoming and recent appointments with patients, including status and basic context.
+        View your appointments across days and times. Use this as your working schedule for consultations.
     </p>
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">

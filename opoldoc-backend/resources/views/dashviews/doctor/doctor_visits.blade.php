@@ -1,10 +1,10 @@
 <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
     <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-900">Visits</h2>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Clinical</span>
+        <h2 class="text-sm font-semibold text-slate-900">History</h2>
+        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Past records</span>
     </div>
     <p class="text-xs text-slate-500 mb-3">
-        Recent completed visits with key clinical details.
+        View past patient visits and clinical records for follow-up and review.
     </p>
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">

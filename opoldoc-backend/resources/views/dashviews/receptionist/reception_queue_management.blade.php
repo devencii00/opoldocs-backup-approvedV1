@@ -8,7 +8,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h2 class="text-sm font-semibold text-slate-900">Queue management</h2>
-            <p class="text-xs text-slate-500">View and monitor today&apos;s queue. Use the display view for TV or lobby screens.</p>
+            <p class="text-xs text-slate-500">Add patients to the queue, assign numbers, and monitor today&apos;s flow.</p>
         </div>
         <button id="receptionDisplayQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.8rem] font-semibold hover:bg-cyan-700 transition-colors">
             <span class="material-symbols-outlined text-[18px] leading-none">tv</span>
@@ -21,6 +21,29 @@
             <h3 class="text-sm font-semibold text-slate-900">Today&apos;s queue</h3>
             <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Front desk</span>
         </div>
+
+        <form id="receptionAddQueueForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-4 items-end">
+            <div>
+                <label for="reception_add_queue_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment ID</label>
+                <input id="reception_add_queue_appointment_id" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Appointment ID" required>
+            </div>
+            <div>
+                <label for="reception_add_queue_number" class="block text-[0.7rem] text-slate-600 mb-1">Queue number (optional)</label>
+                <input id="reception_add_queue_number" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Auto-generate if empty">
+            </div>
+            <div>
+                <label for="reception_add_queue_datetime" class="block text-[0.7rem] text-slate-600 mb-1">Queue date &amp; time (optional)</label>
+                <input id="reception_add_queue_datetime" type="datetime-local" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
+                    Add to queue
+                </button>
+            </div>
+        </form>
+
+        <div id="receptionQueueError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+        <div id="receptionQueueSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
         <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
             <div class="flex-1">
@@ -47,6 +70,7 @@
                         <th class="py-2 pr-4 font-semibold">Doctor</th>
                         <th class="py-2 pr-4 font-semibold">Date</th>
                         <th class="py-2 pr-4 font-semibold">Status</th>
+                        <th class="py-2 pr-4 font-semibold text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,12 +80,16 @@
                             $doctorName = optional(optional($queue->doctor)->employee)->personalInformation->full_name ?? '';
                             $statusName = optional($queue->status)->status_name ?? '';
                             $dateKey = $queue->queue_date ?? '';
+                            $queueId = $queue->queue_id ?? null;
                         @endphp
                         <tr class="border-b border-slate-50 last:border-0 reception-queue-row"
                             data-queue-number="{{ $queue->queue_number }}"
                             data-patient="{{ strtolower($patientName) }}"
                             data-doctor="{{ strtolower($doctorName) }}"
-                            data-date="{{ $dateKey }}">
+                            data-date="{{ $dateKey }}"
+                            @if ($queueId)
+                                data-queue-id="{{ $queueId }}"
+                            @endif>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $queue->queue_number }}</td>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                                 @if ($patientName)
@@ -85,6 +113,16 @@
                                     <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border bg-slate-50 border-slate-100 text-slate-700">
                                         {{ ucfirst($statusName) }}
                                     </span>
+                                @else
+                                    <span class="text-[0.7rem] text-slate-400">—</span>
+                                @endif
+                            </td>
+                            <td class="py-2 pr-4 text-[0.78rem] text-right text-slate-500">
+                                @if ($queueId ?? null)
+                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700 reception-queue-remove" data-queue-id="{{ $queueId }}">
+                                        <span class="material-symbols-outlined text-[16px] leading-none">close</span>
+                                        Remove
+                                    </button>
                                 @else
                                     <span class="text-[0.7rem] text-slate-400">—</span>
                                 @endif
@@ -201,6 +239,9 @@
         var searchInput = document.getElementById('reception_queue_search')
         var sortSelect = document.getElementById('reception_queue_sort')
         var rows = Array.prototype.slice.call(document.querySelectorAll('.reception-queue-row'))
+        var addQueueForm = document.getElementById('receptionAddQueueForm')
+        var queueErrorBox = document.getElementById('receptionQueueError')
+        var queueSuccessBox = document.getElementById('receptionQueueSuccess')
 
         function applyReceptionQueueFilters() {
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
@@ -262,6 +303,26 @@
             })
         }
 
+        function showQueueError(message) {
+            if (!queueErrorBox) return
+            queueErrorBox.textContent = message || ''
+            if (message) {
+                queueErrorBox.classList.remove('hidden')
+            } else {
+                queueErrorBox.classList.add('hidden')
+            }
+        }
+
+        function showQueueSuccess(message) {
+            if (!queueSuccessBox) return
+            queueSuccessBox.textContent = message || ''
+            if (message) {
+                queueSuccessBox.classList.remove('hidden')
+            } else {
+                queueSuccessBox.classList.add('hidden')
+            }
+        }
+
         if (searchInput) {
             searchInput.addEventListener('input', applyReceptionQueueFilters)
         }
@@ -270,6 +331,129 @@
         }
 
         applyReceptionQueueFilters()
+
+        if (addQueueForm) {
+            addQueueForm.addEventListener('submit', function (e) {
+                e.preventDefault()
+
+                showQueueError('')
+                showQueueSuccess('')
+
+                var appointmentInput = document.getElementById('reception_add_queue_appointment_id')
+                var numberInput = document.getElementById('reception_add_queue_number')
+                var datetimeInput = document.getElementById('reception_add_queue_datetime')
+
+                var appointmentId = appointmentInput ? parseInt(appointmentInput.value, 10) : 0
+                var queueNumber = numberInput && numberInput.value ? parseInt(numberInput.value, 10) : null
+                var queueDatetime = datetimeInput ? datetimeInput.value : ''
+
+                if (!appointmentId) {
+                    showQueueError('Appointment ID is required to add to queue.')
+                    return
+                }
+
+                if (typeof apiFetch !== 'function') {
+                    showQueueError('API client is not available.')
+                    return
+                }
+
+                var body = {
+                    appointment_id: appointmentId
+                }
+
+                if (queueNumber !== null && !isNaN(queueNumber)) {
+                    body.queue_number = queueNumber
+                }
+                if (queueDatetime) {
+                    body.queue_datetime = queueDatetime
+                }
+
+                apiFetch("{{ url('/api/queues') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, status: response.status, data: data }
+                        }).catch(function () {
+                            return { ok: response.ok, status: response.status, data: null }
+                        })
+                    })
+                    .then(function (result) {
+                        if (!result.ok) {
+                            var message = 'Failed to add appointment to queue.'
+                            if (result.data && result.data.message) {
+                                message = result.data.message
+                            }
+                            showQueueError(message)
+                            return
+                        }
+
+                        showQueueSuccess('Appointment added to queue.')
+                        if (appointmentInput) appointmentInput.value = ''
+                        if (numberInput) numberInput.value = ''
+                        if (datetimeInput) datetimeInput.value = ''
+                    })
+                    .catch(function () {
+                        showQueueError('Network error while adding to queue.')
+                    })
+            })
+        }
+
+        document.querySelectorAll('.reception-queue-remove').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var queueId = button.getAttribute('data-queue-id')
+                if (!queueId) {
+                    return
+                }
+
+                showQueueError('')
+                showQueueSuccess('')
+
+                if (typeof apiFetch !== 'function') {
+                    showQueueError('API client is not available.')
+                    return
+                }
+
+                var url = "{{ url('/api/queues') }}/" + encodeURIComponent(queueId)
+
+                apiFetch(url, { method: 'DELETE' })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            return response.json().then(function (data) {
+                                return { ok: false, data: data }
+                            }).catch(function () {
+                                return { ok: false, data: null }
+                            })
+                        }
+                        return { ok: true, data: null }
+                    })
+                    .then(function (result) {
+                        if (!result.ok) {
+                            var message = 'Failed to remove queue entry.'
+                            if (result.data && result.data.message) {
+                                message = result.data.message
+                            }
+                            showQueueError(message)
+                            return
+                        }
+
+                        var row = button.closest('tr')
+                        if (row) {
+                            row.parentNode.removeChild(row)
+                            rows = Array.prototype.slice.call(document.querySelectorAll('.reception-queue-row'))
+                        }
+
+                        showQueueSuccess('Queue entry removed.')
+                    })
+                    .catch(function () {
+                        showQueueError('Network error while removing queue entry.')
+                    })
+            })
+        })
 
         function buildQueueDisplay(items) {
             var today = new Date().toISOString().slice(0, 10)
