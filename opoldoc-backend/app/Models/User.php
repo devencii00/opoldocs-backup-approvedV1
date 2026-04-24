@@ -78,6 +78,21 @@ class User extends Authenticatable
         return $this->hasMany(self::class, 'parent_user_id', 'user_id');
     }
 
+    public function doctorSchedules()
+    {
+        return $this->hasMany(DoctorSchedule::class, 'doctor_id', 'user_id');
+    }
+
+    public function patientVerifications()
+    {
+        return $this->hasMany(PatientVerification::class, 'patient_id', 'user_id');
+    }
+
+    public function processedVerifications()
+    {
+        return $this->hasMany(PatientVerification::class, 'verified_by', 'user_id');
+    }
+
     public function getMustChangeCredentialsAttribute(): bool
     {
         return (bool) $this->is_first_login;
@@ -87,6 +102,32 @@ class User extends Authenticatable
     {
         return [
             'role_name' => $this->role,
+        ];
+    }
+
+    public function getPersonalInformationAttribute(): object
+    {
+        $fullName = trim(implode(' ', array_filter([
+            $this->firstname,
+            $this->middlename,
+            $this->lastname,
+        ], function ($v) {
+            return (string) $v !== '';
+        })));
+
+        if ($fullName === '') {
+            $fullName = 'User #' . $this->user_id;
+        }
+
+        return (object) [
+            'full_name' => $fullName,
+            'first_name' => $this->firstname,
+            'middle_name' => $this->middlename,
+            'last_name' => $this->lastname,
+            'birthdate' => $this->birthdate,
+            'sex' => $this->sex,
+            'address' => $this->address,
+            'mobile_number' => $this->contact_number,
         ];
     }
 }

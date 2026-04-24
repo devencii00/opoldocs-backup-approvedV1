@@ -11,20 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
- Schema::create('doctor_schedules', function (Blueprint $table) {
-    $table->id('schedule_id');
+        Schema::create('doctor_schedules', function (Blueprint $table) {
+            $table->id('schedule_id');
 
-    $table->unsignedBigInteger('doctor_id');
-    $table->foreign('doctor_id')->references('user_id')->on('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('doctor_id');
+            $table->foreign('doctor_id')->references('user_id')->on('users')->cascadeOnDelete();
 
-    $table->time('start_time');
-    $table->time('end_time');
-    $table->integer('max_patients')->nullable();
+            $table->time('start_time');
+            $table->time('end_time');
+            $table->integer('max_patients')->nullable();
 
-    $table->timestamps();
+            $table->timestamps();
 
-    $table->index('doctor_id');
-});
+            $table->index('doctor_id');
+        });
     }
 
     /**

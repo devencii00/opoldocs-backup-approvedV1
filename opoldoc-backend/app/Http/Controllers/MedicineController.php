@@ -7,9 +7,17 @@ use Illuminate\Http\Request;
 
 class MedicineController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Medicine::query()->paginate();
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1) {
+            $perPage = 15;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        return Medicine::query()->paginate($perPage);
     }
 
     public function show(Medicine $medicine)

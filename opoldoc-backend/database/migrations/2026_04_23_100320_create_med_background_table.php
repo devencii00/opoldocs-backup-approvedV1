@@ -11,9 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('med_background', function (Blueprint $table) {
-            $table->id();
+        Schema::create('medical_backgrounds', function (Blueprint $table) {
+            $table->id('medical_background_id');
+
+            $table->unsignedBigInteger('patient_id');
+            $table->foreign('patient_id')
+                ->references('user_id')
+                ->on('users')
+                ->cascadeOnDelete();
+
+            $table->enum('category', ['allergy_food', 'allergy_drug', 'condition']);
+            $table->string('name'); // e.g. Asthma, Penicillin allergy
+
+            $table->text('notes')->nullable();
+
             $table->timestamps();
+
+            $table->index('patient_id');
+            $table->index('category');
+            $table->index(['patient_id', 'category']);
         });
     }
 
@@ -22,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('med_background');
+        Schema::dropIfExists('medical_backgrounds');
     }
 };

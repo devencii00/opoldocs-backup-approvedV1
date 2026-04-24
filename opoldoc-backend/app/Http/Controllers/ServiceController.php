@@ -52,4 +52,3 @@ class ServiceController extends Controller
         ]);
     }
 }
-

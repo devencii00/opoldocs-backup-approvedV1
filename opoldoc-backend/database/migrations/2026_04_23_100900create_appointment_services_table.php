@@ -11,18 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-      Schema::create('appointment_services', function (Blueprint $table) {
-    $table->id();
+        Schema::create('appointment_services', function (Blueprint $table) {
+            $table->id();
 
-    $table->unsignedBigInteger('appointment_id');
-    $table->unsignedBigInteger('service_id');
+            $table->unsignedBigInteger('appointment_id');
+            $table->unsignedBigInteger('service_id');
 
-    $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
-    $table->foreign('service_id')->references('service_id')->on('services')->cascadeOnDelete();
+            $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
+            $table->foreign('service_id')->references('service_id')->on('services')->cascadeOnDelete();
 
-    $table->index('appointment_id');
-    $table->index('service_id');
-});
+            $table->index('appointment_id');
+            $table->index('service_id');
+        });
     }
 
     /**

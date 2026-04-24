@@ -64,6 +64,7 @@
                 $isMedicinesManagement = $currentSection === 'medicines-management';
                 $isMedicalBackgroundViewer = $currentSection === 'medical-background-viewer';
                 $isAppointments = $currentSection === 'appointments';
+                $isVerificationOversight = $currentSection === 'verification-oversight';
                 $isReports = $currentSection === 'reports';
                 $isChatbotManagement = $currentSection === 'chatbot-management';
                 $isLogs = $currentSection === 'logs';
@@ -114,6 +115,14 @@
                 <span class="material-symbols-outlined text-[18px] leading-none {{ $isAppointments ? 'text-cyan-600' : '' }}">event</span>
                 Appointments
                 @if ($isAppointments)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
+            </a>
+
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isVerificationOversight ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isVerificationOversight ? 'text-cyan-600' : '' }}">verified_user</span>
+                Verification Oversight
+                @if ($isVerificationOversight)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>

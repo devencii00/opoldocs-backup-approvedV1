@@ -11,27 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-  Schema::create('conversations', function (Blueprint $table) {
-    $table->id('conversation_id');
+        Schema::create('conversations', function (Blueprint $table) {
+            $table->id('conversation_id');
 
-    $table->unsignedBigInteger('user_id');
-    $table->foreign('user_id')->references('user_id')->on('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('user_id')->on('users')->cascadeOnDelete();
 
-    $table->softDeletes();
-    $table->timestamps();
-});
+            $table->softDeletes();
+            $table->timestamps();
+        });
 
-Schema::create('messages', function (Blueprint $table) {
-    $table->id('message_id');
+        Schema::create('messages', function (Blueprint $table) {
+            $table->id('message_id');
 
-    $table->unsignedBigInteger('conversation_id');
-    $table->foreign('conversation_id')->references('conversation_id')->on('conversations')->cascadeOnDelete();
+            $table->unsignedBigInteger('conversation_id');
+            $table->foreign('conversation_id')->references('conversation_id')->on('conversations')->cascadeOnDelete();
 
-    $table->enum('sender', ['user','bot']);
-    $table->text('message_text');
+            $table->enum('sender', ['user', 'bot']);
+            $table->text('message_text');
 
-    $table->timestamps();
-});
+            $table->timestamps();
+        });
     }
 
     /**

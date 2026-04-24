@@ -30,4 +30,3 @@ class Service extends Model
         return $this->belongsToMany(Appointment::class, 'appointment_services', 'service_id', 'appointment_id');
     }
 }
-

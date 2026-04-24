@@ -37,8 +37,15 @@
             <tbody>
                 @forelse ($doctorRecentPrescriptions ?? [] as $prescription)
                     @php
-                        $patientName = optional(optional(optional($prescription->visit)->patient)->personalInformation)->full_name ?? '';
-                        $dateKey = optional($prescription->prescribed_date)->format('Y-m-d') ?? $prescription->prescribed_date ?? '';
+                        $patientParts = array_filter([
+                            optional(optional(optional($prescription->transaction)->appointment)->patient)->firstname,
+                            optional(optional(optional($prescription->transaction)->appointment)->patient)->middlename,
+                            optional(optional(optional($prescription->transaction)->appointment)->patient)->lastname,
+                        ], function ($v) {
+                            return (string) $v !== '';
+                        });
+                        $patientName = trim(implode(' ', $patientParts));
+                        $dateKey = optional($prescription->prescribed_datetime)->format('Y-m-d') ?? '';
                         $itemsCount = $prescription->items ? $prescription->items->count() : 0;
                     @endphp
                     <tr class="border-b border-slate-50 last:border-0 doctor-prescription-row"
@@ -157,4 +164,3 @@
         applyDoctorPrescriptionFilters()
     })
 </script>
-

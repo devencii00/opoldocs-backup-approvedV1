@@ -11,19 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-   Schema::create('logs', function (Blueprint $table) {
-    $table->id('log_id');
+        Schema::create('logs', function (Blueprint $table) {
+            $table->id('log_id');
 
-    $table->unsignedBigInteger('user_id')->nullable();
-    $table->foreign('user_id')->references('user_id')->on('users')->nullOnDelete();
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->foreign('user_id')->references('user_id')->on('users')->nullOnDelete();
 
-    $table->string('action', 100)->nullable();
-    $table->string('table_name', 50)->nullable();
-    $table->unsignedBigInteger('record_id')->nullable();
-    $table->text('details')->nullable();
+            $table->string('action', 100)->nullable();
+            $table->string('table_name', 50)->nullable();
+            $table->unsignedBigInteger('record_id')->nullable();
+            $table->text('details')->nullable();
 
-    $table->timestamp('created_at')->useCurrent();
-});
+            $table->timestamp('created_at')->useCurrent();
+        });
     }
 
     /**

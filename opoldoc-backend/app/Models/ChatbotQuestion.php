@@ -24,4 +24,3 @@ class ChatbotQuestion extends Model
         return $this->hasMany(ChatbotOption::class, 'question_id', 'question_id');
     }
 }
-

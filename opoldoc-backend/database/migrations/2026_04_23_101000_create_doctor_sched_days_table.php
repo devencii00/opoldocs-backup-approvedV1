@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-     Schema::create('doctor_schedule_days', function (Blueprint $table) {
-    $table->id();
+        Schema::create('doctor_schedule_days', function (Blueprint $table) {
+            $table->id();
 
-    $table->unsignedBigInteger('schedule_id');
-    $table->foreign('schedule_id')->references('schedule_id')->on('doctor_schedules')->cascadeOnDelete();
+            $table->unsignedBigInteger('schedule_id');
+            $table->foreign('schedule_id')->references('schedule_id')->on('doctor_schedules')->cascadeOnDelete();
 
-    $table->enum('day_of_week', ['mon','tue','wed','thu','fri','sat','sun']);
-});
+            $table->enum('day_of_week', ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+        });
     }
 
     /**
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('doctor_sched_days');
+        Schema::dropIfExists('doctor_schedule_days');
     }
 };

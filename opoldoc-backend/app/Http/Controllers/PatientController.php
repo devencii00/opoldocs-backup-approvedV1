@@ -48,4 +48,3 @@ class PatientController extends Controller
         return app(UserController::class)->destroy($patient);
     }
 }
-

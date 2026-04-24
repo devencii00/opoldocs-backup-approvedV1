@@ -11,19 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-   Schema::create('notifications', function (Blueprint $table) {
-    $table->id('notification_id');
+        Schema::create('notifications', function (Blueprint $table) {
+            $table->id('notification_id');
 
-    $table->unsignedBigInteger('user_id');
-    $table->foreign('user_id')->references('user_id')->on('users')->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('user_id')->on('users')->cascadeOnDelete();
 
-    $table->enum('type', ['appointment','payment','system']);
-    $table->text('message');
-    $table->boolean('is_read')->default(false);
+            $table->enum('type', ['appointment', 'payment', 'system']);
+            $table->text('message');
+            $table->boolean('is_read')->default(false);
 
-    $table->softDeletes();
-    $table->timestamps();
-});
+            $table->softDeletes();
+            $table->timestamps();
+        });
     }
 
     /**

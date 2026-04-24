@@ -7,9 +7,17 @@ use Illuminate\Http\Request;
 
 class AppointmentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Appointment::with(['patient', 'doctor'])->paginate();
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1) {
+            $perPage = 15;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        return Appointment::with(['patient', 'doctor'])->paginate($perPage);
     }
 
     public function store(Request $request)
@@ -67,4 +75,3 @@ class AppointmentController extends Controller
         ]);
     }
 }
-

@@ -41,4 +41,3 @@ class Prescription extends Model
         return $this->hasMany(PrescriptionItem::class, 'prescription_id', 'prescription_id');
     }
 }
-

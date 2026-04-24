@@ -27,4 +27,3 @@ class ChatbotOption extends Model
         return $this->belongsTo(ChatbotQuestion::class, 'question_id', 'question_id');
     }
 }
-

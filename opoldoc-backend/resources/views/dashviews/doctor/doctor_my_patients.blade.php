@@ -36,16 +36,22 @@
             <tbody>
                 @forelse ($doctorPatients ?? [] as $patient)
                     @php
-                        $pi = $patient->personalInformation;
-                        $name = $pi ? trim(($pi->first_name ?? '') . ' ' . ($pi->last_name ?? '')) : '';
-                        $contact = $pi && $pi->mobile_number ? $pi->mobile_number : '';
+                        $nameParts = array_filter([
+                            $patient->firstname ?? null,
+                            $patient->middlename ?? null,
+                            $patient->lastname ?? null,
+                        ], function ($v) {
+                            return (string) $v !== '';
+                        });
+                        $name = trim(implode(' ', $nameParts));
+                        $contact = $patient->contact_number ?? '';
                     @endphp
                     <tr class="border-b border-slate-50 last:border-0 doctor-patient-row"
-                        data-patient-id="{{ $patient->patient_id }}"
+                        data-patient-id="{{ $patient->user_id }}"
                         data-name="{{ strtolower($name) }}"
                         data-contact="{{ strtolower($contact) }}"
                         data-created="{{ optional($patient->created_at)->format('Y-m-d') ?? '' }}">
-                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">#{{ $patient->patient_id }}</td>
+                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">#{{ $patient->user_id }}</td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                             @if ($name)
                                 {{ $name }}
@@ -150,4 +156,3 @@
         applyDoctorPatientFilters()
     })
 </script>
-

@@ -41,4 +41,3 @@ class PersonalInformationController extends Controller
         return $personal_information->refresh();
     }
 }
-

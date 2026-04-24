@@ -48,6 +48,15 @@
                 <option value="patient">Patient</option>
             </select>
         </div>
+        <div class="w-full md:w-44">
+            <label for="admin_user_status_filter" class="block text-[0.7rem] text-slate-600 mb-1">Filter by status</label>
+            <select id="admin_user_status_filter" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <option value="">All statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+            </select>
+        </div>
         <div class="w-full md:w-40">
             <label for="admin_user_sort" class="block text-[0.7rem] text-slate-600 mb-1">Sort</label>
             <select id="admin_user_sort" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
@@ -64,6 +73,8 @@
             <thead>
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
                     <th class="py-2 pr-4 font-semibold">ID</th>
+                    <th class="py-2 pr-4 font-semibold">Name</th>
+                    <th class="py-2 pr-4 font-semibold">Contact</th>
                     <th class="py-2 pr-4 font-semibold">Email</th>
                     <th class="py-2 pr-4 font-semibold">Current role</th>
                     <th class="py-2 pr-4 font-semibold">Status</th>
@@ -81,9 +92,34 @@
                             'suspended' => 'bg-amber-50 text-amber-700 border-amber-100',
                         ];
                         $statusClass = $statusColors[$status] ?? 'bg-slate-50 text-slate-600 border-slate-100';
+                        $fullName = trim(($user->firstname ?? '') . ' ' . ($user->lastname ?? ''));
+                        $contact = $user->contact_number ?? '';
+                        $childrenCount = (int) ($user->children_count ?? 0);
                     @endphp
-                    <tr class="border-b border-slate-50 last:border-0 admin-user-row" data-user-id="{{ $user->user_id }}" data-email="{{ strtolower($user->email) }}" data-role="{{ strtolower($user->role ?? '') }}" data-created="{{ optional($user->created_at)->format('Y-m-d') ?? '' }}" data-status="{{ $status }}">
+                    <tr class="border-b border-slate-50 last:border-0 admin-user-row"
+                        data-user-id="{{ $user->user_id }}"
+                        data-email="{{ strtolower($user->email) }}"
+                        data-name="{{ strtolower($fullName) }}"
+                        data-contact="{{ strtolower($contact) }}"
+                        data-role="{{ strtolower($user->role ?? '') }}"
+                        data-created="{{ optional($user->created_at)->format('Y-m-d') ?? '' }}"
+                        data-status="{{ $status }}"
+                        data-children-count="{{ $childrenCount }}">
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">#{{ $user->user_id }}</td>
+                        <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
+                            @if ($fullName)
+                                {{ $fullName }}
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
+                            @if ($contact)
+                                {{ $contact }}
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-700">{{ $user->email }}</td>
                         <td class="py-2 pr-4 text-[0.78rem]">
                             <span class="text-[0.78rem] text-slate-700">
@@ -103,9 +139,11 @@
                                 <button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-user-edit" data-user-id="{{ $user->user_id }}">
                                     Edit
                                 </button>
-                                <button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
-                                    Dependents
-                                </button>
+                                @if ($childrenCount > 0)
+                                    <button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
+                                        View dependents
+                                    </button>
+                                @endif
                                 <button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-user-toggle-status" data-user-id="{{ $user->user_id }}">
                                     @if ($status === 'suspended' || $status === 'inactive')
                                         Activate
@@ -118,7 +156,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="py-4 text-center text-[0.78rem] text-slate-400">
+                        <td colspan="8" class="py-4 text-center text-[0.78rem] text-slate-400">
                             No users found yet.
                         </td>
                     </tr>
@@ -218,6 +256,7 @@
 
         var searchInput = document.getElementById('admin_user_search')
         var roleFilter = document.getElementById('admin_user_role_filter')
+        var statusFilter = document.getElementById('admin_user_status_filter')
         var sortSelect = document.getElementById('admin_user_sort')
         var rows = Array.prototype.slice.call(document.querySelectorAll('.admin-user-row'))
 
@@ -238,7 +277,7 @@
                     return
                 }
 
-                var emailCell = row.children[1]
+                var emailCell = row.children[3]
                 var originalEmail = emailCell.getAttribute('data-original-email') || emailCell.textContent.trim()
                 emailCell.setAttribute('data-original-email', originalEmail)
 
@@ -295,7 +334,7 @@
                         actionsCell.innerHTML =
                             '<div class="flex items-center gap-2">' +
                             '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-user-edit" data-user-id="' + userId + '">Edit</button>' +
-                            '<button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="' + userId + '">Dependents</button>' +
+                            (parseInt(row.getAttribute('data-children-count') || '0', 10) > 0 ? '<button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="' + userId + '">View dependents</button>' : '') +
                             '<button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-user-toggle-status" data-user-id="' + userId + '">Toggle status</button>' +
                             '</div>'
                     })
@@ -357,7 +396,7 @@
 
                     if (!dependentsPanel) {
                         dependentsPanel = document.createElement('div')
-                        dependentsPanel.className = 'mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.75rem] text-slate-700'
+                        dependentsPanel.className = 'mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-[0.78rem] text-slate-700'
                         var container = document.getElementById('adminCreateUserForm')
                         if (container && container.parentNode) {
                             container.parentNode.insertBefore(dependentsPanel, container.nextSibling)
@@ -369,15 +408,99 @@
                         return
                     }
 
-                    var html = 'Dependents for user #' + userId + ': '
-                    html += dependents
-                        .map(function (d) {
-                            var name = (d.firstname || '') + ' ' + (d.lastname || '')
-                            name = name.trim() || d.email
-                            return '#' + d.user_id + ' ' + name
+                    function computeAge(birthdate) {
+                        if (!birthdate) return null
+                        var d = new Date(birthdate)
+                        if (isNaN(d.getTime())) return null
+                        var today = new Date()
+                        var age = today.getFullYear() - d.getFullYear()
+                        var m = today.getMonth() - d.getMonth()
+                        if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+                            age--
+                        }
+                        return age
+                    }
+
+                    var html = ''
+                    html += '<div class="flex items-center justify-between mb-2">' +
+                        '<div class="text-[0.78rem] font-semibold text-slate-900">Dependents</div>' +
+                        '<a class="text-[0.72rem] font-semibold text-slate-600 hover:text-slate-900" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(userId) + '" target="_blank" rel="noopener">Open as patient</a>' +
+                        '</div>'
+
+                    html += '<div class="overflow-x-auto scrollbar-hidden">' +
+                        '<table class="min-w-full text-left text-[0.78rem] text-slate-600">' +
+                        '<thead>' +
+                        '<tr class="border-b border-slate-200 text-[0.68rem] uppercase tracking-widest text-slate-400">' +
+                        '<th class="py-2 pr-4 font-semibold">Name</th>' +
+                        '<th class="py-2 pr-4 font-semibold">Age</th>' +
+                        '<th class="py-2 pr-4 font-semibold">Status</th>' +
+                        '<th class="py-2 pr-4 font-semibold">Actions</th>' +
+                        '</tr>' +
+                        '</thead>' +
+                        '<tbody>'
+
+                    dependents.forEach(function (d) {
+                        var name = ((d.firstname || '') + ' ' + (d.lastname || '')).trim()
+                        if (!name) {
+                            name = d.email ? d.email : ('User #' + d.user_id)
+                        }
+                        var age = computeAge(d.birthdate)
+                        var activated = !!d.account_activated
+                        var statusLabel = activated ? 'Activated' : 'Not activated'
+                        var statusClass = activated ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+
+                        html += '<tr class="border-b border-slate-200/60 last:border-0">' +
+                            '<td class="py-2 pr-4 text-slate-700">' + String(name).replace(/</g, '&lt;') + '</td>' +
+                            '<td class="py-2 pr-4 text-slate-500">' + (age === null ? '—' : age) + '</td>' +
+                            '<td class="py-2 pr-4">' +
+                                '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border ' + statusClass + '">' + statusLabel + '</span>' +
+                            '</td>' +
+                            '<td class="py-2 pr-4">' +
+                                '<div class="flex items-center gap-2">' +
+                                    '<a class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(d.user_id) + '" target="_blank" rel="noopener">View records</a>' +
+                                    (!activated ? '<button type="button" class="text-[0.72rem] font-semibold text-emerald-700 hover:text-emerald-800 admin-dependent-activate" data-dependent-id="' + d.user_id + '">Activate account</button>' : '') +
+                                '</div>' +
+                            '</td>' +
+                            '</tr>'
+                    })
+
+                    html += '</tbody></table></div>'
+
+                    dependentsPanel.innerHTML = html
+
+                    var activateButtons = dependentsPanel.querySelectorAll('.admin-dependent-activate')
+                    activateButtons.forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            var dependentId = this.getAttribute('data-dependent-id')
+                            if (!dependentId) return
+
+                            apiFetch("{{ url('/api/users') }}/" + dependentId, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    account_activated: true,
+                                    status: 'active'
+                                })
+                            })
+                                .then(function (response) {
+                                    return response.json().then(function (data) {
+                                        return { ok: response.ok, data: data }
+                                    })
+                                })
+                                .then(function (r) {
+                                    if (!r.ok) {
+                                        showUserError('Failed to activate dependent account.')
+                                        return
+                                    }
+                                    showDependents(userId)
+                                })
+                                .catch(function () {
+                                    showUserError('Network error while activating dependent account.')
+                                })
                         })
-                        .join(', ')
-                    dependentsPanel.textContent = html
+                    })
                 })
                 .catch(function () {
                 })
@@ -401,15 +524,23 @@
         function applyUserFilters() {
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
             var role = roleFilter ? roleFilter.value : ''
+            var status = statusFilter ? statusFilter.value.toLowerCase() : ''
 
             rows.forEach(function (row) {
                 var email = row.getAttribute('data-email') || ''
+                var name = row.getAttribute('data-name') || ''
+                var contact = row.getAttribute('data-contact') || ''
                 var id = row.getAttribute('data-user-id') || ''
                 var rowRole = row.getAttribute('data-role') || ''
+                var rowStatus = row.getAttribute('data-status') || ''
 
                 var matchesSearch = true
                 if (query) {
-                    matchesSearch = email.indexOf(query) !== -1 || ('#' + id).indexOf(query) !== -1
+                    matchesSearch =
+                        email.indexOf(query) !== -1 ||
+                        name.indexOf(query) !== -1 ||
+                        contact.indexOf(query) !== -1 ||
+                        ('#' + id).indexOf(query) !== -1
                 }
 
                 var matchesRole = true
@@ -417,7 +548,12 @@
                     matchesRole = rowRole === role
                 }
 
-                row.style.display = matchesSearch && matchesRole ? '' : 'none'
+                var matchesStatus = true
+                if (status) {
+                    matchesStatus = rowStatus === status
+                }
+
+                row.style.display = matchesSearch && matchesRole && matchesStatus ? '' : 'none'
             })
 
             applyUserSort()
@@ -463,6 +599,9 @@
         }
         if (roleFilter) {
             roleFilter.addEventListener('change', applyUserFilters)
+        }
+        if (statusFilter) {
+            statusFilter.addEventListener('change', applyUserFilters)
         }
         if (sortSelect) {
             sortSelect.addEventListener('change', applyUserSort)

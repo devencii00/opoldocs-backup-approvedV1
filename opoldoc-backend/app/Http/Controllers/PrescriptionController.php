@@ -52,4 +52,3 @@ class PrescriptionController extends Controller
         ]);
     }
 }
-

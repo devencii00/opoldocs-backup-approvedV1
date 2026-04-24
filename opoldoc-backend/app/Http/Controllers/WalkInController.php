@@ -32,4 +32,3 @@ class WalkInController extends Controller
         return $walk_in->load(['patient', 'doctor', 'queue', 'transaction']);
     }
 }
-

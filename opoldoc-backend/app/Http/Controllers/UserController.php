@@ -64,6 +64,9 @@ class UserController extends Controller
             'sex' => ['sometimes', 'nullable', 'string'],
             'address' => ['sometimes', 'nullable', 'string'],
             'contact_number' => ['sometimes', 'nullable', 'string'],
+            'account_activated' => ['sometimes', 'boolean'],
+            'license_number' => ['sometimes', 'nullable', 'string'],
+            'specialization' => ['sometimes', 'nullable', 'string'],
         ]);
 
         if (array_key_exists('password', $data)) {

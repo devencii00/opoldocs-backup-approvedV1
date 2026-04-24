@@ -37,27 +37,34 @@
             <tbody>
                 @forelse ($doctorRecentVisits ?? [] as $visit)
                     @php
-                        $patientName = optional(optional($visit->patient)->personalInformation)->full_name ?? '';
-                        $dateKey = optional($visit->visit_date)->format('Y-m-d') ?? $visit->visit_date ?? '';
+                        $patientParts = array_filter([
+                            optional(optional($visit->appointment)->patient)->firstname,
+                            optional(optional($visit->appointment)->patient)->middlename,
+                            optional(optional($visit->appointment)->patient)->lastname,
+                        ], function ($v) {
+                            return (string) $v !== '';
+                        });
+                        $patientName = trim(implode(' ', $patientParts));
+                        $dateKey = optional($visit->visit_datetime)->format('Y-m-d') ?? (optional($visit->transaction_datetime)->format('Y-m-d') ?? '');
                     @endphp
                     <tr class="border-b border-slate-50 last:border-0 doctor-visit-row"
-                        data-visit-id="{{ $visit->visit_id }}"
+                        data-visit-id="{{ $visit->transaction_id }}"
                         data-patient="{{ strtolower($patientName) }}"
                         data-date="{{ $dateKey }}"
                         data-diagnosis="{{ strtolower($visit->diagnosis ?? '') }}">
-                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">#{{ $visit->visit_id }}</td>
+                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">#{{ $visit->transaction_id }}</td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                             @if ($patientName)
                                 {{ $patientName }}
                             @else
-                                <span class="text-slate-400">Patient #{{ $visit->patient_id }}</span>
+                                <span class="text-slate-400">Patient #{{ optional($visit->appointment)->patient_id }}</span>
                             @endif
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                             {{ $dateKey }}
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                            {{ \Illuminate\Support\Str::limit($visit->reason_for_visit ?? 'No reason specified', 50) }}
+                            {{ \Illuminate\Support\Str::limit(optional($visit->appointment)->reason_for_visit ?? '—', 50) }}
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                             @if ($visit->diagnosis)

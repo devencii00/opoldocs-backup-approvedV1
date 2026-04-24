@@ -11,22 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-   Schema::create('chatbot_questions', function (Blueprint $table) {
-    $table->id('question_id');
-    $table->text('question_text');
-});
+        Schema::create('chatbot_questions', function (Blueprint $table) {
+            $table->id('question_id');
+            $table->text('question_text');
+        });
 
-Schema::create('chatbot_options', function (Blueprint $table) {
-    $table->id('option_id');
+        Schema::create('chatbot_options', function (Blueprint $table) {
+            $table->id('option_id');
 
-    $table->unsignedBigInteger('question_id');
-    $table->foreign('question_id')->references('question_id')->on('chatbot_questions')->cascadeOnDelete();
+            $table->unsignedBigInteger('question_id');
+            $table->foreign('question_id')->references('question_id')->on('chatbot_questions')->cascadeOnDelete();
 
-    $table->string('option_text');
-    $table->text('response_text')->nullable();
+            $table->string('option_text');
+            $table->text('response_text')->nullable();
 
-    $table->unsignedBigInteger('next_question_id')->nullable();
-});
+            $table->unsignedBigInteger('next_question_id')->nullable();
+        });
     }
 
     /**

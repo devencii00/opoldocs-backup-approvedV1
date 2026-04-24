@@ -10,6 +10,7 @@
             'medicines-management' => 'Medicines',
             'medical-background-viewer' => 'Medical Background',
             'appointments' => 'Appointments',
+            'verification-oversight' => 'Verification Oversight',
             'reports' => 'Reports',
             'chatbot-management' => 'Chatbot Management',
             'logs' => 'Logs',
@@ -18,11 +19,12 @@
 
         $sectionSubtitles = [
             'user-management' => 'Create users, edit accounts, suspend or activate, search, and view dependents.',
-            'doctor-management' => 'Add doctors, edit information, and manage doctor schedules.',
+            'doctor-management' => 'Manage doctor profiles and schedules. Doctor accounts are created in the Users module by assigning the Doctor role.',
             'services-management' => 'Add, edit, delete, and update pricing for clinic services.',
             'medicines-management' => 'Manage medicine reference data and active status.',
             'medical-background-viewer' => 'Admin-only insight tool for reviewing patient medical background entries.',
             'appointments' => 'Global appointment monitoring across doctors and dates.',
+            'verification-oversight' => 'Review and override patient verification requests with document viewing and audit logs.',
             'reports' => 'View transactions, revenue trends, appointments, and no-show analytics.',
             'chatbot-management' => 'Manage chatbot questions, options, and conversation flow.',
             'logs' => 'View system logs and filter by user or action.',
@@ -264,6 +266,8 @@
             @include('dashviews.admin.medical_background_viewer')
         @elseif ($sectionKey === 'appointments')
             @include('dashviews.admin.appointments_view')
+        @elseif ($sectionKey === 'verification-oversight')
+            @include('dashviews.admin.verification_approvals')
         @elseif ($sectionKey === 'reports')
             @include('dashviews.admin.reports_analytics')
         @elseif ($sectionKey === 'chatbot-management')

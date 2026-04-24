@@ -45,6 +45,10 @@
                 <span class="material-symbols-outlined text-[16px] leading-none">play_arrow</span>
                 Call next patient
             </button>
+            <button type="button" id="doctorQueueRefresh" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200">
+                <span class="material-symbols-outlined text-[16px] leading-none">refresh</span>
+                Refresh queue
+            </button>
         </div>
     </div>
 
@@ -63,11 +67,18 @@
             <tbody>
                 @forelse ($doctorRecentQueue ?? [] as $queue)
                     @php
-                        $patientName = optional(optional(optional($queue->source)->appointment)->patient)->personalInformation->full_name ?? '';
-                        $statusName = optional($queue->status)->status_name ?? '';
+                        $patientParts = array_filter([
+                            optional(optional($queue->appointment)->patient)->firstname,
+                            optional(optional($queue->appointment)->patient)->middlename,
+                            optional(optional($queue->appointment)->patient)->lastname,
+                        ], function ($v) {
+                            return (string) $v !== '';
+                        });
+                        $patientName = trim(implode(' ', $patientParts));
+                        $statusName = $queue->status ? ucfirst(str_replace('_', ' ', $queue->status)) : '';
                         $priority = $queue->priority_level ?? '';
-                        $dateKey = $queue->queue_date ?? '';
-                        $statusValue = is_string($queue->status ?? null) ? strtolower($queue->status) : strtolower($statusName);
+                        $dateKey = optional($queue->queue_datetime)->format('Y-m-d') ?? '';
+                        $statusValue = strtolower($queue->status ?? '');
                     @endphp
                     <tr class="border-b border-slate-50 last:border-0 doctor-queue-row"
                         data-queue-id="{{ $queue->queue_id }}"
@@ -84,7 +95,7 @@
                             @endif
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                            {{ $queue->queue_date }}
+                            {{ $dateKey }}
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                             @if ($priority)
@@ -94,13 +105,9 @@
                             @endif
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                            @if ($statusName)
-                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border bg-slate-50 border-slate-100 text-slate-700">
-                                    {{ ucfirst($statusName) }}
-                                </span>
-                            @else
-                                <span class="text-[0.7rem] text-slate-400">—</span>
-                            @endif
+                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border bg-slate-50 border-slate-100 text-slate-700">
+                                {{ $statusName ?: 'Waiting' }}
+                            </span>
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                             <div class="flex gap-1.5">
@@ -135,6 +142,7 @@
         var sortSelect = document.getElementById('doctor_queue_sort')
         var rows = Array.prototype.slice.call(document.querySelectorAll('.doctor-queue-row'))
         var callNextButton = document.getElementById('doctorQueueCallNext')
+        var refreshButton = document.getElementById('doctorQueueRefresh')
         var errorBox = document.getElementById('doctorQueueError')
 
         function showQueueError(message) {
@@ -328,6 +336,11 @@
         }
         if (callNextButton) {
             callNextButton.addEventListener('click', handleCallNext)
+        }
+        if (refreshButton) {
+            refreshButton.addEventListener('click', function () {
+                window.location.reload()
+            })
         }
 
         applyDoctorQueueFilters()

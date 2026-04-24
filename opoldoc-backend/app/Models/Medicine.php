@@ -30,4 +30,3 @@ class Medicine extends Model
         return $this->hasMany(PrescriptionItem::class, 'medicine_id', 'medicine_id');
     }
 }
-

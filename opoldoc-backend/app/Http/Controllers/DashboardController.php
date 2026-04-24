@@ -7,6 +7,7 @@ use App\Models\LogEntry;
 use App\Models\PatientVerification;
 use App\Models\Prescription;
 use App\Models\Queue;
+use App\Models\Notification;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ class DashboardController extends Controller
 
             $patientCount = User::where('role', 'patient')->count();
             $doctorCount = User::where('role', 'doctor')->count();
-            $verificationCount = PatientVerification::count();
+            $pendingVerificationCount = PatientVerification::where('status', 'pending')->count();
             $recentLogsCount = LogEntry::count();
 
             $appointmentsToday = Appointment::whereDate('appointment_datetime', $today)->count();
@@ -98,11 +99,22 @@ class DashboardController extends Controller
             $data['adminMetrics'] = [
                 'patientCount' => $patientCount,
                 'doctorCount' => $doctorCount,
-                'pendingVerificationsCount' => $verificationCount,
+                'pendingVerificationsCount' => $pendingVerificationCount,
                 'recentLogsCount' => $recentLogsCount,
                 'appointmentsToday' => $appointmentsToday,
                 'revenueToday' => $revenueToday,
                 'revenueThisMonth' => $revenueThisMonth,
+            ];
+
+            $verificationStats = PatientVerification::query()
+                ->selectRaw('status, COUNT(*) as total_count')
+                ->groupBy('status')
+                ->pluck('total_count', 'status');
+
+            $data['adminVerificationStats'] = [
+                'pending' => (int) ($verificationStats['pending'] ?? 0),
+                'approved' => (int) ($verificationStats['approved'] ?? 0),
+                'rejected' => (int) ($verificationStats['rejected'] ?? 0),
             ];
 
             $data['adminUserRoleCounts'] = $userRoleCounts;
@@ -196,6 +208,28 @@ class DashboardController extends Controller
                 })
                 ->count();
 
+            $pendingPrescriptionsToday = Transaction::query()
+                ->whereDate('visit_datetime', $today)
+                ->when($doctorId, function ($q) use ($doctorId) {
+                    $q->whereHas('appointment', function ($sub) use ($doctorId) {
+                        $sub->where('doctor_id', $doctorId);
+                    });
+                })
+                ->whereDoesntHave('prescriptions')
+                ->count();
+
+            $unreadNotificationsCount = 0;
+            $recentNotifications = collect();
+            if ($currentUser) {
+                $unreadNotificationsCount = Notification::where('user_id', $currentUser->user_id)
+                    ->where('is_read', false)
+                    ->count();
+                $recentNotifications = Notification::where('user_id', $currentUser->user_id)
+                    ->latest('created_at')
+                    ->limit(10)
+                    ->get();
+            }
+
             $recentAppointments = Appointment::with(['patient', 'doctor'])
                 ->when($doctorId, function ($q) use ($doctorId) {
                     $q->where('doctor_id', $doctorId);
@@ -223,6 +257,29 @@ class DashboardController extends Controller
                 ->latest('queue_datetime')
                 ->limit(50)
                 ->get();
+
+            $todayAppointments = Appointment::with(['patient', 'doctor', 'queue', 'transaction'])
+                ->whereDate('appointment_datetime', $today)
+                ->when($doctorId, function ($q) use ($doctorId) {
+                    $q->where('doctor_id', $doctorId);
+                })
+                ->orderBy('appointment_datetime')
+                ->get();
+
+            $todayQueue = Queue::with(['appointment.patient', 'appointment.doctor'])
+                ->whereDate('queue_datetime', $today)
+                ->when($doctorId, function ($q) use ($doctorId) {
+                    $q->whereHas('appointment', function ($sub) use ($doctorId) {
+                        $sub->where('doctor_id', $doctorId);
+                    });
+                })
+                ->orderBy('queue_number')
+                ->orderBy('queue_datetime')
+                ->get();
+
+            $activeQueueCount = $todayQueue->filter(function ($row) {
+                return in_array($row->status, ['waiting', 'serving'], true);
+            })->count();
 
             $doctorPatients = collect();
 
@@ -271,16 +328,22 @@ class DashboardController extends Controller
 
             $data['doctorMetrics'] = [
                 'appointmentsToday' => $appointmentsToday,
-                'queueToday' => $queueToday,
+                'queueToday' => $activeQueueCount,
                 'completedToday' => $completedToday,
+                'pendingPrescriptionsToday' => $pendingPrescriptionsToday,
+                'unreadNotificationsCount' => $unreadNotificationsCount,
             ];
 
             $data['doctorRecentAppointments'] = $recentAppointments;
             $data['doctorRecentVisits'] = $recentVisits;
             $data['doctorRecentQueue'] = $recentQueue;
+            $data['doctorTodayAppointments'] = $todayAppointments;
+            $data['doctorTodayQueue'] = $todayQueue;
+            $data['doctorRecentNotifications'] = $recentNotifications;
             $data['doctorPatients'] = $doctorPatients;
             $data['doctorRecentPrescriptions'] = $recentPrescriptions;
             $data['doctorActivitySummary'] = $activitySummary;
+            $data['currentUser'] = $currentUser;
         } elseif ($role === 'receptionist') {
             $today = now()->toDateString();
 

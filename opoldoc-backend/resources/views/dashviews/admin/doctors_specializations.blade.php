@@ -4,30 +4,10 @@
         <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Doctors</span>
     </div>
     <p class="text-xs text-slate-500 mb-4">
-        Add doctors, edit their information, and manage schedules (time slots and assigned days).
+        Manage doctor profiles and schedules. Doctor accounts are created in the Users module by assigning the Doctor role.
     </p>
 
     <div id="adminDoctorError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
-
-    <form id="adminAddDoctorForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-4 items-end">
-        <div>
-            <label for="admin_doctor_email" class="block text-[0.7rem] text-slate-600 mb-1">Doctor email</label>
-            <input id="admin_doctor_email" type="email" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
-        </div>
-        <div>
-            <label for="admin_doctor_firstname" class="block text-[0.7rem] text-slate-600 mb-1">First name (optional)</label>
-            <input id="admin_doctor_firstname" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-        </div>
-        <div>
-            <label for="admin_doctor_lastname" class="block text-[0.7rem] text-slate-600 mb-1">Last name (optional)</label>
-            <input id="admin_doctor_lastname" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-        </div>
-        <div class="flex items-center gap-2">
-            <button type="submit" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
-                Add Doctor
-            </button>
-        </div>
-    </form>
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
         <div class="flex-1">
@@ -49,17 +29,15 @@
         <table class="min-w-full text-left text-xs text-slate-600">
             <thead>
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
-                    <th class="py-2 pr-4 font-semibold">ID</th>
-                    <th class="py-2 pr-4 font-semibold">Doctor</th>
-                    <th class="py-2 pr-4 font-semibold">Email</th>
-                    <th class="py-2 pr-4 font-semibold">Status</th>
-                    <th class="py-2 pr-4 font-semibold">Schedules</th>
+                    <th class="py-2 pr-4 font-semibold">Name</th>
+                    <th class="py-2 pr-4 font-semibold">Specialization</th>
+                    <th class="py-2 pr-4 font-semibold">Schedule summary</th>
                     <th class="py-2 pr-4 font-semibold">Actions</th>
                 </tr>
             </thead>
             <tbody id="admin_doctor_table_body">
                 <tr>
-                    <td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">
+                    <td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">
                         Loading doctors…
                     </td>
                 </tr>
@@ -95,31 +73,31 @@
                 <label class="block text-[0.7rem] text-slate-600 mb-1">Days</label>
                 <div class="flex flex-wrap gap-1 text-[0.68rem]">
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="1" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Mon
+                        <input type="checkbox" value="mon" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Mon
                     </label>
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="2" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Tue
+                        <input type="checkbox" value="tue" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Tue
                     </label>
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="3" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Wed
+                        <input type="checkbox" value="wed" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Wed
                     </label>
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="4" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Thu
+                        <input type="checkbox" value="thu" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Thu
                     </label>
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="5" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Fri
+                        <input type="checkbox" value="fri" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Fri
                     </label>
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="6" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Sat
+                        <input type="checkbox" value="sat" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Sat
                     </label>
                     <label class="inline-flex items-center gap-1">
-                        <input type="checkbox" value="0" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Sun
+                        <input type="checkbox" value="sun" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"> Sun
                     </label>
                 </div>
             </div>
             <div class="flex items-center gap-2">
                 <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors w-full">
-                    Add time slot
+                    Add schedule
                 </button>
             </div>
         </form>
@@ -128,6 +106,10 @@
             <h4 class="text-xs font-semibold text-slate-900 mb-2">Existing schedules</h4>
             <div id="adminDoctorScheduleList" class="space-y-2 text-[0.78rem] text-slate-700">
             </div>
+            <div class="mt-4">
+                <h4 class="text-xs font-semibold text-slate-900 mb-2">Weekly grid</h4>
+                <div id="adminDoctorScheduleGrid" class="grid grid-cols-7 gap-2 text-[0.72rem]"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -135,10 +117,6 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var errorBox = document.getElementById('adminDoctorError')
-        var addForm = document.getElementById('adminAddDoctorForm')
-        var emailInput = document.getElementById('admin_doctor_email')
-        var firstnameInput = document.getElementById('admin_doctor_firstname')
-        var lastnameInput = document.getElementById('admin_doctor_lastname')
         var searchInput = document.getElementById('admin_doctor_search')
         var sortSelect = document.getElementById('admin_doctor_sort')
         var tableBody = document.getElementById('admin_doctor_table_body')
@@ -151,8 +129,11 @@
         var scheduleEnd = document.getElementById('admin_schedule_end')
         var scheduleMax = document.getElementById('admin_schedule_max')
         var scheduleList = document.getElementById('adminDoctorScheduleList')
+        var scheduleGrid = document.getElementById('adminDoctorScheduleGrid')
 
         var currentDoctorIdForSchedule = null
+        var currentScheduleId = null
+        var loadedSchedules = []
         var doctors = []
 
         function showDoctorError(message) {
@@ -167,7 +148,7 @@
 
         function loadDoctors() {
             if (!tableBody) return
-            tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">Loading doctors…</td></tr>'
+            tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">Loading doctors…</td></tr>'
 
             apiFetch("{{ url('/api/doctors') }}", {
                 method: 'GET'
@@ -220,7 +201,7 @@
             })
 
             if (!filtered.length) {
-                tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">No doctors found.</td></tr>'
+                tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">No doctors found.</td></tr>'
                 return
             }
 
@@ -234,28 +215,32 @@
                 if (!fullName) {
                     fullName = 'Doctor #' + doctor.user_id
                 }
-                var status = (doctor.status || 'active').toLowerCase()
-
-                var statusClass = 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                if (status === 'inactive') {
-                    statusClass = 'bg-slate-50 text-slate-600 border-slate-100'
-                } else if (status === 'suspended') {
-                    statusClass = 'bg-amber-50 text-amber-700 border-amber-100'
-                }
+                var specialization = (doctor.specialization || '').trim()
+                var schedules = Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
+                var scheduleCount = schedules.length
+                var daySet = {}
+                schedules.forEach(function (s) {
+                    var days = Array.isArray(s.days) ? s.days : []
+                    days.forEach(function (d) {
+                        if (d && d.day_of_week) {
+                            daySet[String(d.day_of_week).toLowerCase()] = true
+                        }
+                    })
+                })
+                var dayKeys = Object.keys(daySet)
+                var dayOrder = ['mon','tue','wed','thu','fri','sat','sun']
+                dayKeys.sort(function (a, b) {
+                    return dayOrder.indexOf(a) - dayOrder.indexOf(b)
+                })
+                var scheduleSummary = scheduleCount ? (scheduleCount + ' slot' + (scheduleCount === 1 ? '' : 's') + (dayKeys.length ? (' · ' + dayKeys.join(', ')) : '')) : 'No schedules'
 
                 tr.innerHTML =
-                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">#' + doctor.user_id + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-700">' + fullName + '</td>' +
-                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-700">' + (doctor.email || '') + '</td>' +
-                    '<td class="py-2 pr-4 text-[0.78rem]">' +
-                        '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border ' + statusClass + '">' +
-                            (status.charAt(0).toUpperCase() + status.slice(1)) +
-                        '</span>' +
-                    '</td>' +
-                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">View schedules</td>' +
+                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + (specialization ? specialization : '<span class="text-slate-400">—</span>') + '</td>' +
+                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + scheduleSummary + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<div class="flex items-center gap-2">' +
-                            '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-doctor-edit" data-doctor-id="' + doctor.user_id + '">Edit info</button>' +
+                            '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-doctor-edit" data-doctor-id="' + doctor.user_id + '">Edit</button>' +
                             '<button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-doctor-schedule" data-doctor-id="' + doctor.user_id + '" data-doctor-name="' + fullName.replace(/"/g, '&quot;') + '">Manage schedule</button>' +
                         '</div>' +
                     '</td>'
@@ -272,6 +257,7 @@
 
                     var newFirstname = window.prompt('First name', doctor.firstname || '') || ''
                     var newLastname = window.prompt('Last name', doctor.lastname || '') || ''
+                    var newSpecialization = window.prompt('Specialization', doctor.specialization || '') || ''
 
                     apiFetch("{{ url('/api/doctors') }}/" + id, {
                         method: 'PUT',
@@ -280,7 +266,8 @@
                         },
                         body: JSON.stringify({
                             firstname: newFirstname,
-                            lastname: newLastname
+                            lastname: newLastname,
+                            specialization: newSpecialization
                         })
                     })
                         .then(function (response) {
@@ -307,6 +294,16 @@
                     var id = this.getAttribute('data-doctor-id')
                     var name = this.getAttribute('data-doctor-name') || ''
                     currentDoctorIdForSchedule = id
+                    currentScheduleId = null
+                    if (scheduleStart) scheduleStart.value = ''
+                    if (scheduleEnd) scheduleEnd.value = ''
+                    if (scheduleMax) scheduleMax.value = ''
+                    if (scheduleForm) {
+                        var inputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
+                        inputs.forEach(function (input) {
+                            input.checked = false
+                        })
+                    }
                     if (scheduleTitle) {
                         scheduleTitle.textContent = 'Manage Schedule — ' + name
                     }
@@ -321,6 +318,10 @@
         function loadSchedulesForDoctor(doctorId) {
             if (!scheduleList || !doctorId) return
             scheduleList.innerHTML = 'Loading schedules…'
+            if (scheduleGrid) {
+                scheduleGrid.innerHTML = ''
+            }
+            currentScheduleId = null
 
             apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId), {
                 method: 'GET'
@@ -336,14 +337,17 @@
                         return
                     }
                     var payload = result.data
-                    var schedules = Array.isArray(payload.data) ? payload.data : payload
-                    if (!schedules.length) {
+                    loadedSchedules = Array.isArray(payload.data) ? payload.data : payload
+                    if (!loadedSchedules.length) {
                         scheduleList.textContent = 'No schedules defined yet for this doctor.'
+                        if (scheduleGrid) {
+                            scheduleGrid.innerHTML = ''
+                        }
                         return
                     }
 
                     var html = ''
-                    schedules.forEach(function (s) {
+                    loadedSchedules.forEach(function (s) {
                         var days = Array.isArray(s.days) ? s.days.map(function (d) { return d.day_of_week }).join(', ') : ''
                         html += '<div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">' +
                             '<div class="text-[0.78rem] text-slate-700">' +
@@ -351,10 +355,38 @@
                             '<div><span class="font-semibold">Days:</span> ' + (days || 'None') + '</div>' +
                             '<div><span class="font-semibold">Max patients:</span> ' + (s.max_patients || '—') + '</div>' +
                             '</div>' +
-                            '<button type="button" class="text-[0.72rem] text-rose-600 hover:text-rose-700 font-semibold admin-schedule-delete" data-schedule-id="' + s.schedule_id + '">Delete</button>' +
+                            '<div class="flex items-center gap-2">' +
+                                '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-schedule-edit" data-schedule-id="' + s.schedule_id + '">Edit</button>' +
+                                '<button type="button" class="text-[0.72rem] text-rose-600 hover:text-rose-700 font-semibold admin-schedule-delete" data-schedule-id="' + s.schedule_id + '">Delete</button>' +
+                            '</div>' +
                             '</div>'
                     })
                     scheduleList.innerHTML = html
+
+                    renderScheduleGrid(loadedSchedules)
+
+                    var editButtons = scheduleList.querySelectorAll('.admin-schedule-edit')
+                    editButtons.forEach(function (button) {
+                        button.addEventListener('click', function () {
+                            var scheduleId = this.getAttribute('data-schedule-id')
+                            var schedule = loadedSchedules.find(function (s) { return String(s.schedule_id) === String(scheduleId) })
+                            if (!schedule) return
+                            currentScheduleId = schedule.schedule_id
+                            if (scheduleStart) scheduleStart.value = (schedule.start_time || '').slice(0, 5)
+                            if (scheduleEnd) scheduleEnd.value = (schedule.end_time || '').slice(0, 5)
+                            if (scheduleMax) scheduleMax.value = schedule.max_patients || ''
+                            var inputs = scheduleForm ? scheduleForm.querySelectorAll('input[type="checkbox"][value]') : []
+                            inputs.forEach(function (input) {
+                                input.checked = false
+                            })
+                            var days = Array.isArray(schedule.days) ? schedule.days : []
+                            days.forEach(function (d) {
+                                var val = d.day_of_week
+                                var input = scheduleForm ? scheduleForm.querySelector('input[type="checkbox"][value="' + val + '"]') : null
+                                if (input) input.checked = true
+                            })
+                        })
+                    })
 
                     var deleteButtons = scheduleList.querySelectorAll('.admin-schedule-delete')
                     deleteButtons.forEach(function (button) {
@@ -389,56 +421,6 @@
                 })
         }
 
-        if (addForm) {
-            addForm.addEventListener('submit', function (e) {
-                e.preventDefault()
-                showDoctorError('')
-
-                var email = emailInput ? emailInput.value.trim() : ''
-                var firstname = firstnameInput ? firstnameInput.value.trim() : ''
-                var lastname = lastnameInput ? lastnameInput.value.trim() : ''
-
-                if (!email) {
-                    showDoctorError('Doctor email is required.')
-                    return
-                }
-
-                var body = {
-                    email: email,
-                    role: 'doctor'
-                }
-                if (firstname) body.firstname = firstname
-                if (lastname) body.lastname = lastname
-
-                apiFetch("{{ url('/api/users/invite') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
-                })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, status: response.status, data: data }
-                        })
-                    })
-                    .then(function (result) {
-                        if (!result.ok) {
-                            var message = result.data && result.data.message ? result.data.message : 'Failed to add doctor.'
-                            showDoctorError(message)
-                            return
-                        }
-                        if (emailInput) emailInput.value = ''
-                        if (firstnameInput) firstnameInput.value = ''
-                        if (lastnameInput) lastnameInput.value = ''
-                        loadDoctors()
-                    })
-                    .catch(function () {
-                        showDoctorError('Network error while adding doctor.')
-                    })
-            })
-        }
-
         if (searchInput) {
             searchInput.addEventListener('input', function () {
                 renderDoctors()
@@ -454,6 +436,16 @@
             scheduleClose.addEventListener('click', function () {
                 schedulePanel.classList.add('hidden')
                 currentDoctorIdForSchedule = null
+                currentScheduleId = null
+                if (scheduleStart) scheduleStart.value = ''
+                if (scheduleEnd) scheduleEnd.value = ''
+                if (scheduleMax) scheduleMax.value = ''
+                if (scheduleForm) {
+                    var inputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
+                    inputs.forEach(function (input) {
+                        input.checked = false
+                    })
+                }
             })
         }
 
@@ -472,7 +464,7 @@
                 var days = []
                 dayInputs.forEach(function (input) {
                     if (input.checked) {
-                        days.push(parseInt(input.value, 10))
+                        days.push(String(input.value))
                     }
                 })
 
@@ -482,7 +474,6 @@
                 }
 
                 var body = {
-                    doctor_id: currentDoctorIdForSchedule,
                     start_time: start,
                     end_time: end,
                     days: days
@@ -491,8 +482,17 @@
                     body.max_patients = parseInt(maxPatients, 10)
                 }
 
-                apiFetch("{{ url('/api/doctor-schedules') }}", {
-                    method: 'POST',
+                var url = "{{ url('/api/doctor-schedules') }}"
+                var method = 'POST'
+                if (currentScheduleId) {
+                    url = url + '/' + currentScheduleId
+                    method = 'PUT'
+                } else {
+                    body.doctor_id = currentDoctorIdForSchedule
+                }
+
+                apiFetch(url, {
+                    method: method,
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -505,12 +505,13 @@
                     })
                     .then(function (result) {
                         if (!result.ok) {
-                            showDoctorError('Failed to add schedule.')
+                            showDoctorError('Failed to save schedule.')
                             return
                         }
                         if (scheduleStart) scheduleStart.value = ''
                         if (scheduleEnd) scheduleEnd.value = ''
                         if (scheduleMax) scheduleMax.value = ''
+                        currentScheduleId = null
                         var inputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
                         inputs.forEach(function (input) {
                             input.checked = false
@@ -518,8 +519,63 @@
                         loadSchedulesForDoctor(currentDoctorIdForSchedule)
                     })
                     .catch(function () {
-                        showDoctorError('Network error while adding schedule.')
+                        showDoctorError('Network error while saving schedule.')
                     })
+            })
+        }
+
+        function renderScheduleGrid(schedules) {
+            if (!scheduleGrid) return
+            var dayOrder = [
+                { key: 'mon', label: 'Mon' },
+                { key: 'tue', label: 'Tue' },
+                { key: 'wed', label: 'Wed' },
+                { key: 'thu', label: 'Thu' },
+                { key: 'fri', label: 'Fri' },
+                { key: 'sat', label: 'Sat' },
+                { key: 'sun', label: 'Sun' }
+            ]
+
+            var slotsByDay = {}
+            dayOrder.forEach(function (d) { slotsByDay[d.key] = [] })
+
+            (schedules || []).forEach(function (s) {
+                var days = Array.isArray(s.days) ? s.days : []
+                days.forEach(function (d) {
+                    var key = d && d.day_of_week ? String(d.day_of_week).toLowerCase() : null
+                    if (!key || !slotsByDay[key]) return
+                    slotsByDay[key].push({
+                        start: (s.start_time || '').slice(0, 5),
+                        end: (s.end_time || '').slice(0, 5),
+                        max: s.max_patients || null
+                    })
+                })
+            })
+
+            dayOrder.forEach(function (d) {
+                slotsByDay[d.key].sort(function (a, b) {
+                    if (a.start < b.start) return -1
+                    if (a.start > b.start) return 1
+                    return 0
+                })
+            })
+
+            scheduleGrid.innerHTML = ''
+            dayOrder.forEach(function (d) {
+                var col = document.createElement('div')
+                col.className = 'rounded-xl border border-slate-200 bg-white p-2'
+                var header = '<div class="text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 mb-2">' + d.label + '</div>'
+                var items = slotsByDay[d.key].map(function (s) {
+                    return '<div class="rounded-lg bg-slate-50 px-2 py-1 border border-slate-200/70 mb-1">' +
+                        '<div class="text-[0.74rem] font-semibold text-slate-700">' + s.start + '–' + s.end + '</div>' +
+                        '<div class="text-[0.68rem] text-slate-500">Max: ' + (s.max ? s.max : '—') + '</div>' +
+                        '</div>'
+                }).join('')
+                if (!items) {
+                    items = '<div class="text-[0.72rem] text-slate-400">—</div>'
+                }
+                col.innerHTML = header + items
+                scheduleGrid.appendChild(col)
             })
         }
 

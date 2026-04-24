@@ -20,11 +20,6 @@ class DoctorSchedule extends Model
         'max_patients',
     ];
 
-    protected $casts = [
-        'start_time' => 'datetime:H:i:s',
-        'end_time' => 'datetime:H:i:s',
-    ];
-
     public function doctor()
     {
         return $this->belongsTo(User::class, 'doctor_id', 'user_id');
@@ -35,4 +30,3 @@ class DoctorSchedule extends Model
         return $this->hasMany(DoctorScheduleDay::class, 'schedule_id');
     }
 }
-

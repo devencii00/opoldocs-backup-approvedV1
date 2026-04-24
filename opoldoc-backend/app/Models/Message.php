@@ -24,4 +24,3 @@ class Message extends Model
         return $this->belongsTo(Conversation::class, 'conversation_id', 'conversation_id');
     }
 }
-

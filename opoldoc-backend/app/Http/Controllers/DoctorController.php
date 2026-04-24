@@ -7,11 +7,20 @@ use Illuminate\Http\Request;
 
 class DoctorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1) {
+            $perPage = 15;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
         return User::query()
             ->where('role', 'doctor')
-            ->paginate();
+            ->with(['doctorSchedules.days'])
+            ->paginate($perPage);
     }
 
     public function store(Request $request)
@@ -27,7 +36,7 @@ class DoctorController extends Controller
             abort(404);
         }
 
-        return $doctor;
+        return $doctor->load(['doctorSchedules.days']);
     }
 
     public function update(Request $request, User $doctor)
@@ -48,4 +57,3 @@ class DoctorController extends Controller
         return app(UserController::class)->destroy($doctor);
     }
 }
-

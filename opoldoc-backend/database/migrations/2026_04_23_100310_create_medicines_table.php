@@ -11,22 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('medicines', function (Blueprint $table) {
-    $table->id('medicine_id');
+        Schema::create('medicines', function (Blueprint $table) {
+            $table->id('medicine_id');
 
-    $table->string('generic_name'); // e.g. Amoxicillin
-    $table->string('brand_name')->nullable(); // e.g. Amoxil
+            $table->string('generic_name'); // e.g. Amoxicillin
+            $table->string('brand_name')->nullable(); // e.g. Amoxil
 
-    $table->text('indications')->nullable(); // what it treats
-    $table->text('contraindications')->nullable(); // who should NOT take it
+            $table->text('indications')->nullable(); // what it treats
+            $table->text('contraindications')->nullable(); // who should NOT take it
 
-    $table->boolean('is_active')->default(true);
+            $table->boolean('is_active')->default(true);
 
-    $table->timestamps();
+            $table->timestamps();
 
-    $table->index('generic_name');
-    $table->index('is_active');
-});
+            $table->index('generic_name');
+            $table->index('is_active');
+        });
     }
 
     /**

@@ -50,18 +50,33 @@
                     @if (count($doctorRecentAppointments ?? []))
                         <ul class="space-y-2 text-xs text-slate-600">
                             @foreach (($doctorRecentAppointments ?? []) as $appointment)
+                                @php
+                                    $patientParts = array_filter([
+                                        optional($appointment->patient)->firstname,
+                                        optional($appointment->patient)->middlename,
+                                        optional($appointment->patient)->lastname,
+                                    ], function ($v) {
+                                        return (string) $v !== '';
+                                    });
+                                    $patientName = trim(implode(' ', $patientParts));
+                                    if ($patientName === '') {
+                                        $patientName = 'Patient #' . ($appointment->patient_id ?? '');
+                                    }
+                                    $dateKey = optional($appointment->appointment_datetime)->format('Y-m-d') ?? '—';
+                                    $timeKey = optional($appointment->appointment_datetime)->format('H:i') ?? '—';
+                                @endphp
                                 <li class="flex items-start justify-between gap-2">
                                     <div>
                                         <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                            {{ optional(optional($appointment->patient)->personalInformation)->full_name ?? 'Patient #' . $appointment->patient_id }}
+                                            {{ $patientName }}
                                         </div>
                                         <div class="text-[0.7rem] text-slate-500">
                                             {{ \Illuminate\Support\Str::limit($appointment->reason_for_visit ?? 'No reason specified', 60) }}
                                         </div>
                                     </div>
                                     <div class="text-[0.7rem] text-slate-400 text-right whitespace-nowrap">
-                                        <div>{{ $appointment->appointment_date }}</div>
-                                        <div>{{ $appointment->appointment_time }}</div>
+                                        <div>{{ $dateKey }}</div>
+                                        <div>{{ $timeKey }}</div>
                                     </div>
                                 </li>
                             @endforeach
@@ -78,17 +93,31 @@
                     @if (count($doctorRecentVisits ?? []))
                         <ul class="space-y-2 text-xs text-slate-600">
                             @foreach (($doctorRecentVisits ?? []) as $visit)
+                                @php
+                                    $patientParts = array_filter([
+                                        optional(optional($visit->appointment)->patient)->firstname,
+                                        optional(optional($visit->appointment)->patient)->middlename,
+                                        optional(optional($visit->appointment)->patient)->lastname,
+                                    ], function ($v) {
+                                        return (string) $v !== '';
+                                    });
+                                    $patientName = trim(implode(' ', $patientParts));
+                                    if ($patientName === '') {
+                                        $patientName = 'Patient #' . (optional($visit->appointment)->patient_id ?? '');
+                                    }
+                                    $dateKey = optional($visit->visit_datetime)->format('Y-m-d') ?? (optional($visit->transaction_datetime)->format('Y-m-d') ?? '—');
+                                @endphp
                                 <li class="flex items-start justify-between gap-2">
                                     <div>
                                         <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                            {{ optional(optional($visit->patient)->personalInformation)->full_name ?? 'Patient #' . $visit->patient_id }}
+                                            {{ $patientName }}
                                         </div>
                                         <div class="text-[0.7rem] text-slate-500">
-                                            {{ \Illuminate\Support\Str::limit($visit->diagnosis ?? $visit->reason_for_visit ?? 'No details yet', 60) }}
+                                            {{ \Illuminate\Support\Str::limit($visit->diagnosis ?? 'No diagnosis yet', 60) }}
                                         </div>
                                     </div>
                                     <div class="text-[0.7rem] text-slate-400 whitespace-nowrap">
-                                        {{ optional($visit->visit_date)->format('Y-m-d') ?? $visit->visit_date }}
+                                        {{ $dateKey }}
                                     </div>
                                 </li>
                             @endforeach
@@ -106,8 +135,15 @@
                         <ul class="space-y-2 text-xs text-slate-600">
                             @foreach (($doctorRecentPrescriptions ?? []) as $prescription)
                                 @php
-                                    $patientName = optional(optional(optional($prescription->visit)->patient)->personalInformation)->full_name ?? '';
-                                    $dateKey = optional($prescription->prescribed_date)->format('Y-m-d') ?? $prescription->prescribed_date ?? '';
+                                    $patientParts = array_filter([
+                                        optional(optional(optional($prescription->transaction)->appointment)->patient)->firstname,
+                                        optional(optional(optional($prescription->transaction)->appointment)->patient)->middlename,
+                                        optional(optional(optional($prescription->transaction)->appointment)->patient)->lastname,
+                                    ], function ($v) {
+                                        return (string) $v !== '';
+                                    });
+                                    $patientName = trim(implode(' ', $patientParts));
+                                    $dateKey = optional($prescription->prescribed_datetime)->format('Y-m-d') ?? '';
                                 @endphp
                                 <li class="flex items-start justify-between gap-2">
                                     <div>
@@ -132,4 +168,3 @@
         </div>
     </div>
 </div>
-

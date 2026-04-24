@@ -11,21 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-   Schema::create('prescriptions', function (Blueprint $table) {
-    $table->id('prescription_id');
+        Schema::create('prescriptions', function (Blueprint $table) {
+            $table->id('prescription_id');
 
-    $table->unsignedBigInteger('transaction_id');
-    $table->unsignedBigInteger('doctor_id');
+            $table->unsignedBigInteger('transaction_id');
+            $table->unsignedBigInteger('doctor_id');
 
-    $table->foreign('transaction_id')->references('transaction_id')->on('transactions')->cascadeOnDelete();
-    $table->foreign('doctor_id')->references('user_id')->on('users')->cascadeOnDelete();
+            $table->foreign('transaction_id')->references('transaction_id')->on('transactions')->cascadeOnDelete();
+            $table->foreign('doctor_id')->references('user_id')->on('users')->cascadeOnDelete();
 
-    $table->text('notes')->nullable();
-    $table->dateTime('prescribed_datetime')->nullable();
+            $table->text('notes')->nullable();
+            $table->dateTime('prescribed_datetime')->nullable();
 
-    $table->softDeletes();
-    $table->timestamps();
-});
+            $table->softDeletes();
+            $table->timestamps();
+        });
     }
 
     /**

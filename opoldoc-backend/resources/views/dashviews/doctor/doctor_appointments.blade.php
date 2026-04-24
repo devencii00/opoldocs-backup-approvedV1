@@ -38,9 +38,17 @@
             <tbody>
                 @forelse ($doctorRecentAppointments ?? [] as $appointment)
                     @php
-                        $patientName = optional(optional($appointment->patient)->personalInformation)->full_name ?? '';
-                        $statusName = optional($appointment->status)->status_name ?? '';
-                        $dateKey = $appointment->appointment_date ?? '';
+                        $patientParts = array_filter([
+                            optional($appointment->patient)->firstname,
+                            optional($appointment->patient)->middlename,
+                            optional($appointment->patient)->lastname,
+                        ], function ($v) {
+                            return (string) $v !== '';
+                        });
+                        $patientName = trim(implode(' ', $patientParts));
+                        $statusName = $appointment->status ? ucfirst(str_replace('_', ' ', $appointment->status)) : '';
+                        $dateKey = optional($appointment->appointment_datetime)->format('Y-m-d') ?? '';
+                        $timeKey = optional($appointment->appointment_datetime)->format('H:i') ?? '';
                     @endphp
                     <tr class="border-b border-slate-50 last:border-0 doctor-appointment-row"
                         data-appointment-id="{{ $appointment->appointment_id }}"
@@ -56,10 +64,10 @@
                             @endif
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                            {{ $appointment->appointment_date }}
+                            {{ $dateKey }}
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                            {{ $appointment->appointment_time }}
+                            {{ $timeKey }}
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                             {{ \Illuminate\Support\Str::limit($appointment->reason_for_visit ?? 'No reason specified', 60) }}

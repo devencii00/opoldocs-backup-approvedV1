@@ -23,4 +23,3 @@ class DoctorScheduleDay extends Model
         return $this->belongsTo(DoctorSchedule::class, 'schedule_id');
     }
 }
-

@@ -22,4 +22,3 @@ class ChatbotController extends Controller
         return $chatbotOption;
     }
 }
-

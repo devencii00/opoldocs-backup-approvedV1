@@ -9,7 +9,12 @@ class VisitController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Transaction::with('appointment');
+        $query = Transaction::with([
+            'appointment.patient',
+            'appointment.doctor',
+            'prescriptions.doctor',
+            'prescriptions.items.medicine',
+        ]);
 
         if ($request->filled('patient_id')) {
             $patientId = $request->input('patient_id');
@@ -18,12 +23,16 @@ class VisitController extends Controller
             });
         }
 
-        return $query->paginate();
+        return $query->orderByDesc('visit_datetime')->orderByDesc('transaction_id')->paginate();
     }
 
     public function show(Transaction $visit)
     {
-        return $visit->load(['appointment', 'prescriptions']);
+        return $visit->load([
+            'appointment.patient',
+            'appointment.doctor',
+            'prescriptions.doctor',
+            'prescriptions.items.medicine',
+        ]);
     }
 }
-

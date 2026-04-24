@@ -11,33 +11,33 @@ return new class extends Migration
      */
     public function up(): void
     {
-  Schema::create('prescription_items', function (Blueprint $table) {
-    $table->id('item_id');
+        Schema::create('prescription_items', function (Blueprint $table) {
+            $table->id('item_id');
 
-    $table->unsignedBigInteger('prescription_id');
-    $table->foreign('prescription_id')
-        ->references('prescription_id')
-        ->on('prescriptions')
-        ->cascadeOnDelete();
+            $table->unsignedBigInteger('prescription_id');
+            $table->foreign('prescription_id')
+                ->references('prescription_id')
+                ->on('prescriptions')
+                ->cascadeOnDelete();
 
-    $table->unsignedBigInteger('medicine_id')->nullable();
-    $table->foreign('medicine_id')
-        ->references('medicine_id')
-        ->on('medicines')
-        ->nullOnDelete();
+            $table->unsignedBigInteger('medicine_id')->nullable();
+            $table->foreign('medicine_id')
+                ->references('medicine_id')
+                ->on('medicines')
+                ->nullOnDelete();
 
-    $table->string('medicine_name')->nullable();
+            $table->string('medicine_name')->nullable();
 
-    $table->string('dosage')->nullable();
-    $table->string('frequency')->nullable();
-    $table->string('duration')->nullable();
-    $table->text('instructions')->nullable();
+            $table->string('dosage')->nullable();
+            $table->string('frequency')->nullable();
+            $table->string('duration')->nullable();
+            $table->text('instructions')->nullable();
 
-    $table->timestamps();
+            $table->timestamps();
 
-    $table->index('prescription_id');
-    $table->index('medicine_id');
-});
+            $table->index('prescription_id');
+            $table->index('medicine_id');
+        });
     }
 
     /**

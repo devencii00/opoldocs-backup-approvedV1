@@ -3,9 +3,29 @@
     $appointmentsToday = (int) ($metrics['appointmentsToday'] ?? 0);
     $queueToday = (int) ($metrics['queueToday'] ?? 0);
     $completedToday = (int) ($metrics['completedToday'] ?? 0);
+    $pendingPrescriptionsToday = (int) ($metrics['pendingPrescriptionsToday'] ?? 0);
+    $unreadNotificationsCount = (int) ($metrics['unreadNotificationsCount'] ?? 0);
     $recentAppointments = $doctorRecentAppointments ?? [];
     $recentVisits = $doctorRecentVisits ?? [];
     $recentQueue = $doctorRecentQueue ?? [];
+    $todayAppointments = $doctorTodayAppointments ?? [];
+    $todayQueue = $doctorTodayQueue ?? [];
+    $recentNotifications = $doctorRecentNotifications ?? collect();
+
+    $formatUserName = function ($user) {
+        if (! $user) {
+            return '';
+        }
+        $parts = array_filter([
+            $user->firstname ?? null,
+            $user->middlename ?? null,
+            $user->lastname ?? null,
+        ], function ($v) {
+            return (string) $v !== '';
+        });
+        $name = trim(implode(' ', $parts));
+        return $name !== '' ? $name : ('User #' . ($user->user_id ?? ''));
+    };
 
     $sectionKey = $section ?? 'overview';
 
@@ -55,7 +75,7 @@
                     <h2 class="text-sm font-semibold text-slate-900">Today&apos;s schedule</h2>
                     <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Consultations</span>
                 </div>
-                <div class="grid gap-3 grid-cols-1 sm:grid-cols-3 text-sm text-slate-600">
+                <div class="grid gap-3 grid-cols-1 sm:grid-cols-4 text-sm text-slate-600">
                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">Today’s appointments</div>
                         <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($appointmentsToday) }}</div>
@@ -68,6 +88,58 @@
                         <div class="text-xs text-slate-500 mb-1">Completed today</div>
                         <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($completedToday) }}</div>
                     </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <div class="text-xs text-slate-500 mb-1">Pending prescriptions</div>
+                        <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($pendingPrescriptionsToday) }}</div>
+                    </div>
+                </div>
+
+                <div class="mt-5 overflow-x-auto scrollbar-hidden border border-slate-100 rounded-xl bg-slate-50">
+                    <table class="min-w-full text-left text-xs text-slate-600">
+                        <thead>
+                            <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
+                                <th class="py-2 px-3 font-semibold">Time</th>
+                                <th class="py-2 px-3 font-semibold">Patient</th>
+                                <th class="py-2 px-3 font-semibold">Type</th>
+                                <th class="py-2 px-3 font-semibold">Status</th>
+                                <th class="py-2 px-3 font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($todayAppointments as $appointment)
+                                @php
+                                    $patientName = $formatUserName($appointment->patient);
+                                    $time = optional($appointment->appointment_datetime)->format('H:i') ?? '—';
+                                    $typeLabel = $appointment->appointment_type ? ucfirst(str_replace('_', '-', $appointment->appointment_type)) : '—';
+                                    $statusLabel = $appointment->status ? ucfirst(str_replace('_', ' ', $appointment->status)) : '—';
+                                @endphp
+                                <tr class="border-b border-slate-100 last:border-0">
+                                    <td class="py-2 px-3 text-[0.78rem] text-slate-500">{{ $time }}</td>
+                                    <td class="py-2 px-3 text-[0.78rem] text-slate-700">{{ $patientName }}</td>
+                                    <td class="py-2 px-3 text-[0.78rem] text-slate-500">{{ $typeLabel }}</td>
+                                    <td class="py-2 px-3 text-[0.78rem] text-slate-500">{{ $statusLabel }}</td>
+                                    <td class="py-2 px-3">
+                                        <div class="flex flex-wrap gap-1.5">
+                                            <a href="{{ route('dashboard', ['role' => 'doctor', 'section' => 'consultation', 'appointment_id' => $appointment->appointment_id]) }}"
+                                                class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2 py-1 text-[0.7rem] font-medium text-slate-700 hover:bg-slate-50">
+                                                👁 Open
+                                            </a>
+                                            <a href="{{ route('dashboard', ['role' => 'doctor', 'section' => 'consultation', 'appointment_id' => $appointment->appointment_id]) }}"
+                                                class="inline-flex items-center justify-center rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-1 text-[0.7rem] font-semibold text-cyan-700 hover:bg-cyan-100">
+                                                ▶ Start
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="py-4 text-center text-[0.78rem] text-slate-400">
+                                        No appointments scheduled for today.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="mt-5 grid gap-3 grid-cols-1 md:grid-cols-2">
@@ -77,17 +149,21 @@
                             @if (count($recentVisits))
                                 <ul class="space-y-2 text-xs text-slate-600">
                                     @foreach ($recentVisits as $visit)
+                                        @php
+                                            $patientName = $formatUserName(optional($visit->appointment)->patient);
+                                            $visitDate = optional($visit->visit_datetime)->format('Y-m-d') ?? (optional($visit->transaction_datetime)->format('Y-m-d') ?? '—');
+                                        @endphp
                                         <li class="flex items-start justify-between gap-2">
                                             <div>
                                                 <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                                    {{ optional(optional($visit->patient)->personalInformation)->full_name ?? 'Patient #' . $visit->patient_id }}
+                                                    {{ $patientName }}
                                                 </div>
                                                 <div class="text-[0.7rem] text-slate-500">
-                                                    {{ \Illuminate\Support\Str::limit($visit->reason_for_visit ?? 'No reason specified', 60) }}
+                                                    {{ \Illuminate\Support\Str::limit($visit->diagnosis ?? 'No diagnosis recorded', 60) }}
                                                 </div>
                                             </div>
                                             <div class="text-[0.7rem] text-slate-400 whitespace-nowrap">
-                                                {{ optional($visit->visit_date)->format('Y-m-d') ?? $visit->visit_date }}
+                                                {{ $visitDate }}
                                             </div>
                                         </li>
                                     @endforeach
@@ -103,18 +179,23 @@
                             @if (count($recentAppointments))
                                 <ul class="space-y-2 text-xs text-slate-600">
                                     @foreach ($recentAppointments as $appointment)
+                                        @php
+                                            $patientName = $formatUserName($appointment->patient);
+                                            $dateKey = optional($appointment->appointment_datetime)->format('Y-m-d') ?? '—';
+                                            $timeKey = optional($appointment->appointment_datetime)->format('H:i') ?? '—';
+                                        @endphp
                                         <li class="flex items-start justify-between gap-2">
                                             <div>
                                                 <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                                    {{ optional(optional($appointment->patient)->personalInformation)->full_name ?? 'Patient #' . $appointment->patient_id }}
+                                                    {{ $patientName }}
                                                 </div>
                                                 <div class="text-[0.7rem] text-slate-500">
                                                     {{ \Illuminate\Support\Str::limit($appointment->reason_for_visit ?? 'No reason specified', 60) }}
                                                 </div>
                                             </div>
                                             <div class="text-[0.7rem] text-slate-400 text-right">
-                                                <div>{{ $appointment->appointment_date }}</div>
-                                                <div>{{ $appointment->appointment_time }}</div>
+                                                <div>{{ $dateKey }}</div>
+                                                <div>{{ $timeKey }}</div>
                                             </div>
                                         </li>
                                     @endforeach
@@ -130,21 +211,27 @@
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <h2 class="text-sm font-semibold text-slate-900 mb-3">Queue list</h2>
                 <div class="max-h-80 overflow-y-auto scrollbar-hidden">
-                    @if (count($recentQueue))
+                    @if (count($todayQueue))
                         <ul class="space-y-2 text-xs text-slate-600">
-                            @foreach ($recentQueue as $queue)
+                            @foreach ($todayQueue as $queue)
+                                @php
+                                    $patientName = $formatUserName(optional(optional($queue->appointment)->patient));
+                                    $dateKey = optional($queue->queue_datetime)->format('Y-m-d') ?? '—';
+                                    $timeKey = optional($queue->queue_datetime)->format('H:i') ?? '—';
+                                    $statusLabel = $queue->status ? ucfirst(str_replace('_', ' ', $queue->status)) : '—';
+                                @endphp
                                 <li class="flex items-start justify-between gap-2 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
                                     <div>
                                         <div class="font-semibold text-slate-900 text-[0.8rem]">
                                             Queue #{{ $queue->queue_number }}
                                         </div>
                                         <div class="text-[0.7rem] text-slate-500">
-                                            {{ optional(optional(optional($queue->source)->appointment)->patient)->personalInformation->full_name ?? 'Patient' }}
+                                            {{ $patientName }}
                                         </div>
                                     </div>
                                     <div class="text-right text-[0.7rem] text-slate-400 whitespace-nowrap">
-                                        <div>{{ $queue->queue_date }}</div>
-                                        <div>{{ optional($queue->status)->status_name ?? '' }}</div>
+                                        <div>{{ $dateKey }} {{ $timeKey }}</div>
+                                        <div>{{ $statusLabel }}</div>
                                     </div>
                                 </li>
                             @endforeach
@@ -156,48 +243,42 @@
             </div>
         </div>
 
-        @php
-            $todayDate = now()->toDateString();
-            $notifications = collect($recentAppointments)->filter(function ($appointment) use ($todayDate) {
-                $dt = $appointment->appointment_datetime ?? null;
-                if ($dt instanceof \Carbon\Carbon) {
-                    return $dt->toDateString() === $todayDate;
-                }
-
-                return (string) ($appointment->appointment_date ?? '') === $todayDate;
-            })->take(5);
-        @endphp
-
         <div class="grid gap-4 grid-cols-1 lg:grid-cols-3">
             <div class="lg:col-span-2"></div>
             <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-sm font-semibold text-slate-900">Notifications</h2>
-                    <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Today</span>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-sm font-semibold text-slate-900">Notifications</h2>
+                        @if ($unreadNotificationsCount > 0)
+                            <span class="inline-flex items-center rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[0.68rem] font-semibold text-red-700">
+                                {{ $unreadNotificationsCount }}
+                            </span>
+                        @endif
+                    </div>
+                    <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Updates</span>
                 </div>
                 <p class="text-xs text-slate-500 mb-3">
-                    Quick view of today’s upcoming appointments for your patients.
+                    Appointment updates, queue alerts, and system messages.
                 </p>
                 <div class="max-h-64 overflow-y-auto scrollbar-hidden">
-                    @if ($notifications->count())
+                    @if (count($recentNotifications))
                         <ul class="space-y-2 text-xs text-slate-600">
-                            @foreach ($notifications as $appointment)
+                            @foreach ($recentNotifications as $notif)
                                 @php
-                                    $patientName = optional(optional($appointment->patient)->personalInformation)->full_name ?? 'Patient #' . $appointment->patient_id;
-                                    $time = $appointment->appointment_time ?? optional($appointment->appointment_datetime)->format('H:i');
+                                    $typeLabel = $notif->type ? ucfirst($notif->type) : 'System';
                                 @endphp
-                                <li class="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                                <li class="flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 {{ $notif->is_read ? '' : 'ring-1 ring-cyan-200/60' }}">
                                     <div>
                                         <div class="font-semibold text-slate-900 text-[0.8rem]">
-                                            {{ $patientName }}
+                                            {{ $typeLabel }}
                                         </div>
                                         <div class="text-[0.7rem] text-slate-500">
-                                            {{ \Illuminate\Support\Str::limit($appointment->reason_for_visit ?? 'No reason specified', 60) }}
+                                            {{ \Illuminate\Support\Str::limit($notif->message ?? '', 120) }}
                                         </div>
                                     </div>
                                     <div class="text-[0.7rem] text-slate-400 text-right whitespace-nowrap">
-                                        <div>Today</div>
-                                        <div>{{ $time }}</div>
+                                        <div>{{ optional($notif->created_at)->format('Y-m-d') }}</div>
+                                        <div>{{ optional($notif->created_at)->format('H:i') }}</div>
                                     </div>
                                 </li>
                             @endforeach

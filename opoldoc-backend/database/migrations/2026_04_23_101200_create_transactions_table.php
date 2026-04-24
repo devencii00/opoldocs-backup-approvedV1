@@ -11,32 +11,32 @@ return new class extends Migration
      */
     public function up(): void
     {
-    Schema::create('transactions', function (Blueprint $table) {
-    $table->id('transaction_id');
+        Schema::create('transactions', function (Blueprint $table) {
+            $table->id('transaction_id');
 
-    $table->unsignedBigInteger('appointment_id');
-    $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
+            $table->unsignedBigInteger('appointment_id');
+            $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
 
-    $table->decimal('amount', 10, 2)->nullable();
-    $table->decimal('discount_amount', 10, 2)->default(0);
-    $table->enum('discount_type', ['none','senior','pwd'])->default('none');
+            $table->decimal('amount', 10, 2)->nullable();
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->enum('discount_type', ['none', 'senior', 'pwd'])->default('none');
 
-    $table->enum('payment_mode', ['cash','gcash','card'])->nullable();
-    $table->enum('payment_status', ['pending','paid','failed'])->default('pending');
+            $table->enum('payment_mode', ['cash', 'gcash', 'card'])->nullable();
+            $table->enum('payment_status', ['pending', 'paid', 'failed'])->default('pending');
 
-    $table->string('reference_number')->nullable();
+            $table->string('reference_number')->nullable();
 
-    $table->dateTime('transaction_datetime')->nullable();
-    $table->dateTime('visit_datetime')->nullable();
+            $table->dateTime('transaction_datetime')->nullable();
+            $table->dateTime('visit_datetime')->nullable();
 
-    $table->text('diagnosis')->nullable();
-    $table->text('treatment_notes')->nullable();
+            $table->text('diagnosis')->nullable();
+            $table->text('treatment_notes')->nullable();
 
-    $table->softDeletes();
-    $table->timestamps();
+            $table->softDeletes();
+            $table->timestamps();
 
-    $table->index('appointment_id');
-});
+            $table->index('appointment_id');
+        });
     }
 
     /**

@@ -11,23 +11,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-   Schema::create('queues', function (Blueprint $table) {
-    $table->id('queue_id');
+        Schema::create('queues', function (Blueprint $table) {
+            $table->id('queue_id');
 
-    $table->unsignedBigInteger('appointment_id');
-    $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
+            $table->unsignedBigInteger('appointment_id');
+            $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
 
-    $table->integer('queue_number')->nullable();
-    $table->dateTime('queue_datetime')->nullable();
-    $table->enum('status', ['waiting','serving','done','cancelled'])->default('waiting');
+            $table->integer('queue_number')->nullable();
+            $table->dateTime('queue_datetime')->nullable();
+            $table->enum('status', ['waiting', 'serving', 'done', 'cancelled'])->default('waiting');
 
-    $table->integer('priority_level')->default(5);
+            $table->integer('priority_level')->default(5);
 
-    $table->softDeletes();
-    $table->timestamps();
+            $table->softDeletes();
+            $table->timestamps();
 
-    $table->index('appointment_id');
-});
+            $table->index('appointment_id');
+        });
     }
 
     /**

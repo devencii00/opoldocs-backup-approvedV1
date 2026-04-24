@@ -16,7 +16,7 @@ class TransactionController extends Controller
     {
         $data = $request->validate([
             'appointment_id' => ['required', 'exists:appointments,appointment_id'],
-            'amount' => ['required', 'numeric'],
+            'amount' => ['nullable', 'numeric'],
             'discount_amount' => ['nullable', 'numeric'],
             'discount_type' => ['nullable', 'in:none,senior,pwd'],
             'payment_mode' => ['nullable', 'in:cash,gcash,card'],
@@ -47,7 +47,12 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction)
     {
-        return $transaction->load(['appointment', 'prescriptions']);
+        return $transaction->load([
+            'appointment.patient',
+            'appointment.doctor',
+            'prescriptions.doctor',
+            'prescriptions.items.medicine',
+        ]);
     }
 
     public function update(Request $request, Transaction $transaction)
@@ -67,7 +72,12 @@ class TransactionController extends Controller
 
         $transaction->update($data);
 
-        return $transaction->refresh()->load(['appointment', 'prescriptions']);
+        return $transaction->refresh()->load([
+            'appointment.patient',
+            'appointment.doctor',
+            'prescriptions.doctor',
+            'prescriptions.items.medicine',
+        ]);
     }
 
     public function destroy(Transaction $transaction)
@@ -79,4 +89,3 @@ class TransactionController extends Controller
         ]);
     }
 }
-

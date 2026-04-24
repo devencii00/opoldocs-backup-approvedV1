@@ -32,4 +32,3 @@ class Queue extends Model
         return $this->belongsTo(Appointment::class, 'appointment_id', 'appointment_id');
     }
 }
-

@@ -7,9 +7,27 @@ use Illuminate\Http\Request;
 
 class MedicalBackgroundController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return MedicalBackground::with('patient')->paginate();
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1) {
+            $perPage = 15;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
+        $query = MedicalBackground::query()->with('patient');
+
+        if ($request->filled('patient_id')) {
+            $query->where('patient_id', $request->query('patient_id'));
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category', $request->query('category'));
+        }
+
+        return $query->orderBy('category')->orderBy('name')->paginate($perPage);
     }
 
     public function store(Request $request)
@@ -54,4 +72,3 @@ class MedicalBackgroundController extends Controller
         ]);
     }
 }
-
