@@ -165,6 +165,7 @@
                 $isReceptionWalkIns = $currentSection === 'walk-ins';
                 $isReceptionQueue = $currentSection === 'queue-management';
                 $isReceptionRecordPayments = $currentSection === 'record-payment';
+                $isReceptionVerificationOversight = $currentSection === 'verification-oversight';
             @endphp
 
             <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Patients & Appointments</div>
@@ -197,6 +198,16 @@
                 <span class="material-symbols-outlined text-[18px] leading-none {{ $isReceptionQueue ? 'text-cyan-600' : '' }}">view_list</span>
                 Queue management
                 @if ($isReceptionQueue)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
+            </a>
+
+            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Verification</div>
+
+            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isReceptionVerificationOversight ? $navActive : $navInactive }} mb-3">
+                <span class="material-symbols-outlined text-[18px] leading-none {{ $isReceptionVerificationOversight ? 'text-cyan-600' : '' }}">verified_user</span>
+                Verification requests
+                @if ($isReceptionVerificationOversight)
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>

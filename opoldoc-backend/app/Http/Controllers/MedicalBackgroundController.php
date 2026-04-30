@@ -19,7 +19,12 @@ class MedicalBackgroundController extends Controller
 
         $query = MedicalBackground::query()->with('patient');
 
-        if ($request->filled('patient_id')) {
+        $currentUser = $request->user();
+        $isPatient = $currentUser && $currentUser->role === 'patient';
+
+        if ($isPatient) {
+            $query->whereIn('patient_id', $currentUser->accessiblePatientIds());
+        } elseif ($request->filled('patient_id')) {
             $query->where('patient_id', $request->query('patient_id'));
         }
 
@@ -32,12 +37,37 @@ class MedicalBackgroundController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'patient_id' => ['required', 'exists:users,user_id'],
+        $currentUser = $request->user();
+        $isPatient = $currentUser && $currentUser->role === 'patient';
+
+        $rules = [
             'category' => ['required', 'in:allergy_food,allergy_drug,condition'],
             'name' => ['required', 'string'],
             'notes' => ['nullable', 'string'],
-        ]);
+        ];
+
+        $rules['patient_id'] = [$isPatient ? 'sometimes' : 'required', 'exists:users,user_id'];
+
+        if ($isPatient && $currentUser) {
+            $rules['patient_id'][] = function ($attribute, $value, $fail) use ($currentUser) {
+                if ($value === null || $value === '') {
+                    return;
+                }
+                if (! $currentUser->canAccessPatientId((int) $value)) {
+                    $fail('Invalid patient selection.');
+                }
+            };
+        }
+
+        $data = $request->validate($rules);
+
+        if ($isPatient) {
+            $targetPatientId = (int) ($data['patient_id'] ?? $currentUser->user_id);
+            if (! $currentUser->canAccessPatientId($targetPatientId)) {
+                abort(403);
+            }
+            $data['patient_id'] = $targetPatientId;
+        }
 
         $record = MedicalBackground::create($data);
 
@@ -46,17 +76,36 @@ class MedicalBackgroundController extends Controller
 
     public function show(MedicalBackground $medicalBackground)
     {
+        $currentUser = request()->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            if (! $currentUser->canAccessPatientId((int) $medicalBackground->patient_id)) {
+                abort(403);
+            }
+        }
+
         return $medicalBackground->load('patient');
     }
 
     public function update(Request $request, MedicalBackground $medicalBackground)
     {
+        $currentUser = $request->user();
+        $isPatient = $currentUser && $currentUser->role === 'patient';
+        if ($isPatient) {
+            if (! $currentUser->canAccessPatientId((int) $medicalBackground->patient_id)) {
+                abort(403);
+            }
+        }
+
         $data = $request->validate([
             'patient_id' => ['sometimes', 'exists:users,user_id'],
             'category' => ['sometimes', 'in:allergy_food,allergy_drug,condition'],
             'name' => ['sometimes', 'string'],
             'notes' => ['sometimes', 'nullable', 'string'],
         ]);
+
+        if ($isPatient) {
+            unset($data['patient_id']);
+        }
 
         $medicalBackground->update($data);
 
@@ -65,6 +114,13 @@ class MedicalBackgroundController extends Controller
 
     public function destroy(MedicalBackground $medicalBackground)
     {
+        $currentUser = request()->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            if (! $currentUser->canAccessPatientId((int) $medicalBackground->patient_id)) {
+                abort(403);
+            }
+        }
+
         $medicalBackground->delete();
 
         return response()->json([

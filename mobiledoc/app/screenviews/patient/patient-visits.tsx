@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   View,
@@ -30,26 +30,14 @@ const T = {
   white: '#ffffff',
 };
 
-const mockVisits = [
-  {
-    id: '1',
-    date: '2026-03-21',
-    doctor: 'Dr. Cruz',
-    reason: 'Routine check-up',
-  },
-  {
-    id: '2',
-    date: '2026-02-11',
-    doctor: 'Dr. Santos',
-    reason: 'Blood pressure follow-up',
-  },
-  {
-    id: '3',
-    date: '2026-01-05',
-    doctor: 'Dr. Reyes',
-    reason: 'Flu-like symptoms',
-  },
-];
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
+
+type VisitListItem = {
+  id: string;
+  date: string;
+  doctor: string;
+  reason: string;
+};
 
 type AnimatedCardProps = {
   children: ReactNode;
@@ -121,6 +109,76 @@ function SectionCard({ title, subtitle, badge, children, delay, style }: Section
 }
 
 export default function PatientVisitsScreen() {
+  const [items, setItems] = useState<VisitListItem[]>([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const token = (globalThis as any)?.apiToken as string | undefined;
+        if (!token) {
+          setError('Please log in again.');
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/visits?per_page=50`, {
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          const message =
+            typeof data?.message === 'string' && data.message.length > 0
+              ? data.message
+              : 'Unable to load visit history.';
+          setError(message);
+          return;
+        }
+
+        const raw = Array.isArray(data?.data) ? data.data : [];
+        const mapped: VisitListItem[] = raw.map((v: any) => {
+          const dt = v?.visit_datetime ? new Date(v.visit_datetime) : null;
+          const doctorFirst = v?.prescriptions?.[0]?.doctor?.firstname
+            ? String(v.prescriptions[0].doctor.firstname)
+            : '';
+          const doctorLast = v?.prescriptions?.[0]?.doctor?.lastname
+            ? String(v.prescriptions[0].doctor.lastname)
+            : '';
+          const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+
+          const reason =
+            typeof v?.appointment?.reason_for_visit === 'string' && v.appointment.reason_for_visit.length > 0
+              ? v.appointment.reason_for_visit
+              : 'Clinic visit';
+
+          return {
+            id: String(v.transaction_id),
+            date: dt ? dt.toLocaleDateString() : '',
+            doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
+            reason,
+          };
+        });
+
+        if (!cancelled) {
+          setItems(mapped);
+          setError('');
+        }
+      } catch {
+        if (!cancelled) setError('Network error. Please try again.');
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
@@ -154,7 +212,8 @@ export default function PatientVisitsScreen() {
           badge="Visits"
           delay={60}
         >
-          {mockVisits.map((item) => (
+          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+          {items.map((item) => (
             <View key={item.id} style={styles.row}>
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{item.reason}</Text>
@@ -310,6 +369,11 @@ const styles = StyleSheet.create({
   rowSubtitle: {
     fontSize: 11,
     color: T.slate500,
+  },
+  inlineError: {
+    fontSize: 12,
+    color: '#b91c1c',
+    marginBottom: 10,
   },
   primaryAction: {
     paddingHorizontal: 10,

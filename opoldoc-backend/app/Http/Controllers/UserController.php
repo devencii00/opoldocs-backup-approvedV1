@@ -11,13 +11,23 @@ use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         return User::query()->paginate();
     }
 
     public function store(Request $request)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $data = $request->validate([
             'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
@@ -44,13 +54,23 @@ class UserController extends Controller
         return response()->json($user, 201);
     }
 
-    public function show(User $user)
+    public function show(Request $request, User $user)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient' && $user->user_id !== $currentUser->user_id) {
+            abort(403);
+        }
+
         return $user;
     }
 
     public function update(Request $request, User $user)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient' && $user->user_id !== $currentUser->user_id) {
+            abort(403);
+        }
+
         $data = $request->validate([
             'email' => ['sometimes', 'email', "unique:users,email,{$user->user_id},user_id"],
             'password' => ['sometimes', 'string', 'min:8'],
@@ -69,6 +89,10 @@ class UserController extends Controller
             'specialization' => ['sometimes', 'nullable', 'string'],
         ]);
 
+        if ($currentUser && $currentUser->role === 'patient') {
+            unset($data['role'], $data['status'], $data['account_activated'], $data['license_number'], $data['specialization']);
+        }
+
         if (array_key_exists('password', $data)) {
             $data['password_hash'] = Hash::make($data['password']);
             unset($data['password']);
@@ -86,8 +110,13 @@ class UserController extends Controller
         return $user->refresh();
     }
 
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $user->delete();
 
         return response()->json([
@@ -99,7 +128,7 @@ class UserController extends Controller
     {
         $data = $request->validate([
             'email' => ['required', 'email', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
             'firstname' => ['nullable', 'string'],
             'lastname' => ['nullable', 'string'],
         ]);
@@ -109,6 +138,9 @@ class UserController extends Controller
             'password_hash' => Hash::make($data['password']),
             'role' => 'patient',
             'status' => 'active',
+            'is_dependent' => false,
+            'account_activated' => true,
+            'is_first_login' => false,
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
         ]);
@@ -118,6 +150,11 @@ class UserController extends Controller
 
     public function invite(Request $request)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $data = $request->validate([
             'email' => ['required', 'email', 'unique:users,email'],
             'role' => ['required', 'in:admin,doctor,receptionist,patient'],
@@ -148,8 +185,13 @@ class UserController extends Controller
         return response()->json($user, 201);
     }
 
-    public function dependents(User $user)
+    public function dependents(Request $request, User $user)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient' && (int) $currentUser->user_id !== (int) $user->user_id) {
+            abort(403);
+        }
+
         return $user->children()->get();
     }
 }

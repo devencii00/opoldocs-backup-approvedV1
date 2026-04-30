@@ -1,7 +1,17 @@
 @php
     $queueItems = collect($receptionQueue ?? []);
-    $serving = $queueItems->first();
-    $nextItems = $queueItems->slice(1, 4);
+    $serving = $queueItems->firstWhere('status', 'serving');
+    $waitingItems = $queueItems
+        ->filter(function ($row) {
+            return ($row->status ?? null) === 'waiting';
+        })
+        ->sortBy(function ($row) {
+            $priority = (int) ($row->priority_level ?? 5);
+            $number = (int) ($row->queue_number ?? 999999);
+            return str_pad((string) $priority, 6, '0', STR_PAD_LEFT) . '-' . str_pad((string) $number, 6, '0', STR_PAD_LEFT);
+        })
+        ->values();
+    $nextItems = $waitingItems->take(5);
 @endphp
 
 <div class="space-y-4">
@@ -10,10 +20,20 @@
             <h2 class="text-sm font-semibold text-slate-900">Queue management</h2>
             <p class="text-xs text-slate-500">Add patients to the queue, assign numbers, and monitor today&apos;s flow.</p>
         </div>
-        <button id="receptionDisplayQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.8rem] font-semibold hover:bg-cyan-700 transition-colors">
-            <span class="material-symbols-outlined text-[18px] leading-none">tv</span>
-            Display queue
-        </button>
+        <div class="flex items-center gap-2">
+            <button id="receptionCallNextButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors">
+                <span class="material-symbols-outlined text-[18px] leading-none">campaign</span>
+                Call next
+            </button>
+            <button id="receptionRefreshQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-200 transition-colors border border-slate-200">
+                <span class="material-symbols-outlined text-[18px] leading-none">refresh</span>
+                Refresh
+            </button>
+            <button id="receptionDisplayQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.8rem] font-semibold hover:bg-cyan-700 transition-colors">
+                <span class="material-symbols-outlined text-[18px] leading-none">tv</span>
+                Display queue
+            </button>
+        </div>
     </div>
 
     <div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
@@ -68,6 +88,7 @@
                         <th class="py-2 pr-4 font-semibold">Queue #</th>
                         <th class="py-2 pr-4 font-semibold">Patient</th>
                         <th class="py-2 pr-4 font-semibold">Doctor</th>
+                        <th class="py-2 pr-4 font-semibold">Priority</th>
                         <th class="py-2 pr-4 font-semibold">Date</th>
                         <th class="py-2 pr-4 font-semibold">Status</th>
                         <th class="py-2 pr-4 font-semibold text-right">Actions</th>
@@ -76,17 +97,20 @@
                 <tbody>
                     @forelse ($queueItems as $queue)
                         @php
-                            $patientName = optional(optional(optional($queue->source)->appointment)->patient)->personalInformation->full_name ?? '';
-                            $doctorName = optional(optional($queue->doctor)->employee)->personalInformation->full_name ?? '';
-                            $statusName = optional($queue->status)->status_name ?? '';
-                            $dateKey = $queue->queue_date ?? '';
+                            $patientName = optional(optional($queue->appointment)->patient)->personalInformation->full_name ?? '';
+                            $doctorName = optional(optional($queue->appointment)->doctor)->personalInformation->full_name ?? '';
+                            $statusName = (string) ($queue->status ?? '');
+                            $dateKey = $queue->queue_datetime ? $queue->queue_datetime->format('Y-m-d H:i') : '';
                             $queueId = $queue->queue_id ?? null;
+                            $priority = (int) ($queue->priority_level ?? 5);
                         @endphp
                         <tr class="border-b border-slate-50 last:border-0 reception-queue-row"
                             data-queue-number="{{ $queue->queue_number }}"
                             data-patient="{{ strtolower($patientName) }}"
                             data-doctor="{{ strtolower($doctorName) }}"
                             data-date="{{ $dateKey }}"
+                            data-status="{{ strtolower($statusName) }}"
+                            data-priority="{{ $priority }}"
                             @if ($queueId)
                                 data-queue-id="{{ $queueId }}"
                             @endif>
@@ -105,8 +129,9 @@
                                     <span class="text-[0.7rem] text-slate-400">Doctor</span>
                                 @endif
                             </td>
+                            <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $priority }}</td>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                                {{ $queue->queue_date }}
+                                {{ $dateKey }}
                             </td>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
                                 @if ($statusName)
@@ -119,10 +144,24 @@
                             </td>
                             <td class="py-2 pr-4 text-[0.78rem] text-right text-slate-500">
                                 @if ($queueId ?? null)
-                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700 reception-queue-remove" data-queue-id="{{ $queueId }}">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">close</span>
-                                        Remove
-                                    </button>
+                                    <div class="inline-flex items-center gap-1.5">
+                                        @if (strtolower($statusName) !== 'serving')
+                                            <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-slate-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="serving">
+                                                <span class="material-symbols-outlined text-[16px] leading-none">play_arrow</span>
+                                                Serving
+                                            </button>
+                                        @else
+                                            <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-[0.7rem] text-emerald-700 hover:bg-emerald-50 reception-queue-status" data-queue-id="{{ $queueId }}" data-status="done">
+                                                <span class="material-symbols-outlined text-[16px] leading-none">check</span>
+                                                Done
+                                            </button>
+                                        @endif
+
+                                        <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-[0.7rem] text-slate-600 hover:bg-red-50 hover:border-red-200 hover:text-red-700 reception-queue-remove" data-queue-id="{{ $queueId }}">
+                                            <span class="material-symbols-outlined text-[16px] leading-none">close</span>
+                                            Remove
+                                        </button>
+                                    </div>
                                 @else
                                     <span class="text-[0.7rem] text-slate-400">—</span>
                                 @endif
@@ -130,7 +169,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="py-4 text-center text-[0.78rem] text-slate-400">
+                            <td colspan="7" class="py-4 text-center text-[0.78rem] text-slate-400">
                                 No queue entries for today.
                             </td>
                         </tr>
@@ -170,8 +209,8 @@
                             {{ str_pad($serving->queue_number, 3, '0', STR_PAD_LEFT) }}
                         </div>
                         @php
-                            $servingPatient = optional(optional(optional($serving->source)->appointment)->patient)->personalInformation->full_name ?? 'Patient';
-                            $servingDoctor = optional(optional($serving->doctor)->employee)->personalInformation->full_name ?? null;
+                            $servingPatient = optional(optional($serving->appointment)->patient)->personalInformation->full_name ?? 'Patient';
+                            $servingDoctor = optional(optional($serving->appointment)->doctor)->personalInformation->full_name ?? null;
                         @endphp
                         <div class="mt-4 text-[0.95rem] text-slate-100 font-semibold">
                             {{ $servingPatient }}
@@ -200,9 +239,9 @@
             <div class="space-y-3 max-h-full overflow-y-auto scrollbar-hidden" id="queueDisplayNextList">
                 @forelse ($nextItems as $queue)
                     @php
-                        $patientName = optional(optional(optional($queue->source)->appointment)->patient)->personalInformation->full_name ?? 'Patient';
-                        $doctorName = optional(optional($queue->doctor)->employee)->personalInformation->full_name ?? null;
-                        $statusName = optional($queue->status)->status_name ?? '';
+                        $patientName = optional(optional($queue->appointment)->patient)->personalInformation->full_name ?? 'Patient';
+                        $doctorName = optional(optional($queue->appointment)->doctor)->personalInformation->full_name ?? null;
+                        $statusName = (string) ($queue->status ?? '');
                     @endphp
                     <div class="rounded-2xl bg-slate-800/60 border border-slate-600/70 px-4 py-3 flex items-center justify-between">
                         <div>
@@ -455,23 +494,155 @@
             })
         })
 
+        function updateQueueStatus(queueId, status, successMessage) {
+            if (!queueId) {
+                return
+            }
+
+            showQueueError('')
+            showQueueSuccess('')
+
+            if (typeof apiFetch !== 'function') {
+                showQueueError('API client is not available.')
+                return
+            }
+
+            var url = "{{ url('/api/queues') }}/" + encodeURIComponent(queueId)
+
+            apiFetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: status })
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, status: response.status, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, status: response.status, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        var message = 'Failed to update queue.'
+                        if (result.data && result.data.message) {
+                            message = result.data.message
+                        }
+                        showQueueError(message)
+                        return
+                    }
+
+                    showQueueSuccess(successMessage || 'Queue updated.')
+                    window.location.reload()
+                })
+                .catch(function () {
+                    showQueueError('Network error while updating queue.')
+                })
+        }
+
+        document.querySelectorAll('.reception-queue-status').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var queueId = button.getAttribute('data-queue-id')
+                var status = button.getAttribute('data-status')
+                if (!queueId || !status) {
+                    return
+                }
+                updateQueueStatus(queueId, status, 'Queue status updated.')
+            })
+        })
+
+        var refreshButton = document.getElementById('receptionRefreshQueueButton')
+        if (refreshButton) {
+            refreshButton.addEventListener('click', function () {
+                window.location.reload()
+            })
+        }
+
+        var callNextButton = document.getElementById('receptionCallNextButton')
+        if (callNextButton) {
+            callNextButton.addEventListener('click', function () {
+                showQueueError('')
+                showQueueSuccess('')
+
+                rows = Array.prototype.slice.call(document.querySelectorAll('.reception-queue-row'))
+                var candidates = rows
+                    .filter(function (row) {
+                        return (row.getAttribute('data-status') || '').toLowerCase() === 'waiting'
+                    })
+                    .map(function (row) {
+                        return {
+                            row: row,
+                            queueId: row.getAttribute('data-queue-id') || '',
+                            priority: parseInt(row.getAttribute('data-priority') || '5', 10),
+                            number: parseInt(row.getAttribute('data-queue-number') || '0', 10)
+                        }
+                    })
+                    .filter(function (item) {
+                        return !!item.queueId
+                    })
+
+                if (!candidates.length) {
+                    showQueueError('No waiting patients to call.')
+                    return
+                }
+
+                candidates.sort(function (a, b) {
+                    if (a.priority !== b.priority) {
+                        return a.priority - b.priority
+                    }
+                    return a.number - b.number
+                })
+
+                updateQueueStatus(candidates[0].queueId, 'serving', 'Next patient is now serving.')
+            })
+        }
+
         function buildQueueDisplay(items) {
             var today = new Date().toISOString().slice(0, 10)
 
+            function safeName(user, fallback) {
+                if (user && user.personal_information && user.personal_information.full_name) {
+                    return String(user.personal_information.full_name)
+                }
+                var first = user && user.firstname ? String(user.firstname) : ''
+                var last = user && user.lastname ? String(user.lastname) : ''
+                var name = (first + ' ' + last).trim()
+                return name || (fallback || 'Patient')
+            }
+
             var todays = items.filter(function (item) {
-                return item.queue_date === today
+                var dt = item && item.queue_datetime ? String(item.queue_datetime) : ''
+                return dt.slice(0, 10) === today
             })
 
-            todays.sort(function (a, b) {
-                var na = parseInt(a.queue_number || 0, 10)
-                var nb = parseInt(b.queue_number || 0, 10)
-                if (na < nb) return -1
-                if (na > nb) return 1
-                return 0
+            todays = todays.filter(function (item) {
+                var status = item && item.status ? String(item.status).toLowerCase() : ''
+                return status === 'waiting' || status === 'serving'
             })
 
-            var servingItem = todays.length ? todays[0] : null
-            var nextItems = todays.slice(1, 5)
+            function sortKey(item) {
+                var priority = parseInt(item && item.priority_level != null ? item.priority_level : 5, 10)
+                var number = parseInt(item && item.queue_number != null ? item.queue_number : 0, 10)
+                return { priority: isNaN(priority) ? 5 : priority, number: isNaN(number) ? 0 : number }
+            }
+
+            var servingItem = todays.find(function (item) {
+                return String(item.status || '').toLowerCase() === 'serving'
+            }) || null
+
+            var waiting = todays.filter(function (item) {
+                return String(item.status || '').toLowerCase() === 'waiting'
+            })
+
+            waiting.sort(function (a, b) {
+                var ka = sortKey(a)
+                var kb = sortKey(b)
+                if (ka.priority !== kb.priority) return ka.priority - kb.priority
+                return ka.number - kb.number
+            })
+
+            var nextItems = waiting.slice(0, 5)
 
             var servingContainer = document.getElementById('queueDisplayNowServing')
             var nextList = document.getElementById('queueDisplayNextList')
@@ -485,23 +656,9 @@
                         'No queue is currently being served.' +
                         '</div>'
                 } else {
-                    var patientName = ''
-                    var doctorName = ''
-                    if (servingItem.source && servingItem.source.appointment && servingItem.source.appointment.patient && servingItem.source.appointment.patient.personal_information) {
-                        var pi = servingItem.source.appointment.patient.personal_information
-                        var first = pi.firstname || pi.first_name || ''
-                        var last = pi.lastname || pi.last_name || ''
-                        patientName = (first + ' ' + last).trim()
-                    }
-                    if (!patientName) {
-                        patientName = 'Patient'
-                    }
-                    if (servingItem.doctor && servingItem.doctor.employee && servingItem.doctor.employee.personal_information) {
-                        var dpi = servingItem.doctor.employee.personal_information
-                        var df = dpi.firstname || dpi.first_name || ''
-                        var dl = dpi.lastname || dpi.last_name || ''
-                        doctorName = (df + ' ' + dl).trim()
-                    }
+                    var appt = servingItem.appointment || null
+                    var patientName = appt && appt.patient ? safeName(appt.patient, 'Patient') : 'Patient'
+                    var doctorName = appt && appt.doctor ? safeName(appt.doctor, '') : ''
 
                     var number = String(servingItem.queue_number || '')
                     if (number.length < 3) {
@@ -527,26 +684,10 @@
                 var nextHtml = ''
 
                 nextItems.forEach(function (queue) {
-                    var patientName = ''
-                    var doctorName = ''
-
-                    if (queue.source && queue.source.appointment && queue.source.appointment.patient && queue.source.appointment.patient.personal_information) {
-                        var pi = queue.source.appointment.patient.personal_information
-                        var first = pi.firstname || pi.first_name || ''
-                        var last = pi.lastname || pi.last_name || ''
-                        patientName = (first + ' ' + last).trim() || 'Patient'
-                    } else {
-                        patientName = 'Patient'
-                    }
-
-                    if (queue.doctor && queue.doctor.employee && queue.doctor.employee.personal_information) {
-                        var dpi = queue.doctor.employee.personal_information
-                        var df = dpi.firstname || dpi.first_name || ''
-                        var dl = dpi.lastname || dpi.last_name || ''
-                        doctorName = (df + ' ' + dl).trim()
-                    }
-
-                    var statusName = queue.status && queue.status.status_name ? String(queue.status.status_name) : ''
+                    var appt = queue.appointment || null
+                    var patientName = appt && appt.patient ? safeName(appt.patient, 'Patient') : 'Patient'
+                    var doctorName = appt && appt.doctor ? safeName(appt.doctor, '') : ''
+                    var statusName = queue.status ? String(queue.status) : ''
 
                     nextHtml +=
                         '<div class="rounded-2xl bg-slate-800/60 border border-slate-600/70 px-4 py-3 flex items-center justify-between">' +
@@ -584,7 +725,10 @@
                 return
             }
 
-            apiFetch("{{ url('/api/queues') }}", {
+            var today = new Date().toISOString().slice(0, 10)
+            var url = "{{ url('/api/queues') }}" + '?per_page=100&date=' + encodeURIComponent(today)
+
+            apiFetch(url, {
                 method: 'GET'
             })
                 .then(function (response) {

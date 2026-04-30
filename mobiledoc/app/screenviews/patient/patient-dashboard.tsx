@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   View,
@@ -11,6 +11,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
+import { useRouter } from 'expo-router';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const T = {
@@ -37,23 +38,45 @@ const T = {
   amber700: '#b45309',
 };
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const mockUpcomingAppointments = [
-  { id: '1', date: '2026-04-05', time: '09:30', doctor: 'Dr. Santos', type: 'Consultation', status: 'Scheduled' },
-  { id: '2', date: '2026-04-12', time: '14:00', doctor: 'Dr. Reyes',  type: 'Follow-up',    status: 'Scheduled' },
-];
-const mockRecentPrescriptions = [
-  { id: '1', date: '2026-03-21', doctor: 'Dr. Cruz',   summary: 'Hypertension medication' },
-  { id: '2', date: '2026-03-08', doctor: 'Dr. Santos', summary: 'Allergy relief tablets'  },
-];
-const mockRecentVisits = [
-  { id: '1', date: '2026-03-21', doctor: 'Dr. Cruz',   reason: 'Routine check-up'          },
-  { id: '2', date: '2026-02-11', doctor: 'Dr. Santos', reason: 'Blood pressure follow-up'  },
-];
-const mockNotifications = [
-  { id: '1', title: 'Appointment reminder',  body: 'You have an appointment with Dr. Santos on Apr 5 at 9:30 AM.' },
-  { id: '2', title: 'Prescription update',   body: 'Your prescription from Mar 21 is ready for refill at the clinic.' },
-];
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
+
+type DashboardAppointment = {
+  id: string;
+  date: string;
+  time: string;
+  doctor: string;
+  type: string;
+  status: string;
+};
+
+type DashboardPrescription = {
+  id: string;
+  date: string;
+  doctor: string;
+  summary: string;
+};
+
+type DashboardVisit = {
+  id: string;
+  date: string;
+  doctor: string;
+  reason: string;
+};
+
+type DashboardNotification = {
+  id: string;
+  title: string;
+  body: string;
+};
+
+type DashboardQueueStatus = {
+  queueId: string;
+  status: string;
+  queueNumber: string;
+  position: number | null;
+  estimatedWaitMinutes: number | null;
+  doctor: string;
+};
 
 type AnimatedCardProps = {
   children: ReactNode;
@@ -174,6 +197,189 @@ function NotifRow({ title, body }: NotifRowProps) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function PatientDashboardScreen() {
+  const router = useRouter();
+  const [upcomingAppointments, setUpcomingAppointments] = useState<DashboardAppointment[]>([]);
+  const [recentPrescriptions, setRecentPrescriptions] = useState<DashboardPrescription[]>([]);
+  const [recentVisits, setRecentVisits] = useState<DashboardVisit[]>([]);
+  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
+  const [queueStatus, setQueueStatus] = useState<DashboardQueueStatus | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQueue(token: string) {
+      try {
+        const queuesRes = await fetch(`${API_BASE_URL}/queues?per_page=10`, {
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        });
+
+        const queuesData = await queuesRes.json().catch(() => ({}));
+        if (!queuesRes.ok) {
+          if (!cancelled) setQueueStatus(null);
+          return;
+        }
+
+        const queueRaw = Array.isArray(queuesData?.data) ? queuesData.data : [];
+        const activeQueue = queueRaw.find((q: any) => q?.status === 'waiting' || q?.status === 'serving') ?? null;
+        const mappedQueue: DashboardQueueStatus | null = activeQueue
+          ? {
+              queueId: String(activeQueue.queue_id ?? ''),
+              status: String(activeQueue.status ?? ''),
+              queueNumber: activeQueue.queue_number != null ? String(activeQueue.queue_number) : '',
+              position: typeof activeQueue.position === 'number' ? activeQueue.position : null,
+              estimatedWaitMinutes:
+                typeof activeQueue.estimated_wait_minutes === 'number' ? activeQueue.estimated_wait_minutes : null,
+              doctor: (() => {
+                const doctorFirst = activeQueue?.appointment?.doctor?.firstname
+                  ? String(activeQueue.appointment.doctor.firstname)
+                  : '';
+                const doctorLast = activeQueue?.appointment?.doctor?.lastname
+                  ? String(activeQueue.appointment.doctor.lastname)
+                  : '';
+                const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+                return doctorName === 'Dr.' ? 'Doctor' : doctorName;
+              })(),
+            }
+          : null;
+
+        if (!cancelled) setQueueStatus(mappedQueue);
+      } catch {
+        if (!cancelled) setQueueStatus(null);
+      }
+    }
+
+    async function loadDashboard(token: string) {
+      try {
+        const [appointmentsRes, prescriptionsRes, visitsRes, notificationsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/appointments?upcoming_only=1&per_page=5`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/prescriptions?per_page=5`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/visits?per_page=5`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${API_BASE_URL}/notifications?per_page=5`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        const [appointmentsData, prescriptionsData, visitsData, notificationsData] = await Promise.all([
+          appointmentsRes.json().catch(() => ({})),
+          prescriptionsRes.json().catch(() => ({})),
+          visitsRes.json().catch(() => ({})),
+          notificationsRes.json().catch(() => ({})),
+        ]);
+
+        if (!appointmentsRes.ok || !prescriptionsRes.ok || !visitsRes.ok || !notificationsRes.ok) {
+          const anyMessage =
+            appointmentsData?.message ||
+            prescriptionsData?.message ||
+            visitsData?.message ||
+            notificationsData?.message;
+          setError(typeof anyMessage === 'string' && anyMessage.length > 0 ? anyMessage : 'Unable to load dashboard.');
+          return;
+        }
+
+        const apptsRaw = Array.isArray(appointmentsData?.data) ? appointmentsData.data : [];
+        const apptsMapped: DashboardAppointment[] = apptsRaw
+          .filter((a: any) => a?.appointment_datetime)
+          .map((a: any) => {
+            const dt = new Date(a.appointment_datetime);
+            const doctorFirst = a?.doctor?.firstname ? String(a.doctor.firstname) : '';
+            const doctorLast = a?.doctor?.lastname ? String(a.doctor.lastname) : '';
+            const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+            return {
+              id: String(a.appointment_id),
+              date: dt.toLocaleDateString(),
+              time: dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
+              type: a?.appointment_type === 'scheduled' ? 'Scheduled' : 'Walk-in',
+              status: typeof a?.status === 'string' ? a.status : '',
+            };
+          });
+
+        const presRaw = Array.isArray(prescriptionsData?.data) ? prescriptionsData.data : [];
+        const presMapped: DashboardPrescription[] = presRaw.map((p: any) => {
+          const dt = p?.prescribed_datetime ? new Date(p.prescribed_datetime) : null;
+          const doctorFirst = p?.doctor?.firstname ? String(p.doctor.firstname) : '';
+          const doctorLast = p?.doctor?.lastname ? String(p.doctor.lastname) : '';
+          const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+          const firstItem = Array.isArray(p?.items) && p.items.length > 0 ? p.items[0] : null;
+          const summary = firstItem?.medicine_name ? String(firstItem.medicine_name) : 'Prescription';
+          return {
+            id: String(p.prescription_id),
+            date: dt ? dt.toLocaleDateString() : '',
+            doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
+            summary,
+          };
+        });
+
+        const visitsRaw = Array.isArray(visitsData?.data) ? visitsData.data : [];
+        const visitsMapped: DashboardVisit[] = visitsRaw.map((v: any) => {
+          const dt = v?.visit_datetime ? new Date(v.visit_datetime) : null;
+          const doctorFirst = v?.prescriptions?.[0]?.doctor?.firstname
+            ? String(v.prescriptions[0].doctor.firstname)
+            : '';
+          const doctorLast = v?.prescriptions?.[0]?.doctor?.lastname
+            ? String(v.prescriptions[0].doctor.lastname)
+            : '';
+          const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+          const reason =
+            typeof v?.appointment?.reason_for_visit === 'string' && v.appointment.reason_for_visit.length > 0
+              ? v.appointment.reason_for_visit
+              : 'Clinic visit';
+          return {
+            id: String(v.transaction_id),
+            date: dt ? dt.toLocaleDateString() : '',
+            doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
+            reason,
+          };
+        });
+
+        const notifsRaw = Array.isArray(notificationsData?.data) ? notificationsData.data : [];
+        const notifsMapped: DashboardNotification[] = notifsRaw.map((n: any) => {
+          const type = typeof n?.type === 'string' ? n.type : 'system';
+          const title = `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+          const body = typeof n?.message === 'string' ? n.message : '';
+          return { id: String(n.notification_id), title, body };
+        });
+
+        if (!cancelled) {
+          setUpcomingAppointments(apptsMapped);
+          setRecentPrescriptions(presMapped);
+          setRecentVisits(visitsMapped);
+          setNotifications(notifsMapped);
+          setError('');
+        }
+      } catch {
+        if (!cancelled) setError('Network error. Please try again.');
+      }
+    }
+
+    const token = (globalThis as any)?.apiToken as string | undefined;
+    if (!token) {
+      setError('Please log in again.');
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    loadDashboard(token);
+    loadQueue(token);
+
+    const intervalId = setInterval(() => {
+      loadQueue(token);
+    }, 15000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
@@ -197,17 +403,17 @@ export default function PatientDashboardScreen() {
         {/* Stat pills in header */}
         <View style={styles.headerStats}>
           <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>{mockUpcomingAppointments.length}</Text>
+            <Text style={styles.headerStatNum}>{upcomingAppointments.length}</Text>
             <Text style={styles.headerStatLabel}>Upcoming</Text>
           </View>
           <View style={styles.headerStatDivider} />
           <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>{mockRecentPrescriptions.length}</Text>
+            <Text style={styles.headerStatNum}>{recentPrescriptions.length}</Text>
             <Text style={styles.headerStatLabel}>Prescriptions</Text>
           </View>
           <View style={styles.headerStatDivider} />
           <View style={styles.headerStatPill}>
-            <Text style={styles.headerStatNum}>{mockRecentVisits.length}</Text>
+            <Text style={styles.headerStatNum}>{recentVisits.length}</Text>
             <Text style={styles.headerStatLabel}>Visits</Text>
           </View>
         </View>
@@ -219,6 +425,29 @@ export default function PatientDashboardScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+
+        {queueStatus ? (
+          <SectionCard title="Queue Status" subtitle="Live updates while you are in the queue." badge="Queue" delay={30}>
+            <View style={styles.queueStatusRow}>
+              <View style={styles.queueStatusMain}>
+                <Text style={styles.queueStatusTitle}>
+                  Position: {queueStatus.position != null ? queueStatus.position : queueStatus.queueNumber || '—'}
+                </Text>
+                <Text style={styles.queueStatusSub}>
+                  {queueStatus.doctor}
+                  {queueStatus.estimatedWaitMinutes != null ? ` · Est. wait: ${queueStatus.estimatedWaitMinutes} min` : ''}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => router.push('/screenviews/queue' as any)}
+                style={({ pressed }) => [styles.queueBtn, pressed && { opacity: 0.7 }]}
+              >
+                <Text style={styles.queueBtnText}>Open</Text>
+              </Pressable>
+            </View>
+          </SectionCard>
+        ) : null}
 
         {/* Upcoming Appointments */}
         <SectionCard
@@ -227,7 +456,7 @@ export default function PatientDashboardScreen() {
           badge="Appointments"
           delay={60}
         >
-          {mockUpcomingAppointments.map((item) => (
+          {upcomingAppointments.map((item) => (
             <RowItem
               key={item.id}
               title={item.doctor}
@@ -244,7 +473,7 @@ export default function PatientDashboardScreen() {
           badge="Prescriptions"
           delay={120}
         >
-          {mockRecentPrescriptions.map((item) => (
+          {recentPrescriptions.map((item) => (
             <RowItem
               key={item.id}
               title={item.summary}
@@ -260,7 +489,7 @@ export default function PatientDashboardScreen() {
           badge="Visits"
           delay={180}
         >
-          {mockRecentVisits.map((item) => (
+          {recentVisits.map((item) => (
             <RowItem
               key={item.id}
               title={item.reason}
@@ -277,7 +506,7 @@ export default function PatientDashboardScreen() {
           delay={240}
           style={{ marginBottom: 32 }}
         >
-          {mockNotifications.map((item) => (
+          {notifications.map((item) => (
             <NotifRow key={item.id} title={item.title} body={item.body} />
           ))}
         </SectionCard>
@@ -377,6 +606,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginTop: -16,
+  },
+  inlineError: {
+    fontSize: 12,
+    color: '#b91c1c',
+    marginBottom: 12,
+    marginTop: 4,
   },
   scrollContent: {
     paddingTop: 20,
@@ -503,6 +738,59 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: T.cyan700,
+  },
+
+  queueStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 12,
+  },
+  queueStatusMain: {
+    flex: 1,
+  },
+  queueStatusTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate800,
+    marginBottom: 2,
+  },
+  queueStatusSub: {
+    fontSize: 11,
+    color: T.slate500,
+    lineHeight: 15,
+  },
+  queueBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(6,182,212,0.08)',
+    borderWidth: 1,
+    borderColor: T.cyan600,
+  },
+  queueBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: T.cyan700,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingVertical: 8,
+  },
+  actionPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    backgroundColor: T.slate50,
+  },
+  actionPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: T.slate700,
   },
 
   // ── Notification row ──

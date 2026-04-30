@@ -7,9 +7,23 @@ use Illuminate\Http\Request;
 
 class PrescriptionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Prescription::with(['doctor', 'transaction'])->paginate();
+        $query = Prescription::with(['doctor', 'transaction.appointment.patient', 'items.medicine']);
+
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            $query->whereHas('transaction.appointment', function ($q) use ($currentUser) {
+                $q->whereIn('patient_id', $currentUser->accessiblePatientIds());
+            });
+        } elseif ($request->filled('patient_id')) {
+            $patientId = $request->query('patient_id');
+            $query->whereHas('transaction.appointment', function ($q) use ($patientId) {
+                $q->where('patient_id', $patientId);
+            });
+        }
+
+        return $query->latest('prescribed_datetime')->paginate();
     }
 
     public function store(Request $request)
@@ -26,13 +40,27 @@ class PrescriptionController extends Controller
         return response()->json($prescription->load(['doctor', 'transaction']), 201);
     }
 
-    public function show(Prescription $prescription)
+    public function show(Request $request, Prescription $prescription)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            $prescription->loadMissing('transaction.appointment');
+            $appointment = $prescription->transaction ? $prescription->transaction->appointment : null;
+            if (! $appointment || ! $currentUser->canAccessPatientId((int) $appointment->patient_id)) {
+                abort(403);
+            }
+        }
+
         return $prescription->load(['doctor', 'transaction', 'items']);
     }
 
     public function update(Request $request, Prescription $prescription)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $data = $request->validate([
             'notes' => ['sometimes', 'nullable', 'string'],
             'prescribed_datetime' => ['sometimes', 'nullable', 'date'],
@@ -43,8 +71,13 @@ class PrescriptionController extends Controller
         return $prescription->refresh()->load(['doctor', 'transaction', 'items']);
     }
 
-    public function destroy(Prescription $prescription)
+    public function destroy(Request $request, Prescription $prescription)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $prescription->delete();
 
         return response()->json([

@@ -78,6 +78,29 @@ class User extends Authenticatable
         return $this->hasMany(self::class, 'parent_user_id', 'user_id');
     }
 
+    public function accessiblePatientIds(): array
+    {
+        $selfId = (int) $this->user_id;
+
+        if ($this->role !== 'patient') {
+            return [$selfId];
+        }
+
+        if ((bool) $this->is_dependent) {
+            return [$selfId];
+        }
+
+        $childIds = $this->children()->pluck('user_id')->map(fn ($id) => (int) $id)->all();
+        array_unshift($childIds, $selfId);
+
+        return array_values(array_unique($childIds));
+    }
+
+    public function canAccessPatientId(int $patientId): bool
+    {
+        return in_array((int) $patientId, $this->accessiblePatientIds(), true);
+    }
+
     public function doctorSchedules()
     {
         return $this->hasMany(DoctorSchedule::class, 'doctor_id', 'user_id');
@@ -116,7 +139,7 @@ class User extends Authenticatable
         })));
 
         if ($fullName === '') {
-            $fullName = 'User #' . $this->user_id;
+            $fullName = 'User #'.$this->user_id;
         }
 
         return (object) [

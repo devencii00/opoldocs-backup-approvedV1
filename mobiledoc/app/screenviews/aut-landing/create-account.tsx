@@ -1,242 +1,411 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   Pressable,
-  ScrollView,
   StatusBar,
   SafeAreaView,
+  Animated,
+  Platform,
+  Dimensions,
+  Image,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 
-const T = {
-  cyan700: '#0e7490',
-  cyan500: '#06b6d4',
-  slate100: '#f1f5f9',
-  slate200: '#e2e8f0',
-  slate400: '#94a3b8',
-  slate500: '#64748b',
-  slate800: '#1e293b',
-  white: '#ffffff',
-};
+const { height } = Dimensions.get('window');
+
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
 
 export default function CreateAccountScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // animations (same system as landing/login)
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.06,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1600,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  async function handleRegister() {
+    if (!email || !password || !confirmPassword) {
+      setError('Please fill in all fields.');
+      return;
+    }
+
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const registerResponse = await fetch(`${API_BASE_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          password_confirmation: confirmPassword,
+        }),
+      });
+
+      let registerData: any = {};
+      try {
+        registerData = await registerResponse.json();
+      } catch {
+        registerData = {};
+      }
+
+      if (!registerResponse.ok) {
+        setError(registerData?.message || 'Unable to create account.');
+        return;
+      }
+
+      const loginResponse = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          device_name: 'mobiledoc',
+        }),
+      });
+
+      let loginData: any = {};
+      try {
+        loginData = await loginResponse.json();
+      } catch {
+        loginData = {};
+      }
+
+    (globalThis as any).apiToken = loginData.token;
+     (globalThis as any).currentUser = loginData.user;
+
+      setSuccess('Account created successfully.');
+      await new Promise((resolve) => setTimeout(resolve, 900));
+
+  
+      if (loginData?.user?.is_first_login) {
+        router.replace('/screenviews/aut-landing/first-login' as any);
+        return;
+      }
+
+      router.replace('/screenviews/(tabs)');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safe,
-        { paddingTop: insets.top, paddingBottom: insets.bottom > 0 ? insets.bottom : 12 },
-      ]}
-    >
-      <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <View style={styles.header}>
-        <View style={styles.headerInner}>
-          <View>
-            <View style={styles.eyebrowRow}>
-              <View style={styles.eyebrowDot} />
-              <Text style={styles.eyebrowText}>Patient Portal</Text>
-            </View>
-            <Text style={styles.headerTitle}>Create account</Text>
-            <Text style={styles.headerSub}>
-              Set up your patient account to manage appointments and visits.
-            </Text>
-          </View>
-        </View>
-      </View>
+      {/* background */}
+      <LinearGradient
+        colors={['#0891b2', '#0e7490', '#155e75']}
+        style={StyleSheet.absoluteFill}
+      />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Full name</Text>
-            <TextInput
-              placeholder="Juan Dela Cruz"
-              placeholderTextColor="#9ca3af"
-              style={styles.input}
-            />
-          </View>
+      {/* circles */}
+      <View style={styles.circleTopRight} />
+      <View style={styles.circleBottomLeft} />
+      <View style={styles.circleMidLeft} />
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              placeholder="you@example.com"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-          </View>
+      <View style={[styles.container, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 30 }]}>
 
-          <View style={styles.fieldRow}>
-            <View style={[styles.fieldGroup, styles.fieldHalf]}>
-              <Text style={styles.label}>Mobile number</Text>
-              <TextInput
-                placeholder="09XX XXX XXXX"
-                placeholderTextColor="#9ca3af"
-                keyboardType="phone-pad"
-                style={styles.input}
-              />
-            </View>
-            <View style={[styles.fieldGroup, styles.fieldHalf]}>
-              <Text style={styles.label}>Birthdate</Text>
-              <TextInput
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#9ca3af"
-                style={styles.input}
+        {/* HEADER */}
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: 'center' }}>
+          <Text style={styles.tagline}>PATIENT PORTAL</Text>
+          <Text style={styles.title}>Create your{'\n'}account</Text>
+          <View style={styles.divider} />
+          <Text style={styles.subtitle}>Join the clinic system securely</Text>
+        </Animated.View>
+
+        
+        {/* LOGO (FIXED - REAL IMAGE RESTORED) */}
+        <Animated.View
+          style={[
+            styles.logoWrapper,
+            { transform: [{ scale: pulseAnim }] },
+          ]}
+        >
+          <View style={styles.logoPulseRing}>
+            <View style={styles.logoRing}>
+              <Image
+                source={require('../../../assets/images/docfiles/opoldoc.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
               />
             </View>
           </View>
+        </Animated.View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              placeholder="Enter a strong password"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              style={styles.input}
-            />
-          </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Confirm password</Text>
-            <TextInput
-              placeholder="Re-enter your password"
-              placeholderTextColor="#9ca3af"
-              secureTextEntry
-              style={styles.input}
-            />
-          </View>
+        {/* FORM */}
+        <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
+          <TextInput
+            placeholder="Email address"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            value={email}
+            onChangeText={setEmail}
+            style={styles.input}
+          />
 
-          <Pressable style={({ pressed }) => [styles.primaryButton, pressed && { opacity: 0.85 }]}>
-            <Text style={styles.primaryButtonText}>Create account</Text>
+          <TextInput
+            placeholder="Password"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            style={styles.input}
+          />
+
+          <TextInput
+            placeholder="Confirm password"
+            placeholderTextColor="rgba(255,255,255,0.5)"
+            secureTextEntry
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            style={styles.input}
+          />
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {success ? <Text style={styles.success}>{success}</Text> : null}
+        </Animated.View>
+
+        {/* BUTTONS */}
+        <View style={styles.buttons}>
+          <Pressable
+            onPress={handleRegister}
+            disabled={submitting}
+            style={({ pressed }) => [
+              styles.btn,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <LinearGradient
+              colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)']}
+              style={styles.btnGradient}
+            >
+              <Text style={styles.btnText}>
+                {submitting ? 'Creating...' : 'Create Account'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+
+          <Pressable onPress={() => router.replace('/screenviews/aut-landing/login-screen')}>
+            <Text style={styles.link}>Already have an account? Log in</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.footerNote}>
-          By creating an account, you agree to the clinic&apos;s terms and privacy policy.
-        </Text>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  safe: { flex: 1 },
+
+  container: {
     flex: 1,
-    backgroundColor: T.cyan700,
-  },
-  header: {
-    backgroundColor: T.cyan700,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-  },
-  headerInner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontFamily: 'serif',
-    fontSize: 24,
-    fontWeight: '700',
-    color: T.white,
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  headerSub: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.78)',
-  },
-  eyebrowRow: {
-    flexDirection: 'row',
+    paddingHorizontal: 28,
     alignItems: 'center',
-    gap: 5,
-    marginBottom: 4,
-  },
-  eyebrowDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  eyebrowText: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    color: 'rgba(255,255,255,0.85)',
   },
 
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 24,
-    backgroundColor: T.slate100,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -10,
+  circleTopRight: {
+    position: 'absolute',
+    top: -80,
+    right: -80,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  card: {
-    borderRadius: 18,
-    padding: 16,
-    backgroundColor: T.white,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.04,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 10,
-    elevation: 2,
+  circleBottomLeft: {
+    position: 'absolute',
+    bottom: -60,
+    left: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255,255,255,0.07)',
   },
-  fieldGroup: {
-    marginBottom: 12,
+  circleMidLeft: {
+    position: 'absolute',
+    top: height * 0.4,
+    left: -100,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
-  fieldRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 4,
+
+  tagline: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 10,
+    letterSpacing: 2,
   },
-  fieldHalf: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: T.slate500,
-    marginBottom: 4,
-  },
-  input: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: T.slate200,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: T.slate800,
-    backgroundColor: T.white,
-  },
-  primaryButton: {
+
+  title: {
+    color: '#fff',
+    fontSize: 28,
+    fontWeight: '700',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     marginTop: 8,
-    borderRadius: 999,
-    backgroundColor: '#0f766e',
-    paddingVertical: 11,
+  },
+
+  divider: {
+    width: 40,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    marginVertical: 12,
+  },
+
+  subtitle: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
+    fontStyle: 'italic',
+  },
+
+  form: {
+    width: '100%',
+    gap: 14,
+    marginTop: 24,
+  },
+
+  input: {
+    borderRadius: 14,
+    padding: 14,
+    color: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+
+  error: {
+    color: '#fecaca',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  success: {
+    color: 'rgba(34,197,94,0.95)',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+
+  logoWrapper: {
+    marginVertical: 18,
+  },
+
+  logoPulseRing: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  primaryButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: T.white,
+
+  logoRing: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  footerNote: {
-    marginTop: 16,
-    fontSize: 11,
-    color: T.slate400,
+
+  logoImage: {
+    width: 80,
+    height: 80,
+  },
+
+  buttons: {
+    width: '100%',
+    gap: 12,
+  },
+
+  btn: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    marginTop: 28,
+  },
+
+  btnGradient: {
+    padding: 16,
+    alignItems: 'center',
+  },
+
+  btnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+   
+  },
+
+  link: {
+    textAlign: 'center',
+    marginTop: 10,
+    color: 'rgba(255,255,255,0.8)',
   },
 });
-

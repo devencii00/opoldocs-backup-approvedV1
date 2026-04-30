@@ -32,6 +32,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/users/invite', [UserController::class, 'invite']);
     Route::get('/users/{user}/dependents', [UserController::class, 'dependents']);
+
+    Route::get('/dependents', [PatientController::class, 'dependents']);
+    Route::post('/dependents', [PatientController::class, 'storeDependent']);
+    Route::post('/dependents/{dependent}/activate', [PatientController::class, 'activateDependent']);
+
     Route::apiResource('users', UserController::class);
     Route::apiResource('patients', PatientController::class);
     Route::apiResource('doctors', DoctorController::class);
@@ -40,8 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('prescriptions', PrescriptionController::class);
     Route::apiResource('medicines', MedicineController::class);
     Route::apiResource('queues', QueueController::class);
+    Route::post('/queues/join', [QueueController::class, 'join']);
     Route::apiResource('transactions', TransactionController::class);
     Route::apiResource('walk-ins', WalkInController::class)->only(['index', 'show', 'store']);
+    Route::post('/walk-ins/guest', [WalkInController::class, 'storeGuest']);
     Route::apiResource('personal-information', PersonalInformationController::class)->only(['index', 'show', 'store', 'update']);
     Route::apiResource('patient-verifications', PatientVerificationController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
     Route::get('/patient-verifications-stats', [PatientVerificationController::class, 'stats']);

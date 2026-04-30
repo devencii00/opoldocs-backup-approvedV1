@@ -4,7 +4,11 @@
 
     $newRegistrationsToday = (int) ($metrics['newRegistrationsToday'] ?? 0);
     $appointmentsToday = (int) ($metrics['appointmentsToday'] ?? 0);
+    $walkInsToday = (int) ($metrics['walkInsToday'] ?? 0);
+    $pendingQueueRequests = (int) ($metrics['pendingQueueRequests'] ?? 0);
     $waitingInQueue = (int) ($metrics['waitingCount'] ?? 0);
+    $currentQueueCount = (int) ($metrics['currentQueueCount'] ?? 0);
+    $transactionsToday = (float) ($metrics['transactionsToday'] ?? 0);
 @endphp
 
 <div class="space-y-6">
@@ -32,6 +36,22 @@
                     <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
                         <div class="text-xs text-slate-500 mb-1">Waiting in queue</div>
                         <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($waitingInQueue) }}</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <div class="text-xs text-slate-500 mb-1">Walk-ins</div>
+                        <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($walkInsToday) }}</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <div class="text-xs text-slate-500 mb-1">Pending requests</div>
+                        <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($pendingQueueRequests) }}</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                        <div class="text-xs text-slate-500 mb-1">Current queue count</div>
+                        <div class="font-serif font-bold text-xl text-slate-900">{{ number_format($currentQueueCount) }}</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 sm:col-span-3">
+                        <div class="text-xs text-slate-500 mb-1">Today&apos;s transactions (paid)</div>
+                        <div class="font-serif font-bold text-xl text-slate-900">₱{{ number_format($transactionsToday, 2) }}</div>
                     </div>
                 </div>
 
@@ -62,6 +82,9 @@
                     <a href="{{ route('dashboard', ['role' => 'receptionist', 'section' => 'queue-management']) }}" class="block w-full px-3 py-2.5 rounded-xl bg-slate-50 text-slate-800 text-[0.85rem] font-semibold hover:bg-slate-100 border border-slate-200 transition-colors">
                         Manage queue
                     </a>
+                    <a href="{{ route('dashboard', ['role' => 'receptionist', 'section' => 'verification-oversight']) }}" class="block w-full px-3 py-2.5 rounded-xl bg-slate-50 text-slate-800 text-[0.85rem] font-semibold hover:bg-slate-100 border border-slate-200 transition-colors">
+                        Verification requests
+                    </a>
                     <a href="{{ route('dashboard', ['role' => 'receptionist', 'section' => 'record-payment']) }}" class="block w-full px-3 py-2.5 rounded-xl bg-slate-50 text-slate-800 text-[0.85rem] font-semibold hover:bg-slate-100 border border-slate-200 transition-colors">
                         Record payment
                     </a>
@@ -84,6 +107,8 @@
             @include('dashviews.receptionist.reception_walk_ins')
         @elseif ($sectionKey === 'record-payment')
             @include('dashviews.receptionist.reception_record_payment')
+        @elseif ($sectionKey === 'verification-oversight')
+            @include('dashviews.admin.verification_approvals')
         @endif
     @endif
 </div>

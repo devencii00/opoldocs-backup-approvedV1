@@ -9,13 +9,30 @@ class PersonalInformationController extends Controller
 {
     public function index(Request $request)
     {
+        $currentUser = $request->user();
+
+        if ($currentUser && $currentUser->role === 'patient' && ! $currentUser->is_dependent) {
+            return User::query()
+                ->whereIn('user_id', $currentUser->accessiblePatientIds())
+                ->get();
+        }
+
         return User::query()
-            ->where('user_id', $request->user()->user_id)
+            ->where('user_id', $currentUser->user_id)
             ->get();
     }
 
     public function show(User $personal_information)
     {
+        $currentUser = request()->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            if (! $currentUser->canAccessPatientId((int) $personal_information->user_id)) {
+                abort(403);
+            }
+        } elseif ($currentUser && (int) $personal_information->user_id !== (int) $currentUser->user_id) {
+            abort(403);
+        }
+
         return $personal_information;
     }
 
@@ -26,6 +43,15 @@ class PersonalInformationController extends Controller
 
     public function update(Request $request, User $personal_information)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            if (! $currentUser->canAccessPatientId((int) $personal_information->user_id)) {
+                abort(403);
+            }
+        } elseif ($currentUser && (int) $personal_information->user_id !== (int) $currentUser->user_id) {
+            abort(403);
+        }
+
         $data = $request->validate([
             'firstname' => ['sometimes', 'nullable', 'string'],
             'lastname' => ['sometimes', 'nullable', 'string'],

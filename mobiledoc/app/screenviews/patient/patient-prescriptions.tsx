@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import {
   View,
@@ -30,24 +30,16 @@ const T = {
   white: '#ffffff',
 };
 
-const mockPrescriptions = [
-  {
-    id: '1',
-    date: '2026-03-21',
-    doctor: 'Dr. Cruz',
-    medicine: 'Amlodipine 5mg',
-    dosage: 'Once daily',
-    duration: '30 days',
-  },
-  {
-    id: '2',
-    date: '2026-03-08',
-    doctor: 'Dr. Santos',
-    medicine: 'Cetirizine 10mg',
-    dosage: 'Once daily',
-    duration: '7 days',
-  },
-];
+const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
+
+type PrescriptionListItem = {
+  id: string;
+  date: string;
+  doctor: string;
+  medicine: string;
+  dosage: string;
+  duration: string;
+};
 
 type AnimatedCardProps = {
   children: ReactNode;
@@ -119,6 +111,74 @@ function SectionCard({ title, subtitle, badge, children, delay, style }: Section
 }
 
 export default function PatientPrescriptionsScreen() {
+  const [items, setItems] = useState<PrescriptionListItem[]>([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const token = (globalThis as any)?.apiToken as string | undefined;
+        if (!token) {
+          setError('Please log in again.');
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/prescriptions?per_page=50`, {
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          const message =
+            typeof data?.message === 'string' && data.message.length > 0
+              ? data.message
+              : 'Unable to load prescriptions.';
+          setError(message);
+          return;
+        }
+
+        const raw = Array.isArray(data?.data) ? data.data : [];
+        const mapped: PrescriptionListItem[] = raw.map((p: any) => {
+          const dt = p?.prescribed_datetime ? new Date(p.prescribed_datetime) : null;
+          const doctorFirst = p?.doctor?.firstname ? String(p.doctor.firstname) : '';
+          const doctorLast = p?.doctor?.lastname ? String(p.doctor.lastname) : '';
+          const doctorName = `Dr. ${[doctorFirst, doctorLast].filter(Boolean).join(' ')}`.trim();
+
+          const firstItem = Array.isArray(p?.items) && p.items.length > 0 ? p.items[0] : null;
+          const medicineName = firstItem?.medicine_name ? String(firstItem.medicine_name) : 'Prescription';
+          const dosage = firstItem?.dosage ? String(firstItem.dosage) : '';
+          const duration = firstItem?.duration ? String(firstItem.duration) : '';
+
+          return {
+            id: String(p.prescription_id),
+            date: dt ? dt.toLocaleDateString() : '',
+            doctor: doctorName === 'Dr.' ? 'Doctor' : doctorName,
+            medicine: medicineName,
+            dosage,
+            duration,
+          };
+        });
+
+        if (!cancelled) {
+          setItems(mapped);
+          setError('');
+        }
+      } catch {
+        if (!cancelled) setError('Network error. Please try again.');
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
@@ -152,7 +212,8 @@ export default function PatientPrescriptionsScreen() {
           badge="Prescriptions"
           delay={60}
         >
-          {mockPrescriptions.map((item) => (
+          {error ? <Text style={styles.inlineError}>{error}</Text> : null}
+          {items.map((item) => (
             <View key={item.id} style={styles.row}>
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{item.medicine}</Text>
@@ -160,7 +221,7 @@ export default function PatientPrescriptionsScreen() {
                   {item.date} · {item.doctor}
                 </Text>
                 <Text style={styles.rowMeta}>
-                  {item.dosage} · {item.duration}
+                  {[item.dosage, item.duration].filter(Boolean).join(' · ')}
                 </Text>
               </View>
               <View style={styles.actionsColumn}>
@@ -324,6 +385,11 @@ const styles = StyleSheet.create({
     color: T.slate400,
     marginTop: 2,
   },
+  inlineError: {
+    fontSize: 12,
+    color: '#b91c1c',
+    marginBottom: 10,
+  },
   actionsColumn: {
     alignItems: 'flex-end',
     gap: 6,
@@ -356,4 +422,3 @@ const styles = StyleSheet.create({
     color: T.slate500,
   },
 });
-

@@ -8,6 +8,7 @@
     </p>
 
     <div id="adminDoctorError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+    <div id="adminDoctorSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
         <div class="flex-1">
@@ -58,12 +59,50 @@
 
         <form id="adminDoctorScheduleForm" class="mb-3 grid gap-2 grid-cols-1 md:grid-cols-5 items-end">
             <div>
-                <label for="admin_schedule_start" class="block text-[0.7rem] text-slate-600 mb-1">Start time</label>
-                <input id="admin_schedule_start" type="time" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <label class="block text-[0.7rem] text-slate-600 mb-1">Start time</label>
+                <div class="grid grid-cols-3 gap-1">
+                    <select id="admin_schedule_start_hour" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">HH</option>
+                        @for ($h = 1; $h <= 12; $h++)
+                            <option value="{{ $h }}">{{ $h }}</option>
+                        @endfor
+                    </select>
+                    <select id="admin_schedule_start_min" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">MM</option>
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                    <select id="admin_schedule_start_ampm" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">AM/PM</option>
+                        <option value="am">AM</option>
+                        <option value="pm">PM</option>
+                    </select>
+                </div>
             </div>
             <div>
-                <label for="admin_schedule_end" class="block text-[0.7rem] text-slate-600 mb-1">End time</label>
-                <input id="admin_schedule_end" type="time" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <label class="block text-[0.7rem] text-slate-600 mb-1">End time</label>
+                <div class="grid grid-cols-3 gap-1">
+                    <select id="admin_schedule_end_hour" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">HH</option>
+                        @for ($h = 1; $h <= 12; $h++)
+                            <option value="{{ $h }}">{{ $h }}</option>
+                        @endfor
+                    </select>
+                    <select id="admin_schedule_end_min" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">MM</option>
+                        <option value="00">00</option>
+                        <option value="15">15</option>
+                        <option value="30">30</option>
+                        <option value="45">45</option>
+                    </select>
+                    <select id="admin_schedule_end_ampm" class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">AM/PM</option>
+                        <option value="am">AM</option>
+                        <option value="pm">PM</option>
+                    </select>
+                </div>
             </div>
             <div>
                 <label for="admin_schedule_max" class="block text-[0.7rem] text-slate-600 mb-1">Max patients</label>
@@ -96,11 +135,30 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <button type="submit" class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors w-full">
-                    Add schedule
+                <button type="submit" id="adminDoctorScheduleSubmit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors w-full disabled:opacity-60 disabled:hover:bg-cyan-600">
+                    <span id="adminDoctorScheduleSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                    <span id="adminDoctorScheduleSubmitLabel">Add schedule</span>
                 </button>
             </div>
         </form>
+
+        <div id="adminConfirmOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
+            <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+                <div class="flex items-start gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
+                        <span class="material-symbols-outlined text-[18px] leading-none">help</span>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-sm font-semibold text-slate-900">Confirm</div>
+                        <div id="adminConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+                    </div>
+                </div>
+                <div class="mt-4 flex items-center justify-end gap-2">
+                    <button type="button" id="adminConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                    <button type="button" id="adminConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+                </div>
+            </div>
+        </div>
 
         <div class="text-[0.78rem] text-slate-700">
             <h4 class="text-xs font-semibold text-slate-900 mb-2">Existing schedules</h4>
@@ -117,6 +175,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var errorBox = document.getElementById('adminDoctorError')
+        var successBox = document.getElementById('adminDoctorSuccess')
         var searchInput = document.getElementById('admin_doctor_search')
         var sortSelect = document.getElementById('admin_doctor_sort')
         var tableBody = document.getElementById('admin_doctor_table_body')
@@ -125,11 +184,24 @@
         var scheduleTitle = document.getElementById('adminDoctorScheduleTitle')
         var scheduleClose = document.getElementById('adminDoctorScheduleClose')
         var scheduleForm = document.getElementById('adminDoctorScheduleForm')
-        var scheduleStart = document.getElementById('admin_schedule_start')
-        var scheduleEnd = document.getElementById('admin_schedule_end')
+        var scheduleStartHour = document.getElementById('admin_schedule_start_hour')
+        var scheduleStartMin = document.getElementById('admin_schedule_start_min')
+        var scheduleStartAmPm = document.getElementById('admin_schedule_start_ampm')
+        var scheduleEndHour = document.getElementById('admin_schedule_end_hour')
+        var scheduleEndMin = document.getElementById('admin_schedule_end_min')
+        var scheduleEndAmPm = document.getElementById('admin_schedule_end_ampm')
         var scheduleMax = document.getElementById('admin_schedule_max')
         var scheduleList = document.getElementById('adminDoctorScheduleList')
         var scheduleGrid = document.getElementById('adminDoctorScheduleGrid')
+        var scheduleSubmit = document.getElementById('adminDoctorScheduleSubmit')
+        var scheduleSpinner = document.getElementById('adminDoctorScheduleSpinner')
+        var scheduleSubmitLabel = document.getElementById('adminDoctorScheduleSubmitLabel')
+
+        var confirmOverlay = document.getElementById('adminConfirmOverlay')
+        var confirmMessage = document.getElementById('adminConfirmMessage')
+        var confirmOk = document.getElementById('adminConfirmOk')
+        var confirmCancel = document.getElementById('adminConfirmCancel')
+        var confirmResolver = null
 
         var currentDoctorIdForSchedule = null
         var currentScheduleId = null
@@ -144,6 +216,123 @@
             } else {
                 errorBox.classList.add('hidden')
             }
+        }
+
+        function showDoctorSuccess(message) {
+            if (!successBox) return
+            successBox.textContent = message || ''
+            if (message) {
+                successBox.classList.remove('hidden')
+            } else {
+                successBox.classList.add('hidden')
+            }
+        }
+
+        function setScheduleSubmitting(isSubmitting) {
+            if (scheduleSubmit) scheduleSubmit.disabled = !!isSubmitting
+            if (scheduleSpinner) scheduleSpinner.classList.toggle('hidden', !isSubmitting)
+            if (scheduleSubmitLabel) scheduleSubmitLabel.textContent = currentScheduleId ? (isSubmitting ? 'Saving...' : 'Save changes') : (isSubmitting ? 'Saving...' : 'Add schedule')
+        }
+
+        function confirmAction(message) {
+            return new Promise(function (resolve) {
+                if (!confirmOverlay || !confirmMessage || !confirmOk || !confirmCancel) {
+                    resolve(window.confirm(message || 'Are you sure?'))
+                    return
+                }
+                confirmMessage.textContent = message || 'Are you sure?'
+                confirmResolver = resolve
+                confirmOverlay.classList.remove('hidden')
+                confirmOverlay.classList.add('flex')
+            })
+        }
+
+        function closeConfirm(result) {
+            if (confirmOverlay) {
+                confirmOverlay.classList.add('hidden')
+                confirmOverlay.classList.remove('flex')
+            }
+            var resolver = confirmResolver
+            confirmResolver = null
+            if (typeof resolver === 'function') {
+                resolver(!!result)
+            }
+        }
+
+        if (confirmOk) {
+            confirmOk.addEventListener('click', function () { closeConfirm(true) })
+        }
+        if (confirmCancel) {
+            confirmCancel.addEventListener('click', function () { closeConfirm(false) })
+        }
+        if (confirmOverlay) {
+            confirmOverlay.addEventListener('click', function (e) {
+                if (e.target === confirmOverlay) closeConfirm(false)
+            })
+        }
+
+        function pad2(n) {
+            return String(n).padStart(2, '0')
+        }
+
+        function to24Hour(hour12, minute, ampm) {
+            var h = parseInt(hour12, 10)
+            if (isNaN(h) || h < 1 || h > 12) return ''
+            var m = String(minute || '')
+            if (!/^\d{2}$/.test(m)) return ''
+            var ap = String(ampm || '').toLowerCase()
+            if (ap !== 'am' && ap !== 'pm') return ''
+            var base = h % 12
+            if (ap === 'pm') base += 12
+            return pad2(base) + ':' + m
+        }
+
+        function minutesFromHHMM(hhmm) {
+            var t = String(hhmm || '').slice(0, 5)
+            if (!/^\d{2}:\d{2}$/.test(t)) return NaN
+            var parts = t.split(':')
+            return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10)
+        }
+
+        function set12HourSelects(prefix, hhmm) {
+            var t = String(hhmm || '').slice(0, 5)
+            if (!/^\d{2}:\d{2}$/.test(t)) return
+            var parts = t.split(':')
+            var h24 = parseInt(parts[0], 10)
+            var m = parts[1]
+            var ap = h24 >= 12 ? 'pm' : 'am'
+            var h12 = h24 % 12
+            if (h12 === 0) h12 = 12
+            var hEl = document.getElementById('admin_schedule_' + prefix + '_hour')
+            var mEl = document.getElementById('admin_schedule_' + prefix + '_min')
+            var apEl = document.getElementById('admin_schedule_' + prefix + '_ampm')
+            if (hEl) hEl.value = String(h12)
+            if (mEl) mEl.value = m
+            if (apEl) apEl.value = ap
+        }
+
+        function formatTimeLabel(hhmm) {
+            var t = String(hhmm || '').slice(0, 5)
+            if (!/^\d{2}:\d{2}$/.test(t)) return ''
+            var parts = t.split(':')
+            var h24 = parseInt(parts[0], 10)
+            var m = parts[1]
+            var ap = h24 >= 12 ? 'PM' : 'AM'
+            var h12 = h24 % 12
+            if (h12 === 0) h12 = 12
+            return h12 + ':' + m + ' ' + ap
+        }
+
+        function readResponse(response) {
+            return response.text().then(function (text) {
+                var data = null
+                try {
+                    data = text ? JSON.parse(text) : null
+                } catch (e) {
+                    data = null
+                }
+                return { ok: response.ok, status: response.status, data: data, raw: text }
+            })
         }
 
         function loadDoctors() {
@@ -295,8 +484,12 @@
                     var name = this.getAttribute('data-doctor-name') || ''
                     currentDoctorIdForSchedule = id
                     currentScheduleId = null
-                    if (scheduleStart) scheduleStart.value = ''
-                    if (scheduleEnd) scheduleEnd.value = ''
+                    if (scheduleStartHour) scheduleStartHour.value = ''
+                    if (scheduleStartMin) scheduleStartMin.value = ''
+                    if (scheduleStartAmPm) scheduleStartAmPm.value = ''
+                    if (scheduleEndHour) scheduleEndHour.value = ''
+                    if (scheduleEndMin) scheduleEndMin.value = ''
+                    if (scheduleEndAmPm) scheduleEndAmPm.value = ''
                     if (scheduleMax) scheduleMax.value = ''
                     if (scheduleForm) {
                         var inputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
@@ -304,6 +497,9 @@
                             input.checked = false
                         })
                     }
+                    showDoctorError('')
+                    showDoctorSuccess('')
+                    setScheduleSubmitting(false)
                     if (scheduleTitle) {
                         scheduleTitle.textContent = 'Manage Schedule — ' + name
                     }
@@ -349,9 +545,11 @@
                     var html = ''
                     loadedSchedules.forEach(function (s) {
                         var days = Array.isArray(s.days) ? s.days.map(function (d) { return d.day_of_week }).join(', ') : ''
+                        var startLabel = formatTimeLabel(s.start_time || '')
+                        var endLabel = formatTimeLabel(s.end_time || '')
                         html += '<div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">' +
                             '<div class="text-[0.78rem] text-slate-700">' +
-                            '<div><span class="font-semibold">Time:</span> ' + (s.start_time || '') + '–' + (s.end_time || '') + '</div>' +
+                            '<div><span class="font-semibold">Time:</span> ' + (startLabel || (s.start_time || '')) + '–' + (endLabel || (s.end_time || '')) + '</div>' +
                             '<div><span class="font-semibold">Days:</span> ' + (days || 'None') + '</div>' +
                             '<div><span class="font-semibold">Max patients:</span> ' + (s.max_patients || '—') + '</div>' +
                             '</div>' +
@@ -372,8 +570,8 @@
                             var schedule = loadedSchedules.find(function (s) { return String(s.schedule_id) === String(scheduleId) })
                             if (!schedule) return
                             currentScheduleId = schedule.schedule_id
-                            if (scheduleStart) scheduleStart.value = (schedule.start_time || '').slice(0, 5)
-                            if (scheduleEnd) scheduleEnd.value = (schedule.end_time || '').slice(0, 5)
+                            set12HourSelects('start', schedule.start_time || '')
+                            set12HourSelects('end', schedule.end_time || '')
                             if (scheduleMax) scheduleMax.value = schedule.max_patients || ''
                             var inputs = scheduleForm ? scheduleForm.querySelectorAll('input[type="checkbox"][value]') : []
                             inputs.forEach(function (input) {
@@ -393,25 +591,33 @@
                         button.addEventListener('click', function () {
                             var scheduleId = this.getAttribute('data-schedule-id')
                             if (!scheduleId) return
-                            if (!window.confirm('Delete this schedule?')) return
+                            showDoctorError('')
+                            showDoctorSuccess('')
 
-                            apiFetch("{{ url('/api/doctor-schedules') }}/" + scheduleId, {
-                                method: 'DELETE'
-                            })
-                                .then(function (response) {
-                                    return response.json().then(function (data) {
-                                        return { ok: response.ok, data: data }
+                            confirmAction('Delete this schedule?')
+                                .then(function (confirmed) {
+                                    if (!confirmed) return
+                                    apiFetch("{{ url('/api/doctor-schedules') }}/" + scheduleId, {
+                                        method: 'DELETE'
                                     })
-                                })
-                                .then(function (result) {
-                                    if (!result.ok) {
-                                        showDoctorError('Failed to delete schedule.')
-                                        return
-                                    }
-                                    loadSchedulesForDoctor(doctorId)
-                                })
-                                .catch(function () {
-                                    showDoctorError('Network error while deleting schedule.')
+                                        .then(function (response) {
+                                            return readResponse(response)
+                                        })
+                                        .then(function (result) {
+                                            if (!result.ok) {
+                                                var msg = (result.data && result.data.message) ? result.data.message : 'Failed to delete schedule.'
+                                                if (!result.data && result.raw) {
+                                                    msg = 'Failed to delete schedule.'
+                                                }
+                                                showDoctorError(msg)
+                                                return
+                                            }
+                                            showDoctorSuccess('Schedule deleted.')
+                                            loadSchedulesForDoctor(doctorId)
+                                        })
+                                        .catch(function () {
+                                            showDoctorError('Network error while deleting schedule.')
+                                        })
                                 })
                         })
                     })
@@ -437,8 +643,12 @@
                 schedulePanel.classList.add('hidden')
                 currentDoctorIdForSchedule = null
                 currentScheduleId = null
-                if (scheduleStart) scheduleStart.value = ''
-                if (scheduleEnd) scheduleEnd.value = ''
+                if (scheduleStartHour) scheduleStartHour.value = ''
+                if (scheduleStartMin) scheduleStartMin.value = ''
+                if (scheduleStartAmPm) scheduleStartAmPm.value = ''
+                if (scheduleEndHour) scheduleEndHour.value = ''
+                if (scheduleEndMin) scheduleEndMin.value = ''
+                if (scheduleEndAmPm) scheduleEndAmPm.value = ''
                 if (scheduleMax) scheduleMax.value = ''
                 if (scheduleForm) {
                     var inputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
@@ -446,6 +656,8 @@
                         input.checked = false
                     })
                 }
+                showDoctorError('')
+                showDoctorSuccess('')
             })
         }
 
@@ -456,8 +668,19 @@
                     showDoctorError('Select a doctor to manage schedules.')
                     return
                 }
-                var start = scheduleStart ? scheduleStart.value : ''
-                var end = scheduleEnd ? scheduleEnd.value : ''
+                showDoctorError('')
+                showDoctorSuccess('')
+
+                var start = to24Hour(
+                    scheduleStartHour ? scheduleStartHour.value : '',
+                    scheduleStartMin ? scheduleStartMin.value : '',
+                    scheduleStartAmPm ? scheduleStartAmPm.value : ''
+                )
+                var end = to24Hour(
+                    scheduleEndHour ? scheduleEndHour.value : '',
+                    scheduleEndMin ? scheduleEndMin.value : '',
+                    scheduleEndAmPm ? scheduleEndAmPm.value : ''
+                )
                 var maxPatients = scheduleMax ? scheduleMax.value : ''
 
                 var dayInputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
@@ -470,6 +693,13 @@
 
                 if (!start || !end || !days.length) {
                     showDoctorError('Start time, end time, and at least one day are required.')
+                    return
+                }
+
+                var startMinutes = minutesFromHHMM(start)
+                var endMinutes = minutesFromHHMM(end)
+                if (isNaN(startMinutes) || isNaN(endMinutes) || endMinutes <= startMinutes) {
+                    showDoctorError('End time must be after start time.')
                     return
                 }
 
@@ -491,6 +721,7 @@
                     body.doctor_id = currentDoctorIdForSchedule
                 }
 
+                setScheduleSubmitting(true)
                 apiFetch(url, {
                     method: method,
                     headers: {
@@ -499,17 +730,43 @@
                     body: JSON.stringify(body)
                 })
                     .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, data: data }
-                        })
+                        return readResponse(response)
                     })
                     .then(function (result) {
                         if (!result.ok) {
-                            showDoctorError('Failed to save schedule.')
+                            var message = 'Failed to save schedule.'
+                            if (result.data && result.data.message) {
+                                message = result.data.message
+                            } else if (result.data && result.data.errors) {
+                                var all = []
+                                Object.keys(result.data.errors).forEach(function (key) {
+                                    var v = result.data.errors[key]
+                                    if (Array.isArray(v)) {
+                                        v.forEach(function (x) { all.push(String(x)) })
+                                    } else if (v != null) {
+                                        all.push(String(v))
+                                    }
+                                })
+                                if (all.length) {
+                                    message = all.join(' ')
+                                }
+                            } else if (!result.data && result.raw) {
+                                message = 'Failed to save schedule.'
+                            } else if (result.status === 401) {
+                                message = 'Session expired. Please log in again.'
+                            } else if (result.status === 403) {
+                                message = 'You do not have permission to manage schedules.'
+                            }
+                            showDoctorError(message)
                             return
                         }
-                        if (scheduleStart) scheduleStart.value = ''
-                        if (scheduleEnd) scheduleEnd.value = ''
+                        showDoctorSuccess(currentScheduleId ? 'Schedule updated.' : 'Schedule created.')
+                        if (scheduleStartHour) scheduleStartHour.value = ''
+                        if (scheduleStartMin) scheduleStartMin.value = ''
+                        if (scheduleStartAmPm) scheduleStartAmPm.value = ''
+                        if (scheduleEndHour) scheduleEndHour.value = ''
+                        if (scheduleEndMin) scheduleEndMin.value = ''
+                        if (scheduleEndAmPm) scheduleEndAmPm.value = ''
                         if (scheduleMax) scheduleMax.value = ''
                         currentScheduleId = null
                         var inputs = scheduleForm.querySelectorAll('input[type="checkbox"][value]')
@@ -520,6 +777,9 @@
                     })
                     .catch(function () {
                         showDoctorError('Network error while saving schedule.')
+                    })
+                    .finally(function () {
+                        setScheduleSubmitting(false)
                     })
             })
         }

@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\LogEntry;
+use App\Models\Notification;
 use App\Models\PatientVerification;
 use App\Models\Prescription;
 use App\Models\Queue;
-use App\Models\Notification;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -353,12 +353,30 @@ class DashboardController extends Controller
 
             $appointmentsToday = Appointment::whereDate('appointment_datetime', $today)->count();
 
+            $walkInsToday = Appointment::whereDate('appointment_datetime', $today)
+                ->where('appointment_type', 'walk_in')
+                ->count();
+
+            $pendingQueueRequests = Appointment::where('appointment_type', 'scheduled')
+                ->where('status', 'pending')
+                ->whereDate('created_at', $today)
+                ->count();
+
             $waitingCount = Queue::whereDate('queue_datetime', $today)
                 ->where('status', 'waiting')
                 ->count();
 
+            $currentQueueCount = Queue::whereDate('queue_datetime', $today)
+                ->whereIn('status', ['waiting', 'serving'])
+                ->count();
+
+            $transactionsToday = Transaction::whereDate('transaction_datetime', $today)
+                ->where('payment_status', 'paid')
+                ->sum('amount');
+
             $receptionQueue = Queue::with(['appointment.patient', 'appointment.doctor'])
                 ->whereDate('queue_datetime', $today)
+                ->orderBy('priority_level')
                 ->orderBy('queue_number')
                 ->get();
 
@@ -370,7 +388,11 @@ class DashboardController extends Controller
             $data['receptionMetrics'] = [
                 'newRegistrationsToday' => $newRegistrationsToday,
                 'appointmentsToday' => $appointmentsToday,
+                'walkInsToday' => $walkInsToday,
+                'pendingQueueRequests' => $pendingQueueRequests,
                 'waitingCount' => $waitingCount,
+                'currentQueueCount' => $currentQueueCount,
+                'transactionsToday' => $transactionsToday,
             ];
 
             $data['receptionQueue'] = $receptionQueue;

@@ -8,6 +8,7 @@
     </p>
 
     <div id="adminUserError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+    <div id="adminUserSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
     <form id="adminCreateUserForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-4 items-end">
         <div>
@@ -27,11 +28,30 @@
             A temporary password will be generated and emailed to the user.
         </div>
         <div class="flex items-center gap-2">
-            <button type="submit" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
-                Create user
+            <button type="submit" id="adminCreateUserSubmit" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
+                <span id="adminCreateUserSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                <span id="adminCreateUserSubmitLabel">Create user</span>
             </button>
         </div>
     </form>
+
+    <div id="adminUserConfirmOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
+        <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
+                    <span class="material-symbols-outlined text-[18px] leading-none">help</span>
+                </div>
+                <div class="flex-1">
+                    <div class="text-sm font-semibold text-slate-900">Confirm</div>
+                    <div id="adminUserConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+                </div>
+            </div>
+            <div class="mt-4 flex items-center justify-end gap-2">
+                <button type="button" id="adminUserConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button type="button" id="adminUserConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+            </div>
+        </div>
+    </div>
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
         <div class="flex-1">
@@ -170,6 +190,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         var form = document.getElementById('adminCreateUserForm')
         var errorBox = document.getElementById('adminUserError')
+        var successBox = document.getElementById('adminUserSuccess')
+        var submitBtn = document.getElementById('adminCreateUserSubmit')
+        var submitSpinner = document.getElementById('adminCreateUserSpinner')
+        var submitLabel = document.getElementById('adminCreateUserSubmitLabel')
+
+        var confirmOverlay = document.getElementById('adminUserConfirmOverlay')
+        var confirmMessage = document.getElementById('adminUserConfirmMessage')
+        var confirmOk = document.getElementById('adminUserConfirmOk')
+        var confirmCancel = document.getElementById('adminUserConfirmCancel')
+        var confirmResolver = null
 
         function showUserError(message) {
             if (!errorBox) {
@@ -183,11 +213,61 @@
             }
         }
 
+        function showUserSuccess(message) {
+            if (!successBox) return
+            successBox.textContent = message || ''
+            if (message) {
+                successBox.classList.remove('hidden')
+            } else {
+                successBox.classList.add('hidden')
+            }
+        }
+
+        function setSubmitting(isSubmitting) {
+            if (submitBtn) submitBtn.disabled = !!isSubmitting
+            if (submitSpinner) submitSpinner.classList.toggle('hidden', !isSubmitting)
+            if (submitLabel) submitLabel.textContent = isSubmitting ? 'Creating...' : 'Create user'
+        }
+
+        function confirmAction(message) {
+            return new Promise(function (resolve) {
+                if (!confirmOverlay || !confirmMessage || !confirmOk || !confirmCancel) {
+                    resolve(window.confirm(message || 'Are you sure?'))
+                    return
+                }
+                confirmMessage.textContent = message || 'Are you sure?'
+                confirmResolver = resolve
+                confirmOverlay.classList.remove('hidden')
+                confirmOverlay.classList.add('flex')
+            })
+        }
+
+        function closeConfirm(result) {
+            if (confirmOverlay) {
+                confirmOverlay.classList.add('hidden')
+                confirmOverlay.classList.remove('flex')
+            }
+            var resolver = confirmResolver
+            confirmResolver = null
+            if (typeof resolver === 'function') {
+                resolver(!!result)
+            }
+        }
+
+        if (confirmOk) confirmOk.addEventListener('click', function () { closeConfirm(true) })
+        if (confirmCancel) confirmCancel.addEventListener('click', function () { closeConfirm(false) })
+        if (confirmOverlay) {
+            confirmOverlay.addEventListener('click', function (e) {
+                if (e.target === confirmOverlay) closeConfirm(false)
+            })
+        }
+
         if (form) {
             form.addEventListener('submit', function (e) {
                 e.preventDefault()
 
                 showUserError('')
+                showUserSuccess('')
 
                 var emailInput = document.getElementById('admin_new_email')
                 var roleSelect = document.getElementById('admin_new_role')
@@ -205,29 +285,41 @@
                     role: role || 'patient'
                 }
 
-                apiFetch("{{ url('/api/users/invite') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
-                })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, status: response.status, data: data }
+                confirmAction('Create this user and email temporary credentials?')
+                    .then(function (confirmed) {
+                        if (!confirmed) return
+                        setSubmitting(true)
+                        apiFetch("{{ url('/api/users/invite') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(body)
                         })
-                    })
-                    .then(function (result) {
-                        if (!result.ok) {
-                            var message = result.data && result.data.message ? result.data.message : 'Failed to create user.'
-                            showUserError(message)
-                            return
-                        }
+                            .then(function (response) {
+                                return response.json().then(function (data) {
+                                    return { ok: response.ok, status: response.status, data: data }
+                                }).catch(function () {
+                                    return { ok: response.ok, status: response.status, data: null }
+                                })
+                            })
+                            .then(function (result) {
+                                if (!result.ok) {
+                                    var message = result.data && result.data.message ? result.data.message : 'Failed to create user.'
+                                    showUserError(message)
+                                    return
+                                }
 
-                        window.location.reload()
-                    })
-                    .catch(function () {
-                        showUserError('Network error while creating user.')
+                                showUserSuccess('Account created and credentials email sent.')
+                                if (emailInput) emailInput.value = ''
+                                setTimeout(function () { window.location.reload() }, 700)
+                            })
+                            .catch(function () {
+                                showUserError('Network error while creating user.')
+                            })
+                            .finally(function () {
+                                setSubmitting(false)
+                            })
                     })
             })
         }
@@ -239,17 +331,31 @@
                 if (!userId) {
                     return
                 }
-                if (!window.confirm('Delete this user?')) {
-                    return
-                }
-
-                apiFetch("{{ url('/api/users') }}/" + userId, {
-                    method: 'DELETE'
-                })
-                    .then(function () {
-                        window.location.reload()
-                    })
-                    .catch(function () {
+                showUserError('')
+                showUserSuccess('')
+                confirmAction('Delete this user?')
+                    .then(function (confirmed) {
+                        if (!confirmed) return
+                        apiFetch("{{ url('/api/users') }}/" + userId, {
+                            method: 'DELETE'
+                        })
+                            .then(function (response) {
+                                return response.json().then(function (data) {
+                                    return { ok: response.ok, status: response.status, data: data }
+                                }).catch(function () {
+                                    return { ok: response.ok, status: response.status, data: null }
+                                })
+                            })
+                            .then(function (result) {
+                                if (!result.ok) {
+                                    var msg = (result.data && result.data.message) ? result.data.message : 'Failed to delete user.'
+                                    showUserError(msg)
+                                    return
+                                }
+                                showUserSuccess('User deleted.')
+                                setTimeout(function () { window.location.reload() }, 700)
+                            })
+                            .catch(function () {})
                     })
             })
         })

@@ -6,6 +6,7 @@
     <title>Update Admin Credentials</title>
     @vite('resources/css/app.css')
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+     <link rel="icon" type="image/x-icon" href="/images/opoldoc-weblog.ico">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;600&display=swap">
     <style>
         .font-playfair { font-family: 'Playfair Display', serif; }

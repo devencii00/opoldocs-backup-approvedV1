@@ -29,7 +29,7 @@
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            <span class="absolute top-1.5 right-1.5 w-1.75 h-1.75 rounded-full bg-cyan-500 border-2 border-white"></span>
+            <span id="headerNotificationDot" class="absolute top-1.5 right-1.5 w-1.75 h-1.75 rounded-full bg-cyan-500 border-2 border-white"></span>
         </button>
 
         <div id="headerNotificationPanel" class="hidden absolute right-0 top-10 w-80 max-h-80 bg-white border border-slate-200 rounded-2xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] overflow-hidden">
@@ -72,6 +72,15 @@
                 return
             }
 
+            function escapeHtml(value) {
+                return String(value || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;')
+            }
+
             if (!items || !items.length) {
                 container.innerHTML = '<div class="px-3 py-3 text-[0.75rem] text-slate-400">No notifications at the moment.</div>'
                 return
@@ -79,14 +88,27 @@
 
             var html = ''
             items.forEach(function (item) {
+                var type = item && item.type ? String(item.type) : 'system'
+                var title = type === 'appointment' ? 'Appointment update' : (type === 'payment' ? 'Payment update' : 'System')
+                var icon = type === 'appointment' ? 'event' : (type === 'payment' ? 'payments' : 'notifications')
+                var body = item && item.message ? String(item.message) : ''
+                var createdAt = item && item.created_at ? String(item.created_at) : ''
+                var timeLabel = ''
+                if (createdAt) {
+                    var dt = new Date(createdAt)
+                    if (!isNaN(dt.getTime())) {
+                        timeLabel = dt.toLocaleString()
+                    }
+                }
+
                 html += '<div class="px-3 py-2 border-b border-slate-50 last:border-0 flex gap-2">' +
                     '<div class="mt-0.5">' +
-                    '<span class="material-symbols-outlined text-[16px] text-cyan-600 leading-none">' + (item.icon || 'notifications') + '</span>' +
+                    '<span class="material-symbols-outlined text-[16px] text-cyan-600 leading-none">' + escapeHtml(icon) + '</span>' +
                     '</div>' +
                     '<div class="flex-1">' +
-                    '<div class="text-[0.75rem] font-semibold text-slate-800">' + item.title + '</div>' +
-                    '<div class="text-[0.7rem] text-slate-500">' + item.body + '</div>' +
-                    '<div class="text-[0.65rem] text-slate-400 mt-0.5">' + (item.time || '') + '</div>' +
+                    '<div class="text-[0.75rem] font-semibold text-slate-800">' + escapeHtml(title) + '</div>' +
+                    '<div class="text-[0.7rem] text-slate-500">' + escapeHtml(body) + '</div>' +
+                    '<div class="text-[0.65rem] text-slate-400 mt-0.5">' + escapeHtml(timeLabel) + '</div>' +
                     '</div>' +
                     '</div>'
             })
@@ -98,7 +120,7 @@
             var button = document.getElementById('headerNotificationButton')
             var panel = document.getElementById('headerNotificationPanel')
             var body = document.getElementById('headerNotificationBody')
-            var loaded = false
+            var dot = document.getElementById('headerNotificationDot')
 
             if (!button || !panel) {
                 return
@@ -107,27 +129,44 @@
             button.addEventListener('click', function (e) {
                 e.stopPropagation()
                 var isHidden = panel.classList.contains('hidden')
-                if (isHidden && !loaded) {
+                if (isHidden) {
                     if (body) {
                         body.innerHTML = '<div class="px-3 py-3 text-[0.75rem] text-slate-400">Loading notifications...</div>'
                     }
-                    headerApiFetch("{{ url('/api/notifications') }}", {
-                        method: 'GET'
-                    })
+                    headerApiFetch("{{ url('/api/notifications') }}", { method: 'GET' })
                         .then(function (response) {
                             return response.json().then(function (data) {
                                 return { ok: response.ok, data: data }
+                            }).catch(function () {
+                                return { ok: response.ok, data: null }
                             })
                         })
                         .then(function (result) {
-                            if (!result.ok) {
+                            if (!result.ok || !result.data) {
                                 if (body) {
                                     body.innerHTML = '<div class="px-3 py-3 text-[0.75rem] text-slate-400">Unable to load notifications.</div>'
                                 }
                                 return
                             }
-                            loaded = true
-                            renderNotifications(body, result.data.notifications || [])
+
+                            var payload = result.data
+                            var items = []
+                            if (Array.isArray(payload)) {
+                                items = payload
+                            } else if (Array.isArray(payload.data)) {
+                                items = payload.data
+                            } else if (Array.isArray(payload.notifications)) {
+                                items = payload.notifications
+                            }
+
+                            renderNotifications(body, items)
+
+                            var hasUnread = items.some(function (n) {
+                                return n && n.is_read === false
+                            })
+                            if (dot) {
+                                dot.classList.toggle('hidden', !hasUnread)
+                            }
                         })
                         .catch(function () {
                             if (body) {

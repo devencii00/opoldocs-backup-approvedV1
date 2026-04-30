@@ -149,7 +149,7 @@
                 </div>
                 <div class="md:col-span-2 flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
                     <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
-                        <input type="checkbox" id="consultMarkCompleted" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-200">
+                        <input type="checkbox" id="consultMarkCompleted" checked class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-200">
                         Mark appointment completed
                     </label>
                     <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
@@ -208,6 +208,34 @@
     </div>
 </div>
 
+<div id="consultSafetyModal" class="hidden fixed inset-0 z-50 bg-slate-900/70">
+    <div class="absolute inset-0 flex items-center justify-center px-4 py-6">
+        <div class="w-full max-w-lg rounded-3xl bg-white border border-slate-200 shadow-[0_20px_60px_rgba(15,23,42,0.35)] overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div>
+                    <div class="text-[0.7rem] uppercase tracking-widest text-slate-400">Safety Warning</div>
+                    <div class="text-sm font-semibold text-slate-900">Possible allergy conflict detected</div>
+                    <div class="text-xs text-slate-500 mt-1">Review before continuing. Override is required to save if conflicts remain.</div>
+                </div>
+                <button type="button" id="consultSafetyModalClose" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                    Close
+                </button>
+            </div>
+            <div class="px-5 py-4">
+                <div id="consultSafetyModalBody" class="text-[0.8rem] text-slate-700 whitespace-pre-line"></div>
+                <div class="mt-4 flex items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <div class="text-[0.78rem] text-amber-900">
+                        Check <span class="font-semibold">Override safety warnings</span> to proceed with saving.
+                    </div>
+                    <button type="button" id="consultSafetyModalAcknowledge" class="inline-flex items-center justify-center rounded-xl bg-amber-600 px-3 py-1.5 text-[0.78rem] font-semibold text-white hover:bg-amber-700">
+                        Override
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var appointmentSelect = document.getElementById('consult_appointment')
@@ -224,6 +252,10 @@
         var prescriptionBody = document.getElementById('consultPrescriptionBody')
         var markCompletedEl = document.getElementById('consultMarkCompleted')
         var acknowledgeEl = document.getElementById('consultAcknowledgeConflicts')
+        var safetyModal = document.getElementById('consultSafetyModal')
+        var safetyModalBody = document.getElementById('consultSafetyModalBody')
+        var safetyModalClose = document.getElementById('consultSafetyModalClose')
+        var safetyModalAck = document.getElementById('consultSafetyModalAcknowledge')
         var historyFilter = document.getElementById('consultHistoryFilter')
         var historyLoading = document.getElementById('consultHistoryLoading')
         var historyError = document.getElementById('consultHistoryError')
@@ -281,6 +313,15 @@
             else if (variant === 'warn') cls += 'bg-amber-50 border-amber-200 text-amber-800'
             else cls += 'bg-white border-slate-200 text-slate-700'
             return '<span class="' + cls + '">' + (label || '—') + '</span>'
+        }
+
+        function showSafetyModal(text) {
+            if (safetyModalBody) safetyModalBody.textContent = text || ''
+            setVisible(safetyModal, true)
+        }
+
+        function hideSafetyModal() {
+            setVisible(safetyModal, false)
         }
 
         function api(url, options) {
@@ -410,6 +451,30 @@
                 ind.textContent = med && med.indications ? med.indications : '—'
                 contra.textContent = med && med.contraindications ? med.contraindications : '—'
                 renderSafety()
+
+                var conflicts = computeConflicts()
+                var hasConflict = conflicts.some(function (c) {
+                    return normalizeString(c.medicine) === normalizeString(medicineDisplayName(med))
+                })
+
+                if (hasConflict) {
+                    sel.classList.add('border-red-300')
+                    sel.classList.add('bg-red-50')
+                    sel.classList.add('focus:border-red-400')
+                    sel.classList.add('focus:ring-red-200')
+
+                    var lines = conflicts
+                        .filter(function (c) { return normalizeString(c.medicine) === normalizeString(medicineDisplayName(med)) })
+                        .slice(0, 8)
+                        .map(function (c) { return '• ' + c.medicine + ' vs allergy "' + c.allergy + '"' })
+                        .join('\n')
+                    showSafetyModal('Possible allergy conflicts:\n' + lines)
+                } else {
+                    sel.classList.remove('border-red-300')
+                    sel.classList.remove('bg-red-50')
+                    sel.classList.remove('focus:border-red-400')
+                    sel.classList.remove('focus:ring-red-200')
+                }
             }
 
             sel.addEventListener('change', updateMeta)
@@ -669,7 +734,7 @@
                 var rx = tx.prescriptions && tx.prescriptions.length ? tx.prescriptions[0] : null
                 if (rx) {
                     state.prescriptionId = rx.prescription_id
-                    state.existingItemIds = (rx.items || []).map(function (it) { return it.prescription_item_id })
+                    state.existingItemIds = (rx.items || []).map(function (it) { return it.item_id })
                     if (prescriptionBody) prescriptionBody.innerHTML = ''
                     if (rx.items && rx.items.length) {
                         rx.items.forEach(function (it) {
@@ -820,6 +885,21 @@
 
         if (appointmentSelect) {
             appointmentSelect.addEventListener('change', handleAppointmentChange)
+        }
+
+        if (safetyModalClose) {
+            safetyModalClose.addEventListener('click', hideSafetyModal)
+        }
+        if (safetyModal) {
+            safetyModal.addEventListener('click', function (e) {
+                if (e.target === safetyModal) hideSafetyModal()
+            })
+        }
+        if (safetyModalAck) {
+            safetyModalAck.addEventListener('click', function () {
+                if (acknowledgeEl) acknowledgeEl.checked = true
+                hideSafetyModal()
+            })
         }
 
         if (clearBtn) {

@@ -4,25 +4,129 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return User::query()
-            ->where('role', 'patient')
-            ->paginate();
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
+        $request->validate([
+            'search' => ['nullable', 'string'],
+            'parents_only' => ['nullable', 'boolean'],
+        ]);
+
+        $search = trim((string) $request->query('search', ''));
+        $parentsOnly = $request->boolean('parents_only');
+
+        $query = User::query()->where('role', 'patient');
+
+        if ($parentsOnly) {
+            $query->where('is_dependent', false);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('email', 'like', '%'.$search.'%')
+                    ->orWhere('firstname', 'like', '%'.$search.'%')
+                    ->orWhere('lastname', 'like', '%'.$search.'%')
+                    ->orWhere('middlename', 'like', '%'.$search.'%')
+                    ->orWhere('contact_number', 'like', '%'.$search.'%')
+                    ->orWhere('address', 'like', '%'.$search.'%');
+
+                if (is_numeric($search)) {
+                    $q->orWhere('user_id', (int) $search);
+                }
+            });
+        }
+
+        return $query->orderByDesc('user_id')->paginate();
     }
 
     public function store(Request $request)
     {
-        $request->merge(['role' => 'patient']);
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
 
-        return app(UserController::class)->store($request);
+        $data = $request->validate([
+            'email' => ['nullable', 'string'],
+            'password' => ['nullable', 'string', 'min:8'],
+            'firstname' => ['nullable', 'string'],
+            'lastname' => ['nullable', 'string'],
+            'middlename' => ['nullable', 'string'],
+            'birthdate' => ['nullable', 'date'],
+            'sex' => ['nullable', 'string'],
+            'address' => ['nullable', 'string'],
+            'contact_number' => ['nullable', 'string'],
+        ]);
+
+        $requestedEmail = isset($data['email']) ? trim((string) $data['email']) : '';
+        if ($requestedEmail === '') {
+            $requestedEmail = null;
+        }
+
+        $plainPassword = isset($data['password']) ? (string) $data['password'] : '';
+        $passwordWasProvided = $plainPassword !== '';
+        if (! $passwordWasProvided) {
+            $plainPassword = Str::random(12);
+        }
+
+        if ($requestedEmail !== null) {
+            $request->validate([
+                'email' => ['email', 'unique:users,email'],
+            ]);
+        }
+
+        $accountActivated = $requestedEmail !== null;
+
+        $user = User::create([
+            'email' => $requestedEmail,
+            'password_hash' => Hash::make($plainPassword),
+            'role' => 'patient',
+            'status' => 'active',
+            'firstname' => $data['firstname'] ?? null,
+            'lastname' => $data['lastname'] ?? null,
+            'middlename' => $data['middlename'] ?? null,
+            'birthdate' => $data['birthdate'] ?? null,
+            'sex' => $data['sex'] ?? null,
+            'address' => $data['address'] ?? null,
+            'contact_number' => $data['contact_number'] ?? null,
+            'is_first_login' => true,
+            'account_activated' => $accountActivated,
+        ]);
+
+        if ($requestedEmail === null) {
+            $generatedEmail = 'patient'.$user->user_id.'@temp.com';
+            if (! User::where('email', $generatedEmail)->exists()) {
+                $user->update(['email' => $generatedEmail]);
+            }
+        }
+
+        $payload = $user->refresh()->toArray();
+        $payload['credentials'] = [
+            'email' => $user->email,
+            'password' => $plainPassword,
+            'generated' => ! $passwordWasProvided || $requestedEmail === null,
+        ];
+
+        return response()->json($payload, 201);
     }
 
-    public function show(User $patient)
+    public function show(Request $request, User $patient)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         if ($patient->role !== 'patient') {
             abort(404);
         }
@@ -32,6 +136,11 @@ class PatientController extends Controller
 
     public function update(Request $request, User $patient)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         if ($patient->role !== 'patient') {
             abort(404);
         }
@@ -39,12 +148,174 @@ class PatientController extends Controller
         return app(UserController::class)->update($request, $patient);
     }
 
-    public function destroy(User $patient)
+    public function destroy(Request $request, User $patient)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         if ($patient->role !== 'patient') {
             abort(404);
         }
 
         return app(UserController::class)->destroy($patient);
+    }
+
+    public function dependents(Request $request)
+    {
+        $currentUser = $request->user();
+
+        if (! $currentUser || $currentUser->role === 'patient') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'parent_user_id' => ['required', 'exists:users,user_id'],
+        ]);
+
+        $parent = User::query()->findOrFail((int) $data['parent_user_id']);
+        if ($parent->role !== 'patient' || $parent->is_dependent) {
+            return [];
+        }
+
+        return $parent->children()->get();
+    }
+
+    public function storeDependent(Request $request)
+    {
+        $currentUser = $request->user();
+
+        if (! $currentUser || $currentUser->role === 'patient') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'parent_user_id' => ['required', 'exists:users,user_id'],
+            'firstname' => ['nullable', 'string'],
+            'lastname' => ['nullable', 'string'],
+            'middlename' => ['nullable', 'string'],
+            'birthdate' => ['required', 'date'],
+            'sex' => ['nullable', 'string'],
+            'address' => ['nullable', 'string'],
+            'contact_number' => ['nullable', 'string'],
+            'relationship' => ['nullable', 'in:mother,father,guardian'],
+            'email' => ['nullable', 'email'],
+            'password' => ['nullable', 'string', 'min:8'],
+        ]);
+
+        $parent = User::query()->findOrFail((int) $data['parent_user_id']);
+        if ($parent->role !== 'patient' || $parent->is_dependent) {
+            return response()->json([
+                'message' => 'Parent must be a non-dependent patient.',
+            ], 422);
+        }
+
+        $birthdate = Carbon::parse($data['birthdate']);
+        $age = $birthdate->diffInYears(now());
+
+        $requestedEmail = isset($data['email']) ? trim((string) $data['email']) : '';
+        if ($requestedEmail === '') {
+            $requestedEmail = null;
+        }
+
+        $plainPassword = isset($data['password']) ? (string) $data['password'] : '';
+        $passwordProvided = $plainPassword !== '';
+
+        if ($requestedEmail !== null) {
+            $request->validate([
+                'email' => ['email', 'unique:users,email'],
+            ]);
+        }
+
+        $shouldAutoCredentials = $age < 5;
+        $requiresEmailActivation = $age >= 5 && $requestedEmail === null;
+
+        if (! $requiresEmailActivation && ! $passwordProvided) {
+            $plainPassword = Str::random(12);
+        }
+
+        $user = User::create([
+            'parent_user_id' => $parent->user_id,
+            'email' => $requiresEmailActivation ? null : $requestedEmail,
+            'password_hash' => $requiresEmailActivation ? null : Hash::make($plainPassword),
+            'role' => 'patient',
+            'status' => $requiresEmailActivation ? 'inactive' : 'active',
+            'firstname' => $data['firstname'] ?? null,
+            'lastname' => $data['lastname'] ?? null,
+            'middlename' => $data['middlename'] ?? null,
+            'birthdate' => $data['birthdate'] ?? null,
+            'sex' => $data['sex'] ?? null,
+            'address' => $data['address'] ?? null,
+            'contact_number' => $data['contact_number'] ?? null,
+            'is_dependent' => true,
+            'account_activated' => ! $requiresEmailActivation,
+            'relationship' => $data['relationship'] ?? null,
+            'is_first_login' => true,
+        ]);
+
+        if ($requiresEmailActivation) {
+            return response()->json([
+                'dependent' => $user->refresh(),
+                'activation' => [
+                    'requires_email' => true,
+                    'prompt' => 'Add email to activate account',
+                ],
+            ], 201);
+        }
+
+        if ($user->email === null) {
+            $generatedEmail = 'dependent'.$user->user_id.'@temp.com';
+            if (User::where('email', $generatedEmail)->exists()) {
+                $generatedEmail = 'dependent'.$user->user_id.'-'.Str::lower(Str::random(4)).'@temp.com';
+            }
+            $user->update(['email' => $generatedEmail]);
+        }
+
+        $payload = [
+            'dependent' => $user->refresh(),
+            'activation' => [
+                'requires_email' => false,
+                'prompt' => null,
+            ],
+        ];
+
+        $payload['credentials'] = [
+            'email' => $user->email,
+            'password' => $plainPassword,
+            'generated' => ! $passwordProvided || $requestedEmail === null,
+        ];
+
+        return response()->json($payload, 201);
+    }
+
+    public function activateDependent(Request $request, User $dependent)
+    {
+        $currentUser = $request->user();
+
+        if (! $currentUser || $currentUser->role === 'patient') {
+            abort(403);
+        }
+
+        if (! $dependent->is_dependent) {
+            return response()->json([
+                'message' => 'User is not a dependent.',
+            ], 422);
+        }
+
+        $data = $request->validate([
+            'email' => ['required', 'email', "unique:users,email,{$dependent->user_id},user_id"],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $dependent->update([
+            'email' => $data['email'],
+            'password_hash' => Hash::make($data['password']),
+            'account_activated' => true,
+            'status' => 'active',
+            'is_first_login' => true,
+        ]);
+
+        return $dependent->refresh();
     }
 }

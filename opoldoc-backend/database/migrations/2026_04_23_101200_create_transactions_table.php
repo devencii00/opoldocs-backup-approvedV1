@@ -25,7 +25,7 @@ return new class extends Migration
             $table->enum('payment_status', ['pending', 'paid', 'failed'])->default('pending');
 
             $table->string('reference_number')->nullable();
-
+            $table->string('receipt_path')->nullable();
             $table->dateTime('transaction_datetime')->nullable();
             $table->dateTime('visit_datetime')->nullable();
 

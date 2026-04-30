@@ -4,24 +4,45 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TransactionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Transaction::with('appointment')->paginate();
+        $query = Transaction::with('appointment');
+
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            $query->whereHas('appointment', function ($q) use ($currentUser) {
+                $q->whereIn('patient_id', $currentUser->accessiblePatientIds());
+            });
+        } elseif ($request->filled('patient_id')) {
+            $patientId = (int) $request->query('patient_id');
+            $query->whereHas('appointment', function ($q) use ($patientId) {
+                $q->where('patient_id', $patientId);
+            });
+        }
+
+        return $query->paginate();
     }
 
     public function store(Request $request)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $data = $request->validate([
             'appointment_id' => ['required', 'exists:appointments,appointment_id'],
             'amount' => ['nullable', 'numeric'],
             'discount_amount' => ['nullable', 'numeric'],
             'discount_type' => ['nullable', 'in:none,senior,pwd'],
-            'payment_mode' => ['nullable', 'in:cash,gcash,card'],
+            'payment_mode' => ['nullable', 'in:cash,gcash'],
             'payment_status' => ['nullable', 'in:pending,paid,failed'],
             'reference_number' => ['nullable', 'string'],
+            'receipt' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,pdf'],
             'transaction_datetime' => ['nullable', 'date'],
             'visit_datetime' => ['nullable', 'date'],
             'diagnosis' => ['nullable', 'string'],
@@ -40,6 +61,31 @@ class TransactionController extends Controller
             $data['payment_status'] = 'pending';
         }
 
+        $receiptPath = null;
+        if ($request->hasFile('receipt')) {
+            $receiptPath = $request->file('receipt')->store('receipts', 'public');
+        }
+        unset($data['receipt']);
+
+        $transaction = Transaction::where('appointment_id', $data['appointment_id'])->first();
+        if ($transaction) {
+            $updateData = $data;
+            unset($updateData['appointment_id']);
+            if ($receiptPath) {
+                if ($transaction->receipt_path) {
+                    Storage::disk('public')->delete($transaction->receipt_path);
+                }
+                $updateData['receipt_path'] = $receiptPath;
+            }
+            $transaction->update($updateData);
+
+            return response()->json($transaction->refresh()->load('appointment'), 200);
+        }
+
+        if ($receiptPath) {
+            $data['receipt_path'] = $receiptPath;
+        }
+
         $transaction = Transaction::create($data);
 
         return response()->json($transaction->load('appointment'), 201);
@@ -47,6 +93,15 @@ class TransactionController extends Controller
 
     public function show(Transaction $transaction)
     {
+        $currentUser = request()->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            $transaction->loadMissing('appointment');
+            $patientId = $transaction->appointment ? (int) $transaction->appointment->patient_id : 0;
+            if (! $patientId || ! $currentUser->canAccessPatientId($patientId)) {
+                abort(403);
+            }
+        }
+
         return $transaction->load([
             'appointment.patient',
             'appointment.doctor',
@@ -57,18 +112,33 @@ class TransactionController extends Controller
 
     public function update(Request $request, Transaction $transaction)
     {
+        $currentUser = $request->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $data = $request->validate([
             'amount' => ['sometimes', 'numeric'],
             'discount_amount' => ['sometimes', 'numeric'],
             'discount_type' => ['sometimes', 'in:none,senior,pwd'],
-            'payment_mode' => ['sometimes', 'in:cash,gcash,card'],
+            'payment_mode' => ['sometimes', 'in:cash,gcash'],
             'payment_status' => ['sometimes', 'in:pending,paid,failed'],
             'reference_number' => ['sometimes', 'nullable', 'string'],
+            'receipt' => ['sometimes', 'nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,pdf'],
             'transaction_datetime' => ['sometimes', 'nullable', 'date'],
             'visit_datetime' => ['sometimes', 'nullable', 'date'],
             'diagnosis' => ['sometimes', 'nullable', 'string'],
             'treatment_notes' => ['sometimes', 'nullable', 'string'],
         ]);
+
+        if ($request->hasFile('receipt')) {
+            $path = $request->file('receipt')->store('receipts', 'public');
+            if ($transaction->receipt_path) {
+                Storage::disk('public')->delete($transaction->receipt_path);
+            }
+            $data['receipt_path'] = $path;
+        }
+        unset($data['receipt']);
 
         $transaction->update($data);
 
@@ -82,6 +152,11 @@ class TransactionController extends Controller
 
     public function destroy(Transaction $transaction)
     {
+        $currentUser = request()->user();
+        if ($currentUser && $currentUser->role === 'patient') {
+            abort(403);
+        }
+
         $transaction->delete();
 
         return response()->json([

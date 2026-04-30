@@ -34,10 +34,8 @@
         <div>
             <label for="reception_payment_mode" class="block text-[0.7rem] text-slate-600 mb-1">Payment mode</label>
             <select id="reception_payment_mode" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                <option value="">Default (cash)</option>
-                <option value="cash">Cash</option>
+                <option value="cash" selected>Cash</option>
                 <option value="gcash">GCash</option>
-                <option value="card">Card</option>
             </select>
         </div>
         <div>
@@ -56,6 +54,10 @@
         <div>
             <label for="reception_payment_datetime" class="block text-[0.7rem] text-slate-600 mb-1">Transaction date &amp; time</label>
             <input id="reception_payment_datetime" type="datetime-local" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+        </div>
+        <div class="md:col-span-2">
+            <label for="reception_payment_receipt" class="block text-[0.7rem] text-slate-600 mb-1">Receipt (optional)</label>
+            <input id="reception_payment_receipt" type="file" accept=".jpg,.jpeg,.png,.pdf" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
         </div>
         <div class="md:col-span-4 flex justify-end">
             <button type="submit" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
@@ -110,6 +112,7 @@
                 var statusInput = document.getElementById('reception_payment_status')
                 var referenceInput = document.getElementById('reception_payment_reference')
                 var datetimeInput = document.getElementById('reception_payment_datetime')
+                var receiptInput = document.getElementById('reception_payment_receipt')
 
                 var appointmentId = appointmentInput ? parseInt(appointmentInput.value, 10) : 0
                 var amount = amountInput ? parseFloat(amountInput.value || '0') : 0
@@ -119,6 +122,7 @@
                 var paymentStatus = statusInput && statusInput.value ? statusInput.value : null
                 var reference = referenceInput ? referenceInput.value : ''
                 var transactionDatetime = datetimeInput ? datetimeInput.value : ''
+                var receiptFile = receiptInput && receiptInput.files && receiptInput.files.length ? receiptInput.files[0] : null
 
                 if (!appointmentId) {
                     showPaymentError('Appointment ID is required.')
@@ -135,36 +139,20 @@
                     return
                 }
 
-                var body = {
-                    appointment_id: appointmentId,
-                    amount: amount
-                }
-
-                if (discountAmount !== null && !isNaN(discountAmount)) {
-                    body.discount_amount = discountAmount
-                }
-                if (discountType) {
-                    body.discount_type = discountType
-                }
-                if (paymentMode) {
-                    body.payment_mode = paymentMode
-                }
-                if (paymentStatus) {
-                    body.payment_status = paymentStatus
-                }
-                if (reference) {
-                    body.reference_number = reference
-                }
-                if (transactionDatetime) {
-                    body.transaction_datetime = transactionDatetime
-                }
+                var formData = new FormData()
+                formData.append('appointment_id', String(appointmentId))
+                formData.append('amount', String(amount))
+                if (discountAmount !== null && !isNaN(discountAmount)) formData.append('discount_amount', String(discountAmount))
+                if (discountType) formData.append('discount_type', String(discountType))
+                if (paymentMode) formData.append('payment_mode', String(paymentMode))
+                if (paymentStatus) formData.append('payment_status', String(paymentStatus))
+                if (reference) formData.append('reference_number', String(reference))
+                if (transactionDatetime) formData.append('transaction_datetime', String(transactionDatetime))
+                if (receiptFile) formData.append('receipt', receiptFile)
 
                 apiFetch("{{ url('/api/transactions') }}", {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
+                    body: formData
                 })
                     .then(function (response) {
                         return response.json().then(function (data) {
@@ -183,7 +171,8 @@
                             return
                         }
 
-                        showPaymentSuccess('Payment has been recorded successfully.')
+                        var txId = result.data && result.data.transaction_id ? result.data.transaction_id : null
+                        showPaymentSuccess('Payment has been recorded successfully.' + (txId ? ' Transaction #' + txId + '.' : ''))
                         if (appointmentInput) appointmentInput.value = ''
                         if (amountInput) amountInput.value = ''
                         if (discountInput) discountInput.value = ''
@@ -192,6 +181,7 @@
                         if (statusInput) statusInput.value = ''
                         if (referenceInput) referenceInput.value = ''
                         if (datetimeInput) datetimeInput.value = ''
+                        if (receiptInput) receiptInput.value = ''
                     })
                     .catch(function () {
                         showPaymentError('Network error while recording payment.')

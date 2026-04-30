@@ -23,6 +23,7 @@ class Transaction extends Model
         'payment_mode',
         'payment_status',
         'reference_number',
+        'receipt_path',
         'transaction_datetime',
         'visit_datetime',
         'diagnosis',
