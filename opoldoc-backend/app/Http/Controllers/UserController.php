@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class UserController extends Controller
@@ -193,5 +194,57 @@ class UserController extends Controller
         }
 
         return $user->children()->get();
+    }
+
+    public function updateSignature(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser) {
+            abort(401);
+        }
+        if ($currentUser->role !== 'doctor') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'signature' => ['required', 'file', 'image', 'max:2048'],
+        ]);
+
+        $file = $data['signature'];
+        $ext = strtolower($file->getClientOriginalExtension() ?: 'png');
+        if (! in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
+            return response()->json([
+                'message' => 'Unsupported signature image type.',
+            ], 422);
+        }
+
+        $oldPath = $currentUser->signature_path;
+
+        $filename = 'signature_'.$currentUser->user_id.'_'.now()->format('YmdHis').'.'.$ext;
+        $path = $file->storeAs('signatures', $filename, 'public');
+
+        $currentUser->update([
+            'signature_path' => $path,
+        ]);
+
+        if (is_string($oldPath) && trim($oldPath) !== '' && $oldPath !== $path) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        return $currentUser->refresh();
+    }
+
+    public function signature(User $user)
+    {
+        $path = $user->signature_path;
+        if (! is_string($path) || trim($path) === '') {
+            abort(404);
+        }
+        if (! Storage::disk('public')->exists($path)) {
+            abort(404);
+        }
+
+        $absolute = storage_path('app/public/'.$path);
+        return response()->file($absolute);
     }
 }

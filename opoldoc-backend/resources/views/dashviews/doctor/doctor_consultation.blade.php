@@ -128,6 +128,9 @@
                     <button type="button" id="consultClear" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
                         Clear
                     </button>
+                    <button type="button" id="consultPrintPrescription" class="hidden inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">
+                        Print receipt
+                    </button>
                     <button type="button" id="consultSave" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-3 py-1.5 text-[0.78rem] font-semibold text-white hover:bg-cyan-700">
                         Save consultation
                     </button>
@@ -248,6 +251,7 @@
         var treatmentEl = document.getElementById('consult_treatment')
         var clearBtn = document.getElementById('consultClear')
         var saveBtn = document.getElementById('consultSave')
+        var printBtn = document.getElementById('consultPrintPrescription')
         var addMedBtn = document.getElementById('consultAddMedicine')
         var prescriptionBody = document.getElementById('consultPrescriptionBody')
         var markCompletedEl = document.getElementById('consultMarkCompleted')
@@ -414,6 +418,7 @@
             setVisible(saveSuccess, false)
             setVisible(safetyBox, false)
             if (acknowledgeEl) acknowledgeEl.checked = false
+            if (printBtn) printBtn.classList.add('hidden')
         }
 
         function ensureRow(item) {
@@ -747,6 +752,7 @@
                             })
                         })
                     }
+                    if (printBtn) printBtn.classList.toggle('hidden', !state.prescriptionId)
                 }
             })
         }
@@ -853,6 +859,7 @@
             }).then(function () {
                 saveSuccess.textContent = 'Saved consultation and prescription successfully.'
                 setVisible(saveSuccess, true)
+                if (printBtn) printBtn.classList.toggle('hidden', !state.prescriptionId)
                 return loadHistory(state.patientId)
             }).catch(function (err) {
                 saveError.textContent = err && err.body ? err.body : 'Unable to save consultation.'
@@ -911,6 +918,7 @@
                 setVisible(saveSuccess, false)
                 setVisible(saveError, false)
                 renderSafety()
+                if (printBtn) printBtn.classList.add('hidden')
             })
         }
 
@@ -922,6 +930,14 @@
 
         if (saveBtn) {
             saveBtn.addEventListener('click', saveAll)
+        }
+
+        if (printBtn) {
+            printBtn.addEventListener('click', function () {
+                if (!state.prescriptionId) return
+                var url = "{{ url('/print/prescriptions') }}/" + encodeURIComponent(String(state.prescriptionId))
+                window.open(url, '_blank', 'noopener')
+            })
         }
 
         Promise.all([loadDoctorUser(), loadMedicines()]).then(function () {

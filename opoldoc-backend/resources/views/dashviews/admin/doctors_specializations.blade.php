@@ -422,15 +422,21 @@
                     return dayOrder.indexOf(a) - dayOrder.indexOf(b)
                 })
                 var scheduleSummary = scheduleCount ? (scheduleCount + ' slot' + (scheduleCount === 1 ? '' : 's') + (dayKeys.length ? (' · ' + dayKeys.join(', ')) : '')) : 'No schedules'
+                var availabilityLabel = doctor.is_available === false ? 'Unavailable' : 'Available'
+                var availabilityClass = doctor.is_available === false ? 'text-rose-700 bg-rose-50 border-rose-100' : 'text-emerald-700 bg-emerald-50 border-emerald-100'
 
                 tr.innerHTML =
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-700">' + fullName + '</td>' +
-                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + (specialization ? specialization : '<span class="text-slate-400">—</span>') + '</td>' +
+                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' +
+                        (specialization ? specialization : '<span class="text-slate-400">—</span>') +
+                        '<div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] font-semibold border ' + availabilityClass + '">' + availabilityLabel + '</div>' +
+                    '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + scheduleSummary + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<div class="flex items-center gap-2">' +
                             '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-doctor-edit" data-doctor-id="' + doctor.user_id + '">Edit</button>' +
                             '<button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-doctor-schedule" data-doctor-id="' + doctor.user_id + '" data-doctor-name="' + fullName.replace(/"/g, '&quot;') + '">Manage schedule</button>' +
+                            '<button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-doctor-availability" data-doctor-id="' + doctor.user_id + '">Availability</button>' +
                         '</div>' +
                     '</td>'
 
@@ -507,6 +513,45 @@
                         schedulePanel.classList.remove('hidden')
                     }
                     loadSchedulesForDoctor(id)
+                })
+            })
+
+            var availabilityButtons = tableBody.querySelectorAll('.admin-doctor-availability')
+            availabilityButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var id = this.getAttribute('data-doctor-id')
+                    var doctor = doctors.find(function (d) { return String(d.user_id) === String(id) })
+                    if (!doctor) return
+
+                    var nextAvailable = doctor.is_available === false
+                    var reason = null
+                    if (!nextAvailable) {
+                        reason = window.prompt('Reason (optional)', doctor.unavailable_reason || '') || ''
+                    }
+
+                    apiFetch("{{ url('/api/doctors') }}/" + id + "/availability", {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            is_available: nextAvailable,
+                            reason: reason
+                        })
+                    })
+                        .then(function (response) {
+                            return response.json().then(function (data) {
+                                return { ok: response.ok, data: data }
+                            })
+                        })
+                        .then(function (result) {
+                            if (!result.ok) {
+                                showDoctorError('Failed to update availability.')
+                                return
+                            }
+                            loadDoctors()
+                        })
+                        .catch(function () {
+                            showDoctorError('Network error while updating availability.')
+                        })
                 })
             })
         }

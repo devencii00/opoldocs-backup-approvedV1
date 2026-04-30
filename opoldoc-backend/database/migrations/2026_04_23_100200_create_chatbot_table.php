@@ -34,6 +34,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('chatbot');
+        Schema::dropIfExists('chatbot_options');
+        Schema::dropIfExists('chatbot_questions');
     }
 };

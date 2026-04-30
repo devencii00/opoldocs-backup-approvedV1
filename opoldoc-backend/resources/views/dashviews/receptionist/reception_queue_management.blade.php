@@ -29,6 +29,10 @@
                 <span class="material-symbols-outlined text-[18px] leading-none">refresh</span>
                 Refresh
             </button>
+            <button id="receptionPublicQueueLinkButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-800 text-[0.8rem] font-semibold hover:bg-slate-50 transition-colors border border-slate-200">
+                <span class="material-symbols-outlined text-[18px] leading-none">link</span>
+                Public link
+            </button>
             <button id="receptionDisplayQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.8rem] font-semibold hover:bg-cyan-700 transition-colors">
                 <span class="material-symbols-outlined text-[18px] leading-none">tv</span>
                 Display queue
@@ -44,8 +48,11 @@
 
         <form id="receptionAddQueueForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-4 items-end">
             <div>
-                <label for="reception_add_queue_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment ID</label>
-                <input id="reception_add_queue_appointment_id" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Appointment ID" required>
+                <label for="reception_add_queue_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment</label>
+                <input id="reception_queue_appointment_search" type="text" class="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search appointment">
+                <select id="reception_add_queue_appointment_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
+                    <option value="">Select an appointment</option>
+                </select>
             </div>
             <div>
                 <label for="reception_add_queue_number" class="block text-[0.7rem] text-slate-600 mb-1">Queue number (optional)</label>
@@ -281,6 +288,71 @@
         var addQueueForm = document.getElementById('receptionAddQueueForm')
         var queueErrorBox = document.getElementById('receptionQueueError')
         var queueSuccessBox = document.getElementById('receptionQueueSuccess')
+        var appointmentSearch = document.getElementById('reception_queue_appointment_search')
+        var appointmentSelect = document.getElementById('reception_add_queue_appointment_id')
+        var appointmentSearchTimer = null
+
+        function escapeHtml(input) {
+            return String(input == null ? '' : input)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+        }
+
+        function appointmentLabel(appt) {
+            if (!appt) return ''
+            var id = appt.appointment_id != null ? appt.appointment_id : ''
+            var patient = appt.patient || null
+            var doctor = appt.doctor || null
+            var pName = patient ? [patient.firstname, patient.middlename, patient.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() : ''
+            var dName = doctor ? [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() : ''
+            var when = appt.appointment_datetime ? String(appt.appointment_datetime).replace('T', ' ').slice(0, 16) : 'Queue request'
+            return '#' + id + ' — ' + (pName || 'Patient') + ' · ' + (dName || 'Doctor') + ' · ' + when
+        }
+
+        function renderAppointmentOptions(list) {
+            if (!appointmentSelect) return
+            var current = appointmentSelect.value
+            appointmentSelect.innerHTML = '<option value="">Select an appointment</option>' + (list || []).slice(0, 50).map(function (a) {
+                return '<option value="' + escapeHtml(a.appointment_id) + '">' + escapeHtml(appointmentLabel(a)) + '</option>'
+            }).join('')
+            if (current) appointmentSelect.value = current
+        }
+
+        function loadAppointmentOptions(search) {
+            if (typeof apiFetch !== 'function') return
+            var url = "{{ url('/api/appointments') }}" + '?per_page=50'
+            if (search) {
+                url += '&search=' + encodeURIComponent(search)
+            }
+            apiFetch(url, { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok || !result.data) return
+                    var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
+                    renderAppointmentOptions(raw || [])
+                })
+                .catch(function () {})
+        }
+
+        if (appointmentSearch) {
+            appointmentSearch.addEventListener('input', function () {
+                if (appointmentSearchTimer) clearTimeout(appointmentSearchTimer)
+                appointmentSearchTimer = setTimeout(function () {
+                    loadAppointmentOptions((appointmentSearch.value || '').trim())
+                }, 250)
+            })
+        }
+
+        loadAppointmentOptions('')
 
         function applyReceptionQueueFilters() {
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
@@ -595,6 +667,27 @@
                 })
 
                 updateQueueStatus(candidates[0].queueId, 'serving', 'Next patient is now serving.')
+            })
+        }
+
+        var publicLinkButton = document.getElementById('receptionPublicQueueLinkButton')
+        if (publicLinkButton) {
+            publicLinkButton.addEventListener('click', function () {
+                var today = new Date().toISOString().slice(0, 10)
+                var link = "{{ route('queue.display') }}" + '?date=' + encodeURIComponent(today)
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(link)
+                    }
+                } catch (_) {
+                }
+
+                try {
+                    window.open(link, '_blank', 'noopener')
+                } catch (_) {
+                    window.location.href = link
+                }
             })
         }
 

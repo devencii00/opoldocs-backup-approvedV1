@@ -12,8 +12,11 @@
 
     <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-end mb-4">
         <div>
-            <label for="reception_appointment_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient ID</label>
-            <input id="reception_appointment_patient_id" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Patient ID" required>
+            <label for="reception_appointment_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient</label>
+            <input id="reception_patient_search" type="text" class="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search patient">
+            <select id="reception_appointment_patient_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
+                <option value="">Select a patient</option>
+            </select>
         </div>
         <div>
             <label for="reception_appointment_service_id" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
@@ -90,8 +93,11 @@
 
         <form id="receptionManageAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-end mb-3">
             <div>
-                <label for="reception_manage_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment ID</label>
-                <input id="reception_manage_appointment_id" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Appointment ID" required>
+                <label for="reception_manage_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment</label>
+                <input id="reception_manage_appointment_search" type="text" class="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search appointment">
+                <select id="reception_manage_appointment_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
+                    <option value="">Select an appointment</option>
+                </select>
             </div>
             <div>
                 <label for="reception_manage_action" class="block text-[0.7rem] text-slate-600 mb-1">Action</label>
@@ -151,6 +157,8 @@
         var submitBtn = document.getElementById('receptionBookAppointmentSubmit')
         var submitSpinner = document.getElementById('receptionBookAppointmentSpinner')
         var submitLabel = document.getElementById('receptionBookAppointmentSubmitLabel')
+        var patientSearch = document.getElementById('reception_patient_search')
+        var patientSelect = document.getElementById('reception_appointment_patient_id')
         var serviceSearch = document.getElementById('reception_service_search')
         var serviceSelect = document.getElementById('reception_appointment_service_id')
         var doctorSearch = document.getElementById('reception_doctor_search')
@@ -159,11 +167,13 @@
         var timeInput = document.getElementById('reception_appointment_time')
         var availableDaysEl = document.getElementById('reception_available_days')
         var timeSlotsEl = document.getElementById('reception_time_slots')
+        var patients = []
         var services = []
         var doctors = []
         var doctorSchedules = []
         var doctorAppointments = []
         var selectedScheduleId = null
+        var patientSearchTimer = null
 
         function setBookSubmitting(isSubmitting) {
             if (submitBtn) submitBtn.disabled = !!isSubmitting
@@ -217,6 +227,50 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;')
+        }
+
+        function patientLabel(p) {
+            var id = p && (p.user_id != null ? p.user_id : p.id)
+            var parts = [p && p.firstname, p && p.middlename, p && p.lastname].filter(function (v) { return String(v || '').trim() !== '' })
+            var name = parts.join(' ').trim()
+            if (!name) name = 'Patient'
+            return '#' + id + ' — ' + name
+        }
+
+        function renderPatientOptions() {
+            if (!patientSelect) return
+            var query = normalizeText(patientSearch ? patientSearch.value : '')
+
+            var list = patients.slice()
+            if (query) {
+                list = list.filter(function (p) {
+                    return normalizeText(patientLabel(p)).indexOf(query) !== -1
+                })
+            }
+
+            var current = patientSelect.value
+            patientSelect.innerHTML = '<option value="">Select a patient</option>' + list.slice(0, 50).map(function (p) {
+                var id = p && (p.user_id != null ? p.user_id : p.id)
+                return '<option value="' + escapeHtml(id) + '">' + escapeHtml(patientLabel(p)) + '</option>'
+            }).join('')
+            if (current) patientSelect.value = current
+        }
+
+        function loadPatients(search) {
+            if (typeof apiFetch !== 'function') return
+            var url = "{{ url('/api/patients') }}" + '?per_page=50'
+            if (search) {
+                url += '&search=' + encodeURIComponent(search)
+            }
+            apiFetch(url, { method: 'GET' })
+                .then(function (response) { return response.json().then(function (data) { return { ok: response.ok, data: data } }) })
+                .then(function (result) {
+                    if (!result.ok || !result.data) return
+                    var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
+                    patients = raw || []
+                    renderPatientOptions()
+                })
+                .catch(function () {})
         }
 
         function dayKeyFromDate(dateStr) {
@@ -474,6 +528,21 @@
                     renderDoctorOptions()
                 })
                 .catch(function () {})
+
+            loadPatients('')
+        }
+
+        if (patientSearch) {
+            patientSearch.addEventListener('input', function () {
+                if (patientSearchTimer) {
+                    clearTimeout(patientSearchTimer)
+                }
+                patientSearchTimer = setTimeout(function () {
+                    var q = normalizeText(patientSearch.value)
+                    loadPatients(q)
+                }, 250)
+                renderPatientOptions()
+            })
         }
 
         if (serviceSearch) {
@@ -641,6 +710,9 @@
         var manageSubmit = document.getElementById('receptionManageAppointmentSubmit')
         var manageSpinner = document.getElementById('receptionManageAppointmentSpinner')
         var manageLabel = document.getElementById('receptionManageAppointmentSubmitLabel')
+        var manageSearchInput = document.getElementById('reception_manage_appointment_search')
+        var manageIdSelect = document.getElementById('reception_manage_appointment_id')
+        var manageSearchTimer = null
 
         var confirmOverlay = document.getElementById('receptionConfirmOverlay')
         var confirmMessage = document.getElementById('receptionConfirmMessage')
@@ -721,6 +793,53 @@
             }
             manageResult.classList.remove('hidden')
         }
+
+        function appointmentLabel(appt) {
+            if (!appt) return ''
+            var id = appt.appointment_id != null ? appt.appointment_id : ''
+            var patient = appt.patient || null
+            var doctor = appt.doctor || null
+            var pName = patient ? [patient.firstname, patient.middlename, patient.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() : ''
+            var dName = doctor ? [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() : ''
+            var when = appt.appointment_datetime ? String(appt.appointment_datetime).replace('T', ' ').slice(0, 16) : 'Queue request'
+            return '#' + id + ' — ' + (pName || 'Patient') + ' · ' + (dName || 'Doctor') + ' · ' + when
+        }
+
+        function renderManageAppointmentOptions(list) {
+            if (!manageIdSelect) return
+            var current = manageIdSelect.value
+            manageIdSelect.innerHTML = '<option value="">Select an appointment</option>' + (list || []).slice(0, 50).map(function (a) {
+                return '<option value="' + escapeHtml(a.appointment_id) + '">' + escapeHtml(appointmentLabel(a)) + '</option>'
+            }).join('')
+            if (current) manageIdSelect.value = current
+        }
+
+        function loadManageAppointmentOptions(search) {
+            if (typeof apiFetch !== 'function') return
+            var url = "{{ url('/api/appointments') }}" + '?per_page=50'
+            if (search) {
+                url += '&search=' + encodeURIComponent(search)
+            }
+            apiFetch(url, { method: 'GET' })
+                .then(function (response) { return readResponse(response) })
+                .then(function (result) {
+                    if (!result.ok) return
+                    var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
+                    renderManageAppointmentOptions(raw || [])
+                })
+                .catch(function () {})
+        }
+
+        if (manageSearchInput) {
+            manageSearchInput.addEventListener('input', function () {
+                if (manageSearchTimer) clearTimeout(manageSearchTimer)
+                manageSearchTimer = setTimeout(function () {
+                    loadManageAppointmentOptions(normalizeText(manageSearchInput.value))
+                }, 250)
+            })
+        }
+
+        loadManageAppointmentOptions('')
 
         if (manageForm) {
             manageForm.addEventListener('submit', function (e) {

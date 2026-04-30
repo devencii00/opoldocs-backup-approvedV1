@@ -13,6 +13,8 @@ class Message extends Model
 
     protected $primaryKey = 'message_id';
 
+    protected $touches = ['conversation'];
+
     protected $fillable = [
         'conversation_id',
         'sender',
@@ -23,4 +25,5 @@ class Message extends Model
     {
         return $this->belongsTo(Conversation::class, 'conversation_id', 'conversation_id');
     }
+
 }

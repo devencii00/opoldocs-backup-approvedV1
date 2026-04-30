@@ -3,10 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\Queue;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class QueueController extends Controller
 {
@@ -157,6 +161,20 @@ class QueueController extends Controller
             'patient_id' => ['sometimes', 'exists:users,user_id'],
         ]);
 
+        $doctor = User::query()->find((int) $data['doctor_id']);
+        if (! $doctor || $doctor->role !== 'doctor') {
+            return response()->json([
+                'message' => 'Selected doctor is invalid.',
+                'code' => 'INVALID_DOCTOR',
+            ], 422);
+        }
+        if ($this->isDoctorUnavailable((int) $doctor->user_id)) {
+            return response()->json([
+                'message' => 'Doctor is currently unavailable.',
+                'code' => 'DOCTOR_UNAVAILABLE',
+            ], 422);
+        }
+
         $targetPatientId = (int) $currentUser->user_id;
         if ($request->filled('patient_id')) {
             $candidate = (int) $request->input('patient_id');
@@ -234,6 +252,9 @@ class QueueController extends Controller
             abort(403);
         }
 
+        $previousStatus = (string) $queue->status;
+        $previousQueueNumber = (int) $queue->queue_number;
+
         $data = $request->validate([
             'queue_number' => ['sometimes', 'integer'],
             'queue_datetime' => ['sometimes', 'nullable', 'date'],
@@ -264,7 +285,48 @@ class QueueController extends Controller
             }
         });
 
-        return $queue->refresh()->load(['appointment.patient', 'appointment.doctor']);
+        $queue->refresh()->load(['appointment.patient', 'appointment.doctor']);
+
+        $statusChanged = array_key_exists('status', $data) && (string) $queue->status !== $previousStatus;
+        $queueNumberChanged = array_key_exists('queue_number', $data) && (int) $queue->queue_number !== $previousQueueNumber;
+
+        if (($statusChanged || $queueNumberChanged) && $queue->appointment) {
+            $appointment = $queue->appointment;
+            $conversation = Conversation::ensureForPatient((int) $appointment->patient_id);
+
+            $messageText = null;
+            if ($statusChanged) {
+                if ($queue->status === 'waiting') {
+                    $messageText = 'Queue update: You are now waiting in the queue.';
+                } elseif ($queue->status === 'serving') {
+                    $messageText = 'Queue update: You are now being served.';
+                } elseif ($queue->status === 'done') {
+                    $messageText = 'Queue update: Your queue entry is marked as done.';
+                } elseif ($queue->status === 'cancelled') {
+                    $messageText = 'Queue update: Your queue entry was cancelled.';
+                }
+            }
+
+            if (! $messageText && $queueNumberChanged) {
+                $messageText = 'Queue update: Your queue number is now '.$queue->queue_number.'.';
+            }
+
+            if ($messageText) {
+                Message::create([
+                    'conversation_id' => $conversation->conversation_id,
+                    'sender' => 'bot',
+                    'message_text' => $messageText,
+                ]);
+            }
+        }
+
+        return $queue;
+    }
+
+    private function isDoctorUnavailable(int $doctorId): bool
+    {
+        $payload = Cache::store('file')->get('doctor_availability:'.$doctorId);
+        return is_array($payload) && ($payload['is_available'] ?? null) === false;
     }
 
     public function destroy(Request $request, Queue $queue)

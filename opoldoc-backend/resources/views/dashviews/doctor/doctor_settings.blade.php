@@ -61,7 +61,7 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-between pt-1">
-                    <p class="text-[0.68rem] text-slate-400">Image metadata is stored locally until API integration.</p>
+                    <p class="text-[0.68rem] text-slate-400">Signature is saved to your account for prescriptions and receipts.</p>
                     <button type="button" id="doctor_signature_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
                         <span class="material-symbols-outlined text-[16px] leading-none">save</span>
                         Save signature
@@ -136,11 +136,6 @@
                 if (profileName && config.profile_name) profileName.value = config.profile_name
                 if (profileSpecialization && config.profile_specialization) profileSpecialization.value = config.profile_specialization
                 if (profileContact && config.profile_contact) profileContact.value = config.profile_contact
-                if (signaturePreview && config.signature_label) {
-                    signaturePreview.textContent = config.signature_label
-                    signaturePreview.classList.remove('text-slate-400')
-                    signaturePreview.classList.add('text-slate-700')
-                }
             } catch (_) {
             }
         }
@@ -172,29 +167,21 @@
             }
         }
 
-        function saveSignature(label) {
-            var raw = null
-            try {
-                raw = window.localStorage ? window.localStorage.getItem(storageKey) : null
-            } catch (_) {
-                raw = null
-            }
-            var config = {}
-            if (raw) {
-                try {
-                    config = JSON.parse(raw) || {}
-                } catch (_) {
-                    config = {}
-                }
-            }
-            config.signature_label = label || 'Signature uploaded'
+        function loadServerSignature() {
+            if (typeof apiFetch !== 'function') return
 
-            try {
-                if (window.localStorage) {
-                    window.localStorage.setItem(storageKey, JSON.stringify(config))
-                }
-            } catch (_) {
-            }
+            apiFetch("{{ url('/api/user') }}", { method: 'GET' })
+                .then(function (response) { return response.json().then(function (data) { return { ok: response.ok, data: data } }) })
+                .then(function (result) {
+                    if (!result.ok || !result.data) return
+                    var url = result.data.signature_url ? String(result.data.signature_url) : ''
+                    if (!signaturePreview) return
+                    if (url) {
+                        signaturePreview.innerHTML = '<img alt="Signature" src="' + url + '" class="max-h-20 max-w-full object-contain">'
+                        signaturePreview.classList.remove('text-slate-400')
+                    }
+                })
+                .catch(function () {})
         }
 
         function handlePasswordChange() {
@@ -226,16 +213,57 @@
 
         if (signatureSave) {
             signatureSave.addEventListener('click', function () {
-                var label = 'Signature uploaded'
-                if (signatureFile && signatureFile.files && signatureFile.files.length > 0) {
-                    label = 'Signature: ' + signatureFile.files[0].name
+                if (!signatureFile || !signatureFile.files || signatureFile.files.length === 0) {
+                    window.alert('Please choose a signature image first.')
+                    return
                 }
-                if (signaturePreview) {
-                    signaturePreview.textContent = label
-                    signaturePreview.classList.remove('text-slate-400')
-                    signaturePreview.classList.add('text-slate-700')
+                if (typeof apiFetch !== 'function') {
+                    window.alert('API client is not available.')
+                    return
                 }
-                saveSignature(label)
+
+                var file = signatureFile.files[0]
+                var formData = new FormData()
+                formData.append('signature', file)
+
+                signatureSave.disabled = true
+
+                apiFetch("{{ url('/api/users/me/signature') }}", {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, data: data }
+                        }).catch(function () {
+                            return { ok: response.ok, data: null }
+                        })
+                    })
+                    .then(function (result) {
+                        if (!result.ok) {
+                            var msg = (result.data && result.data.message) ? String(result.data.message) : 'Unable to upload signature.'
+                            window.alert(msg)
+                            return
+                        }
+                        var url = result.data && result.data.signature_url ? String(result.data.signature_url) : ''
+                        if (signaturePreview) {
+                            if (url) {
+                                signaturePreview.innerHTML = '<img alt="Signature" src="' + url + '" class="max-h-20 max-w-full object-contain">'
+                                signaturePreview.classList.remove('text-slate-400')
+                            } else {
+                                signaturePreview.textContent = 'Signature uploaded'
+                                signaturePreview.classList.remove('text-slate-400')
+                                signaturePreview.classList.add('text-slate-700')
+                            }
+                        }
+                        if (signatureFile) signatureFile.value = ''
+                    })
+                    .catch(function () {
+                        window.alert('Network error while uploading signature.')
+                    })
+                    .finally(function () {
+                        signatureSave.disabled = false
+                    })
             })
         }
 
@@ -246,6 +274,6 @@
         }
 
         loadDoctorSettings()
+        loadServerSignature()
     })
 </script>
-

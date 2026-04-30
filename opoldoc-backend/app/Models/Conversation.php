@@ -28,4 +28,22 @@ class Conversation extends Model
     {
         return $this->hasMany(Message::class, 'conversation_id', 'conversation_id');
     }
+
+    public static function ensureForPatient(int $patientId): self
+    {
+        $conversation = self::query()
+            ->where('user_id', $patientId)
+            ->latest('conversation_id')
+            ->first();
+
+        if (! $conversation) {
+            $conversation = self::create([
+                'user_id' => $patientId,
+            ]);
+
+            return $conversation;
+        }
+
+        return $conversation;
+    }
 }

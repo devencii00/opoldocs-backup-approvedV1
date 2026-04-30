@@ -6,6 +6,7 @@ use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\DoctorScheduleController;
 use App\Http\Controllers\MedicalBackgroundController;
 use App\Http\Controllers\MedicineController;
+use App\Http\Controllers\MessagingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientVerificationController;
@@ -32,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/users/invite', [UserController::class, 'invite']);
     Route::get('/users/{user}/dependents', [UserController::class, 'dependents']);
+    Route::post('/users/me/signature', [UserController::class, 'updateSignature']);
 
     Route::get('/dependents', [PatientController::class, 'dependents']);
     Route::post('/dependents', [PatientController::class, 'storeDependent']);
@@ -40,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::apiResource('patients', PatientController::class);
     Route::apiResource('doctors', DoctorController::class);
+    Route::patch('/doctors/{doctor}/availability', [DoctorController::class, 'setAvailability']);
     Route::apiResource('appointments', AppointmentController::class);
     Route::apiResource('visits', VisitController::class);
     Route::apiResource('prescriptions', PrescriptionController::class);
@@ -62,6 +65,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{notification}', [NotificationController::class, 'update']);
     Route::delete('/notifications/{notification}', [NotificationController::class, 'destroy']);
+
+    Route::get('/conversations', [MessagingController::class, 'index']);
+    Route::post('/conversations', [MessagingController::class, 'store']);
+    Route::get('/conversations/{conversation}/messages', [MessagingController::class, 'messages']);
+    Route::post('/conversations/{conversation}/messages', [MessagingController::class, 'send']);
 
     Route::get('/chatbot/questions', [\App\Http\Controllers\ChatbotController::class, 'questions']);
     Route::get('/chatbot/questions/{chatbotQuestion}', [\App\Http\Controllers\ChatbotController::class, 'question']);

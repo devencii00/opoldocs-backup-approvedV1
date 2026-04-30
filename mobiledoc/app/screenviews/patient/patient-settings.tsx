@@ -8,6 +8,7 @@ import {
   StatusBar,
   SafeAreaView,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 // @ts-ignore
@@ -73,6 +74,8 @@ export default function PatientSettingsScreen() {
   const [verificationItems, setVerificationItems] = useState<VerificationRequest[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const accountStatus = useMemo(() => {
     if (!user) return { label: '—', color: T.slate700, bg: T.slate50, border: T.slate200 };
@@ -360,6 +363,28 @@ export default function PatientSettingsScreen() {
     }
   }
 
+  async function performLogout() {
+    setLoggingOut(true);
+    setError('');
+    setSuccess('');
+    try {
+      const token = (globalThis as any)?.apiToken as string | undefined;
+      if (token) {
+        await fetch(`${API_BASE_URL}/logout`, {
+          method: 'POST',
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        }).catch(() => null);
+      }
+    } finally {
+      (globalThis as any).apiToken = undefined;
+      (globalThis as any).currentUser = undefined;
+      setUser(null);
+      setLogoutOpen(false);
+      setLoggingOut(false);
+      router.replace('/screenviews/aut-landing/login-screen' as any);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={T.cyan700} />
@@ -563,10 +588,51 @@ export default function PatientSettingsScreen() {
           </View>
         </View>
 
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.eyebrowRow}>
+              <View style={styles.eyebrowDot} />
+              <Text style={styles.eyebrowText}>Session</Text>
+            </View>
+            <Text style={styles.cardTitle}>Log out</Text>
+            <Text style={styles.cardSubtitle}>Sign out from this device.</Text>
+          </View>
+          <View style={styles.cardBody}>
+            <Pressable onPress={() => setLogoutOpen(true)} style={({ pressed }) => [styles.dangerButton, pressed && { opacity: 0.85 }]}>
+              <Text style={styles.dangerButtonText}>Log out</Text>
+            </Pressable>
+          </View>
+        </View>
+
         <Text style={styles.footerNote}>
           {loading ? 'Loading account…' : 'Need help? Contact the clinic front desk.'}
         </Text>
       </ScrollView>
+
+      <Modal visible={logoutOpen} transparent animationType="fade" onRequestClose={() => setLogoutOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Log out</Text>
+            <Text style={styles.modalText}>Are you sure you want to log out?</Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setLogoutOpen(false)}
+                disabled={loggingOut}
+                style={({ pressed }) => [styles.modalBtn, pressed && { opacity: 0.85 }, loggingOut && { opacity: 0.6 }]}
+              >
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={performLogout}
+                disabled={loggingOut}
+                style={({ pressed }) => [styles.modalBtnDanger, pressed && { opacity: 0.85 }, loggingOut && { opacity: 0.6 }]}
+              >
+                <Text style={styles.modalBtnDangerText}>{loggingOut ? 'Logging out…' : 'Log out'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -806,5 +872,79 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 11,
     color: T.slate400,
+  },
+  dangerButton: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: 'rgba(185,28,28,0.25)',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerButtonText: {
+    color: T.red700,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15,23,42,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 18,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: T.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: T.slate200,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: T.slate900,
+    marginBottom: 6,
+  },
+  modalText: {
+    fontSize: 13,
+    color: T.slate600,
+    lineHeight: 18,
+  },
+  modalActions: {
+    marginTop: 14,
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'flex-end',
+  },
+  modalBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: T.slate100,
+    borderWidth: 1,
+    borderColor: T.slate200,
+  },
+  modalBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.slate700,
+  },
+  modalBtnDanger: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: T.red700,
+    borderWidth: 1,
+    borderColor: T.red700,
+  },
+  modalBtnDangerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: T.white,
   },
 });

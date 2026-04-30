@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -34,6 +35,7 @@ class User extends Authenticatable
         'contact_number',
         'license_number',
         'specialization',
+        'signature_path',
         'employee_number',
         'hire_date',
         'is_dependent',
@@ -61,6 +63,7 @@ class User extends Authenticatable
     protected $appends = [
         'must_change_credentials',
         'current_role',
+        'signature_url',
     ];
 
     public function getAuthPassword(): string
@@ -152,5 +155,19 @@ class User extends Authenticatable
             'address' => $this->address,
             'mobile_number' => $this->contact_number,
         ];
+    }
+
+    public function getSignatureUrlAttribute(): ?string
+    {
+        $path = $this->signature_path;
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        if (! Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        return url('/signatures/'.$this->user_id);
     }
 }

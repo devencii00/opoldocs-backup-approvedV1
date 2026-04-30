@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\QueueDisplayController;
+use App\Http\Controllers\PrescriptionReceiptController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,3 +31,10 @@ Route::get('/create-account', function () {
 })->name('create.account');
 
 Route::get('/dashboard/{role?}', [DashboardController::class, 'show'])->name('dashboard');
+
+Route::get('/queue-display', [QueueDisplayController::class, 'page'])->name('queue.display');
+Route::get('/queue-display/data', [QueueDisplayController::class, 'data'])->name('queue.display.data');
+
+Route::get('/print/prescriptions/{prescriptionId}', [PrescriptionReceiptController::class, 'show'])->name('print.prescription');
+
+Route::get('/signatures/{user}', [UserController::class, 'signature'])->name('public.signature');

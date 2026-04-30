@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Conversation;
 use App\Models\DoctorSchedule;
 use App\Models\MedicalBackground;
+use App\Models\Message;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class AppointmentController extends Controller
 {
@@ -26,6 +29,7 @@ class AppointmentController extends Controller
         $request->validate([
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
+            'search' => ['nullable', 'string'],
         ]);
 
         $query = Appointment::with(['patient', 'doctor', 'queue', 'services']);
@@ -48,6 +52,34 @@ class AppointmentController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
+        }
+
+        $search = trim((string) $request->query('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('reason_for_visit', 'like', '%'.$search.'%');
+
+                if (is_numeric($search)) {
+                    $q->orWhere('appointment_id', (int) $search);
+                }
+
+                $q->orWhereHas('patient', function ($p) use ($search) {
+                    $p->where('email', 'like', '%'.$search.'%')
+                        ->orWhere('firstname', 'like', '%'.$search.'%')
+                        ->orWhere('lastname', 'like', '%'.$search.'%')
+                        ->orWhere('middlename', 'like', '%'.$search.'%')
+                        ->orWhere('contact_number', 'like', '%'.$search.'%');
+                });
+
+                $q->orWhereHas('doctor', function ($d) use ($search) {
+                    $d->where('email', 'like', '%'.$search.'%')
+                        ->orWhere('firstname', 'like', '%'.$search.'%')
+                        ->orWhere('lastname', 'like', '%'.$search.'%')
+                        ->orWhere('middlename', 'like', '%'.$search.'%')
+                        ->orWhere('license_number', 'like', '%'.$search.'%')
+                        ->orWhere('specialization', 'like', '%'.$search.'%');
+                });
+            });
         }
 
         if ($request->boolean('queue_request_only')) {
@@ -104,6 +136,20 @@ class AppointmentController extends Controller
             'service_id' => [$isPatient ? 'required' : 'nullable', 'exists:services,service_id'],
         ]);
 
+        $doctor = User::query()->find((int) $data['doctor_id']);
+        if (! $doctor || $doctor->role !== 'doctor') {
+            return response()->json([
+                'message' => 'Selected doctor is invalid.',
+                'code' => 'INVALID_DOCTOR',
+            ], 422);
+        }
+        if ($this->isDoctorUnavailable((int) $doctor->user_id)) {
+            return response()->json([
+                'message' => 'Doctor is currently unavailable.',
+                'code' => 'DOCTOR_UNAVAILABLE',
+            ], 422);
+        }
+
         if ($isPatient) {
             $targetPatientId = $currentUser->user_id;
             if ($request->filled('patient_id')) {
@@ -151,22 +197,47 @@ class AppointmentController extends Controller
                 ], 422);
             }
 
+            $slotStart = $dt->copy()->setTimeFromTimeString((string) $schedule->start_time);
+            $slotEnd = $dt->copy()->setTimeFromTimeString((string) $schedule->end_time);
+
+            $booked = Appointment::query()
+                ->where('doctor_id', $doctorId)
+                ->whereNotNull('appointment_datetime')
+                ->where('status', '!=', 'cancelled')
+                ->where('appointment_datetime', '>=', $slotStart)
+                ->where('appointment_datetime', '<', $slotEnd)
+                ->count();
+
             if ($schedule->max_patients) {
-                $slotStart = $dt->copy()->setTimeFromTimeString((string) $schedule->start_time);
-                $slotEnd = $dt->copy()->setTimeFromTimeString((string) $schedule->end_time);
-
-                $booked = Appointment::query()
-                    ->where('doctor_id', $doctorId)
-                    ->whereNotNull('appointment_datetime')
-                    ->where('status', '!=', 'cancelled')
-                    ->where('appointment_datetime', '>=', $slotStart)
-                    ->where('appointment_datetime', '<', $slotEnd)
-                    ->count();
-
                 if ($booked >= (int) $schedule->max_patients) {
                     return response()->json([
                         'message' => 'Selected time slot is fully booked.',
                         'code' => 'SLOT_FULL',
+                    ], 422);
+                }
+            } else {
+                if ($booked > 0) {
+                    return response()->json([
+                        'message' => 'Selected time slot already has an appointment.',
+                        'code' => 'DOCTOR_CONFLICT',
+                    ], 422);
+                }
+            }
+
+            $patientId = (int) ($data['patient_id'] ?? 0);
+            if ($patientId > 0) {
+                $patientBooked = Appointment::query()
+                    ->where('patient_id', $patientId)
+                    ->whereNotNull('appointment_datetime')
+                    ->where('status', '!=', 'cancelled')
+                    ->where('appointment_datetime', '>=', $slotStart)
+                    ->where('appointment_datetime', '<', $slotEnd)
+                    ->exists();
+
+                if ($patientBooked) {
+                    return response()->json([
+                        'message' => 'Patient already has an appointment in the selected time slot.',
+                        'code' => 'PATIENT_CONFLICT',
                     ], 422);
                 }
             }
@@ -250,6 +321,8 @@ class AppointmentController extends Controller
             abort(403);
         }
 
+        $previousDoctorId = (int) $appointment->doctor_id;
+
         $data = $request->validate([
             'patient_id' => ['sometimes', 'exists:users,user_id'],
             'doctor_id' => ['sometimes', 'exists:users,user_id'],
@@ -261,9 +334,53 @@ class AppointmentController extends Controller
             'check_in_time' => ['sometimes', 'nullable', 'date'],
         ]);
 
+        if (array_key_exists('doctor_id', $data)) {
+            $doctor = User::query()->find((int) $data['doctor_id']);
+            if (! $doctor || $doctor->role !== 'doctor') {
+                return response()->json([
+                    'message' => 'Selected doctor is invalid.',
+                    'code' => 'INVALID_DOCTOR',
+                ], 422);
+            }
+            if ($this->isDoctorUnavailable((int) $doctor->user_id)) {
+                return response()->json([
+                    'message' => 'Doctor is currently unavailable.',
+                    'code' => 'DOCTOR_UNAVAILABLE',
+                ], 422);
+            }
+        }
+
         $appointment->update($data);
 
-        return $appointment->refresh()->load(['patient', 'doctor', 'queue', 'transaction', 'services']);
+        $appointment->refresh();
+
+        $doctorChanged = array_key_exists('doctor_id', $data) && (int) $appointment->doctor_id !== $previousDoctorId;
+        if ($doctorChanged) {
+            $appointment->loadMissing(['patient', 'doctor']);
+            $newDoctorName = trim(implode(' ', array_filter([
+                $appointment->doctor?->firstname,
+                $appointment->doctor?->lastname,
+            ])));
+            if ($newDoctorName === '') {
+                $newDoctorName = 'Doctor #'.$appointment->doctor_id;
+            }
+
+            $conversation = Conversation::ensureForPatient((int) $appointment->patient_id);
+
+            Message::create([
+                'conversation_id' => $conversation->conversation_id,
+                'sender' => 'bot',
+                'message_text' => 'Your doctor has been reassigned to '.$newDoctorName.'.',
+            ]);
+        }
+
+        return $appointment->load(['patient', 'doctor', 'queue', 'transaction', 'services']);
+    }
+
+    private function isDoctorUnavailable(int $doctorId): bool
+    {
+        $payload = Cache::store('file')->get('doctor_availability:'.$doctorId);
+        return is_array($payload) && ($payload['is_available'] ?? null) === false;
     }
 
     public function destroy(Appointment $appointment)

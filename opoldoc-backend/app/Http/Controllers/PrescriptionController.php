@@ -51,7 +51,7 @@ class PrescriptionController extends Controller
             }
         }
 
-        return $prescription->load(['doctor', 'transaction', 'items']);
+        return $prescription->load(['doctor', 'transaction.appointment.patient', 'items.medicine']);
     }
 
     public function update(Request $request, Prescription $prescription)

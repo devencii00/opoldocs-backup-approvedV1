@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id('user_id');
 
-            // self-reference (FIXED)
+           
             $table->unsignedBigInteger('parent_user_id')->nullable();
             $table->foreign('parent_user_id')
                 ->references('user_id')
@@ -37,7 +37,7 @@ return new class extends Migration
 
             $table->string('license_number')->nullable();
             $table->string('specialization')->nullable();
-
+            $table->string('signature_path')->nullable();
             $table->string('employee_number')->nullable();
             $table->date('hire_date')->nullable();
 
