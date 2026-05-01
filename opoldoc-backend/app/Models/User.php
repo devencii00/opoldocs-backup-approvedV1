@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -65,6 +66,61 @@ class User extends Authenticatable
         'current_role',
         'signature_url',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $user) {
+            if (! in_array($user->role, ['doctor', 'receptionist'], true)) {
+                return;
+            }
+
+            $current = is_string($user->employee_number) ? trim($user->employee_number) : '';
+            if ($current !== '') {
+                return;
+            }
+
+            $user->employee_number = self::nextEmployeeNumberForRole((string) $user->role);
+        });
+    }
+
+    private static function employeePrefixForRole(string $role): ?string
+    {
+        return match (strtolower($role)) {
+            'doctor' => 'DTR',
+            'receptionist' => 'RCP',
+            default => null,
+        };
+    }
+
+    private static function nextEmployeeNumberForRole(string $role): ?string
+    {
+        $prefix = self::employeePrefixForRole($role);
+        if (! $prefix) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($prefix) {
+            $latest = DB::table('users')
+                ->select('employee_number')
+                ->where('employee_number', 'like', $prefix.'-%')
+                ->orderBy('employee_number', 'desc')
+                ->lockForUpdate()
+                ->first();
+
+            $latestValue = is_object($latest) ? ($latest->employee_number ?? null) : null;
+            $latestValue = is_string($latestValue) ? trim($latestValue) : '';
+
+            $next = 1;
+            if ($latestValue !== '') {
+                $pattern = '/^'.preg_quote($prefix, '/').'-([0-9]{4})$/';
+                if (preg_match($pattern, $latestValue, $m)) {
+                    $next = ((int) $m[1]) + 1;
+                }
+            }
+
+            return $prefix.'-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+        });
+    }
 
     public function getAuthPassword(): string
     {

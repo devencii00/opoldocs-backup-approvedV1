@@ -102,6 +102,67 @@
             </form>
         </div>
     </div>
+
+    <div class="mt-5 border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
+        <div class="flex items-center justify-between gap-3">
+            <div>
+                <h3 class="text-xs font-semibold text-slate-900">Manage schedule availability</h3>
+                <p class="text-[0.7rem] text-slate-500">Select time slots to mark yourself available/unavailable.</p>
+            </div>
+            <button type="button" id="doctor_manage_schedule_open" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
+                <span class="material-symbols-outlined text-[16px] leading-none">schedule</span>
+                Manage
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="doctorScheduleAvailabilityOverlay" class="hidden fixed inset-0 z-50 bg-slate-900/40 items-center justify-center p-4">
+    <div class="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+            <div>
+                <div class="text-sm font-semibold text-slate-900" id="doctorScheduleAvailabilityTitle">Manage Availability</div>
+                <div class="text-[0.72rem] text-slate-500">Pick slots and save.</div>
+            </div>
+            <button type="button" id="doctorScheduleAvailabilityClose" class="text-slate-400 hover:text-slate-600">
+                <span class="material-symbols-outlined text-[20px] leading-none">close</span>
+            </button>
+        </div>
+        <div class="p-5">
+            <div id="doctorScheduleAvailabilityError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3 items-end">
+                <div>
+                    <label for="doctorScheduleAvailabilityDayFilter" class="block text-[0.7rem] text-slate-600 mb-1">Filter by day</label>
+                    <select id="doctorScheduleAvailabilityDayFilter" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="">All days</option>
+                        <option value="mon">Mon</option>
+                        <option value="tue">Tue</option>
+                        <option value="wed">Wed</option>
+                        <option value="thu">Thu</option>
+                        <option value="fri">Fri</option>
+                        <option value="sat">Sat</option>
+                        <option value="sun">Sun</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="doctorScheduleAvailabilityMode" class="block text-[0.7rem] text-slate-600 mb-1">Action</label>
+                    <select id="doctorScheduleAvailabilityMode" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                        <option value="unavailable">Mark unavailable</option>
+                        <option value="available">Mark available</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end gap-2">
+                    <button type="button" id="doctorScheduleAvailabilitySave" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors w-full disabled:opacity-60 disabled:hover:bg-cyan-600">
+                        <span id="doctorScheduleAvailabilitySpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                        Save
+                    </button>
+                </div>
+            </div>
+
+            <div id="doctorScheduleAvailabilityList" class="max-h-[55vh] overflow-y-auto scrollbar-hidden space-y-3"></div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -120,7 +181,20 @@
         var confirmPassword = document.getElementById('doctor_confirm_password')
         var accountSave = document.getElementById('doctor_account_save')
 
+        var manageScheduleOpen = document.getElementById('doctor_manage_schedule_open')
+        var scheduleAvailabilityOverlay = document.getElementById('doctorScheduleAvailabilityOverlay')
+        var scheduleAvailabilityTitle = document.getElementById('doctorScheduleAvailabilityTitle')
+        var scheduleAvailabilityClose = document.getElementById('doctorScheduleAvailabilityClose')
+        var scheduleAvailabilityError = document.getElementById('doctorScheduleAvailabilityError')
+        var scheduleAvailabilityDayFilter = document.getElementById('doctorScheduleAvailabilityDayFilter')
+        var scheduleAvailabilityMode = document.getElementById('doctorScheduleAvailabilityMode')
+        var scheduleAvailabilityList = document.getElementById('doctorScheduleAvailabilityList')
+        var scheduleAvailabilitySave = document.getElementById('doctorScheduleAvailabilitySave')
+        var scheduleAvailabilitySpinner = document.getElementById('doctorScheduleAvailabilitySpinner')
+
         var storageKey = 'opol_doctor_settings'
+        var currentDoctorId = null
+        var loadedScheduleSlots = []
 
         function loadDoctorSettings() {
             var raw = null
@@ -174,6 +248,7 @@
                 .then(function (response) { return response.json().then(function (data) { return { ok: response.ok, data: data } }) })
                 .then(function (result) {
                     if (!result.ok || !result.data) return
+                    currentDoctorId = result.data.user_id ? String(result.data.user_id) : currentDoctorId
                     var url = result.data.signature_url ? String(result.data.signature_url) : ''
                     if (!signaturePreview) return
                     if (url) {
@@ -182,6 +257,153 @@
                     }
                 })
                 .catch(function () {})
+        }
+
+        function readResponse(response) {
+            return response.text().then(function (text) {
+                var data = null
+                try {
+                    data = text ? JSON.parse(text) : null
+                } catch (e) {
+                    data = null
+                }
+                return { ok: response.ok, status: response.status, data: data, raw: text }
+            })
+        }
+
+        function showScheduleAvailabilityError(message) {
+            if (!scheduleAvailabilityError) return
+            scheduleAvailabilityError.textContent = message || ''
+            scheduleAvailabilityError.classList.toggle('hidden', !message)
+        }
+
+        function setScheduleAvailabilitySubmitting(isSubmitting) {
+            if (scheduleAvailabilitySave) scheduleAvailabilitySave.disabled = !!isSubmitting
+            if (scheduleAvailabilitySpinner) scheduleAvailabilitySpinner.classList.toggle('hidden', !isSubmitting)
+        }
+
+        function openScheduleAvailabilityModal() {
+            if (!currentDoctorId) {
+                showScheduleAvailabilityError('Unable to identify the current doctor.')
+                return
+            }
+            loadedScheduleSlots = []
+            showScheduleAvailabilityError('')
+            setScheduleAvailabilitySubmitting(false)
+            if (scheduleAvailabilityTitle) scheduleAvailabilityTitle.textContent = 'Manage Availability'
+            if (scheduleAvailabilityDayFilter) scheduleAvailabilityDayFilter.value = ''
+            if (scheduleAvailabilityMode) scheduleAvailabilityMode.value = 'unavailable'
+            if (scheduleAvailabilityList) scheduleAvailabilityList.innerHTML = 'Loading schedules…'
+
+            if (scheduleAvailabilityOverlay) {
+                scheduleAvailabilityOverlay.classList.remove('hidden')
+                scheduleAvailabilityOverlay.classList.add('flex')
+            }
+
+            loadScheduleAvailabilitySlots()
+        }
+
+        function closeScheduleAvailabilityModal() {
+            if (scheduleAvailabilityOverlay) {
+                scheduleAvailabilityOverlay.classList.add('hidden')
+                scheduleAvailabilityOverlay.classList.remove('flex')
+            }
+            loadedScheduleSlots = []
+            showScheduleAvailabilityError('')
+            setScheduleAvailabilitySubmitting(false)
+        }
+
+        function loadScheduleAvailabilitySlots() {
+            if (!currentDoctorId || typeof apiFetch !== 'function') return
+            if (!scheduleAvailabilityList) return
+
+            scheduleAvailabilityList.innerHTML = 'Loading schedules…'
+            loadedScheduleSlots = []
+
+            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(currentDoctorId) + "&per_page=500", { method: 'GET' })
+                .then(function (response) { return readResponse(response) })
+                .then(function (result) {
+                    if (!result.ok) {
+                        var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to load schedules.'
+                        showScheduleAvailabilityError(msg)
+                        scheduleAvailabilityList.innerHTML = ''
+                        return
+                    }
+                    var payload = result.data
+                    loadedScheduleSlots = Array.isArray(payload && payload.data) ? payload.data : (Array.isArray(payload) ? payload : [])
+                    renderDoctorScheduleAvailabilityList()
+                })
+                .catch(function () {
+                    showScheduleAvailabilityError('Network error while loading schedules.')
+                    scheduleAvailabilityList.innerHTML = ''
+                })
+        }
+
+        function renderDoctorScheduleAvailabilityList() {
+            if (!scheduleAvailabilityList) return
+            var dayFilter = scheduleAvailabilityDayFilter ? String(scheduleAvailabilityDayFilter.value || '').toLowerCase() : ''
+            var dayOrder = [
+                { key: 'mon', label: 'Monday' },
+                { key: 'tue', label: 'Tuesday' },
+                { key: 'wed', label: 'Wednesday' },
+                { key: 'thu', label: 'Thursday' },
+                { key: 'fri', label: 'Friday' },
+                { key: 'sat', label: 'Saturday' },
+                { key: 'sun', label: 'Sunday' }
+            ]
+
+            var grouped = {}
+            dayOrder.forEach(function (d) { grouped[d.key] = [] })
+
+            (loadedScheduleSlots || []).forEach(function (s) {
+                var key = s && s.day_of_week ? String(s.day_of_week).toLowerCase() : ''
+                if (!key || !grouped[key]) return
+                if (dayFilter && dayFilter !== key) return
+                grouped[key].push(s)
+            })
+
+            dayOrder.forEach(function (d) {
+                grouped[d.key].sort(function (a, b) {
+                    var sa = String(a.start_time || '').slice(0, 5)
+                    var sb = String(b.start_time || '').slice(0, 5)
+                    if (sa < sb) return -1
+                    if (sa > sb) return 1
+                    return 0
+                })
+            })
+
+            var html = ''
+            dayOrder.forEach(function (d) {
+                var rows = grouped[d.key] || []
+                if (!rows.length) return
+                html += '<div class="rounded-xl border border-slate-200 bg-white p-3">' +
+                    '<div class="text-[0.72rem] font-semibold text-slate-900 mb-2">' + d.label + '</div>'
+
+                rows.forEach(function (s) {
+                    var start = String(s.start_time || '').slice(0, 5)
+                    var end = String(s.end_time || '').slice(0, 5)
+                    var label = start + '–' + end
+                    var isUnavailable = s.is_available === false
+                    var badgeClass = isUnavailable ? 'text-rose-700 bg-rose-50 border-rose-100' : 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                    var badgeText = isUnavailable ? 'Unavailable' : 'Available'
+
+                    html += '<label class="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 mb-1">' +
+                        '<div class="flex items-center gap-2">' +
+                            '<input type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" data-schedule-id="' + s.schedule_id + '">' +
+                            '<span class="text-[0.78rem] text-slate-700 font-semibold">' + label + '</span>' +
+                        '</div>' +
+                        '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] font-semibold border ' + badgeClass + '">' + badgeText + '</span>' +
+                    '</label>'
+                })
+
+                html += '</div>'
+            })
+
+            if (!html) {
+                html = '<div class="text-[0.78rem] text-slate-500">No schedules found for the selected filter.</div>'
+            }
+
+            scheduleAvailabilityList.innerHTML = html
         }
 
         function handlePasswordChange() {
@@ -270,6 +492,85 @@
         if (accountSave) {
             accountSave.addEventListener('click', function () {
                 handlePasswordChange()
+            })
+        }
+
+        if (manageScheduleOpen) {
+            manageScheduleOpen.addEventListener('click', function () {
+                openScheduleAvailabilityModal()
+            })
+        }
+        if (scheduleAvailabilityClose) {
+            scheduleAvailabilityClose.addEventListener('click', function () {
+                closeScheduleAvailabilityModal()
+            })
+        }
+        if (scheduleAvailabilityOverlay) {
+            scheduleAvailabilityOverlay.addEventListener('click', function (e) {
+                if (e.target === scheduleAvailabilityOverlay) {
+                    closeScheduleAvailabilityModal()
+                }
+            })
+        }
+        if (scheduleAvailabilityDayFilter) {
+            scheduleAvailabilityDayFilter.addEventListener('change', function () {
+                renderDoctorScheduleAvailabilityList()
+            })
+        }
+        if (scheduleAvailabilitySave) {
+            scheduleAvailabilitySave.addEventListener('click', function () {
+                showScheduleAvailabilityError('')
+                if (!currentDoctorId) {
+                    showScheduleAvailabilityError('Unable to identify the current doctor.')
+                    return
+                }
+                if (!scheduleAvailabilityList) {
+                    showScheduleAvailabilityError('Schedule list not available.')
+                    return
+                }
+
+                var checked = scheduleAvailabilityList.querySelectorAll('input[type="checkbox"][data-schedule-id]:checked')
+                var ids = []
+                checked.forEach(function (c) {
+                    var id = c.getAttribute('data-schedule-id')
+                    if (id) ids.push(parseInt(id, 10))
+                })
+
+                if (!ids.length) {
+                    showScheduleAvailabilityError('Select at least one time slot.')
+                    return
+                }
+
+                var mode = scheduleAvailabilityMode ? String(scheduleAvailabilityMode.value || '') : 'unavailable'
+                var isAvailable = mode === 'available'
+
+                var confirmed = window.confirm('Are you sure you want to save this schedule?')
+                if (!confirmed) return
+
+                setScheduleAvailabilitySubmitting(true)
+                apiFetch("{{ url('/api/doctor-schedules/bulk-availability') }}", {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        schedule_ids: ids,
+                        is_available: isAvailable
+                    })
+                })
+                    .then(function (response) { return readResponse(response) })
+                    .then(function (result) {
+                        if (!result.ok) {
+                            var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to update availability.'
+                            showScheduleAvailabilityError(msg)
+                            return
+                        }
+                        loadScheduleAvailabilitySlots()
+                    })
+                    .catch(function () {
+                        showScheduleAvailabilityError('Network error while updating availability.')
+                    })
+                    .finally(function () {
+                        setScheduleAvailabilitySubmitting(false)
+                    })
             })
         }
 

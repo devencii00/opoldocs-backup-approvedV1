@@ -44,15 +44,14 @@ type DoctorListItem = {
   hasSchedules: boolean;
 };
 
-type DoctorScheduleDay = { day_of_week: string };
-
 type DoctorScheduleApi = {
   schedule_id: number;
   doctor_id: number;
+  day_of_week: string;
   start_time: string;
   end_time: string;
   max_patients: number | null;
-  days: DoctorScheduleDay[];
+  is_available: boolean;
 };
 
 type TimeSlot = {
@@ -308,7 +307,7 @@ export default function PatientBookAppointmentScreen() {
           return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/doctor-schedules?doctor_id=${encodeURIComponent(selectedDoctorId)}&per_page=200`, {
+        const res = await fetch(`${API_BASE_URL}/doctor-schedules?doctor_id=${encodeURIComponent(selectedDoctorId)}&per_page=500`, {
           headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
         });
         const data = await res.json().catch(() => ({}));
@@ -328,10 +327,9 @@ export default function PatientBookAppointmentScreen() {
 
         const daySet = new Set<string>();
         for (const s of schedules) {
-          for (const d of Array.isArray(s.days) ? s.days : []) {
-            const key = String((d as any)?.day_of_week ?? '').toLowerCase();
-            if (key) daySet.add(key);
-          }
+          if ((s as any)?.is_available === false) continue;
+          const key = String((s as any)?.day_of_week ?? '').toLowerCase();
+          if (key) daySet.add(key);
         }
 
         const next: string[] = [];
@@ -401,9 +399,7 @@ export default function PatientBookAppointmentScreen() {
           .map((v: string) => v.slice(11, 16));
 
         const dayKey = dayKeyFromDate(date);
-        const daySchedules = doctorSchedules.filter((s) =>
-          (Array.isArray(s.days) ? s.days : []).some((d) => String((d as any)?.day_of_week ?? '').toLowerCase() === dayKey)
-        );
+        const daySchedules = doctorSchedules.filter((s) => (s as any)?.is_available !== false && String((s as any)?.day_of_week ?? '').toLowerCase() === dayKey);
 
         const slots: TimeSlot[] = daySchedules
           .map((s) => {

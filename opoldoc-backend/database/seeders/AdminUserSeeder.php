@@ -15,6 +15,7 @@ class AdminUserSeeder extends Seeder
             [
                 'role' => 'admin',
                 'status' => 'active',
+                'employee_number' => 'ADN-0001',
                 'password_hash' => Hash::make('admin123'),
 
                 'account_activated' => 1,

@@ -72,22 +72,46 @@ class UserController extends Controller
             abort(403);
         }
 
+        $emailRules = ['sometimes', 'email', "unique:users,email,{$user->user_id},user_id"];
+        if ($user->role === 'admin' && $user->is_first_login) {
+            $emailRules[] = 'regex:/@example\\.com$/i';
+        }
+
+        $requiresPasswordForFirstLogin = $user->is_first_login
+            && $request->has('must_change_credentials')
+            && $request->boolean('must_change_credentials') === false;
+
+        $passwordRules = [
+            $requiresPasswordForFirstLogin ? 'required' : 'sometimes',
+            'string',
+            'min:8',
+            'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/',
+        ];
+
         $data = $request->validate([
-            'email' => ['sometimes', 'email', "unique:users,email,{$user->user_id},user_id"],
-            'password' => ['sometimes', 'string', 'min:8'],
+            'email' => $emailRules,
+            'password' => $passwordRules,
             'must_change_credentials' => ['sometimes', 'boolean'],
             'role' => ['sometimes', 'in:admin,doctor,receptionist,patient'],
             'status' => ['sometimes', 'in:active,inactive,suspended'],
-            'firstname' => ['sometimes', 'nullable', 'string'],
-            'lastname' => ['sometimes', 'nullable', 'string'],
-            'middlename' => ['sometimes', 'nullable', 'string'],
+            'firstname' => ['sometimes', 'nullable', 'string', "regex:/^[A-Za-z][A-Za-z\\s\\.'-]*$/"],
+            'lastname' => ['sometimes', 'nullable', 'string', "regex:/^[A-Za-z][A-Za-z\\s\\.'-]*$/"],
+            'middlename' => ['sometimes', 'nullable', 'string', "regex:/^[A-Za-z][A-Za-z\\s\\.'-]*$/"],
             'birthdate' => ['sometimes', 'nullable', 'date'],
             'sex' => ['sometimes', 'nullable', 'string'],
             'address' => ['sometimes', 'nullable', 'string'],
-            'contact_number' => ['sometimes', 'nullable', 'string'],
+            'contact_number' => ['sometimes', 'nullable', 'string', 'regex:/^(\\+63\\d{10}|0\\d{10})$/'],
             'account_activated' => ['sometimes', 'boolean'],
             'license_number' => ['sometimes', 'nullable', 'string'],
             'specialization' => ['sometimes', 'nullable', 'string'],
+        ], [
+            'email.regex' => 'Email must be a valid email ending with @example.com.',
+            'password.required' => 'Password is required.',
+            'password.regex' => 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.',
+            'firstname.regex' => 'First name must contain letters only.',
+            'middlename.regex' => 'Middle name must contain letters only.',
+            'lastname.regex' => 'Last name must contain letters only.',
+            'contact_number.regex' => 'Contact number must be a valid PH number.',
         ]);
 
         if ($currentUser && $currentUser->role === 'patient') {

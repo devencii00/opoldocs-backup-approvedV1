@@ -10,16 +10,7 @@
         'patient' => 'Patient',
     ];
 
-    $roleTaglines = [
-        'admin' => 'System Control & Oversight',
-        'doctor' => 'Consultations & Prescriptions',
-        'receptionist' => 'Front Desk Operations',
-        'patient' => 'Patient Portal',
-    ];
-
-    $displayName = $roleNames[$roleKey] ?? ucfirst($roleKey);
-    $tagline = $roleTaglines[$roleKey] ?? 'User Workspace';
-    $initial = strtoupper(substr($displayName, 0, 1));
+    $roleLabel = $roleNames[$roleKey] ?? ucfirst($roleKey);
 
     $currentSection = request()->query('section');
     $currentSection = $currentSection ?: 'overview';
@@ -29,16 +20,20 @@
     $navActive = 'bg-gradient-to-br from-cyan-50/20 to-cyan-100/10 text-cyan-700 relative';
 @endphp
 
-<aside class="w-[248px] flex-shrink-0 bg-white flex flex-col fixed top-0 left-0 bottom-0 z-40 shadow-[4px_0_24px_rgba(15,23,42,0.05)] border-r border-slate-200">
-    <div class="flex items-center gap-3 p-6 border-b border-slate-100">
-        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-cyan-500 to-cyan-700 shadow-[0_4px_10px_rgba(6,182,212,0.3)]">
-            <span class="material-symbols-outlined text-white text-[18px] leading-none">monitor_heart</span>
-        </div>
-        <div>
-            <div class="font-serif font-bold text-slate-900 text-sm leading-[1.2]">Opol Clinic</div>
-            <div class="text-slate-400 font-medium text-[0.68rem] uppercase tracking-widest">{{ $displayName }}</div>
-        </div>
-    </div>
+    <aside class="w-[248px] flex-shrink-0 bg-white flex flex-col fixed top-0 left-0 bottom-0 z-40 shadow-[4px_0_24px_rgba(15,23,42,0.05)] border-r border-slate-200">
+<div class="flex items-start gap-3 p-6 border-b border-slate-100"> 
+    
+    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-white border border-slate-200 overflow-hidden"> 
+        <img src="{{ asset('images/opoldoc3.png') }}" alt="Opol Doctors Medical Clinic" class="w-full h-full object-cover"> 
+    </div> 
+
+     
+    <div class="pt-0.78"> 
+        <div class="font-serif font-bold text-slate-900 text-sm leading-[1.2]">Opol Doctors Medical Clinic</div> 
+        <div class="text-slate-400 font-medium text-[0.68rem] uppercase tracking-widest">{{ $roleLabel }}</div> 
+    </div> 
+</div>
+
 
     <nav class="flex-1 px-3 py-2 overflow-y-auto scrollbar-hidden">
         <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest pt-4 pb-1">Main Menu</div>
@@ -287,12 +282,12 @@
 
     <div class="px-3 py-4 border-t border-slate-100">
         <div class="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 mb-2">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-400 to-cyan-700 text-white font-bold text-xs">
-                {{ $initial }}
+            <div class="w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br from-cyan-400 to-cyan-700 text-white">
+                <span class="material-symbols-outlined text-[18px] leading-none">person</span>
             </div>
             <div>
-                <div class="text-slate-800 font-semibold text-[0.83rem] leading-tight">{{ $displayName }}</div>
-                <div class="text-slate-400 text-[0.7rem]">{{ $tagline }}</div>
+                <div id="sidebarUserName" class="text-slate-800 font-semibold text-[0.83rem] leading-tight">{{ $roleLabel }}</div>
+                <div id="sidebarUserEmail" class="text-slate-400 text-[0.7rem]"></div>
             </div>
         </div>
         <button type="button" onclick="if(confirm('Are you sure you want to log out?')) { window.location.href='{{ route('webadmin.login') }}'; }" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
@@ -301,3 +296,76 @@
         </button>
     </div>
 </aside>
+
+<script>
+    (function () {
+        function sidebarApiFetch(path, options) {
+            var token = null
+            try {
+                token = window.localStorage ? window.localStorage.getItem('api_token') : null
+            } catch (_) {
+                token = null
+            }
+            var headers = (options && options.headers) ? Object.assign({}, options.headers) : {}
+            if (token) {
+                headers['Authorization'] = 'Bearer ' + token
+            }
+            if (!headers['Accept']) {
+                headers['Accept'] = 'application/json'
+            }
+            return fetch(path, Object.assign({}, options, { headers: headers }))
+        }
+
+        function formatUserName(user) {
+            if (!user) {
+                return ''
+            }
+            var parts = []
+            if (user.firstname) parts.push(String(user.firstname))
+            if (user.middlename) parts.push(String(user.middlename))
+            if (user.lastname) parts.push(String(user.lastname))
+            var name = parts.join(' ').trim()
+            if (name) {
+                return name
+            }
+            return 'User'
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var nameEl = document.getElementById('sidebarUserName')
+            var emailEl = document.getElementById('sidebarUserEmail')
+            if (!nameEl || !emailEl) {
+                return
+            }
+
+            var userId = null
+            try {
+                userId = window.localStorage ? window.localStorage.getItem('current_user_id') : null
+            } catch (_) {
+                userId = null
+            }
+
+            if (!userId) {
+                return
+            }
+
+            sidebarApiFetch("{{ url('/api/users') }}/" + encodeURIComponent(userId), { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok || !result.data) {
+                        return
+                    }
+                    var user = result.data
+                    nameEl.textContent = formatUserName(user)
+                    emailEl.textContent = user && user.email ? String(user.email) : ''
+                })
+                .catch(function () {})
+        })
+    })()
+</script>

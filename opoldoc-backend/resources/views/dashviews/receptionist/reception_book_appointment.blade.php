@@ -368,10 +368,9 @@
             }
             var set = {}
             doctorSchedules.forEach(function (s) {
-                var days = Array.isArray(s.days) ? s.days : []
-                days.forEach(function (d) {
-                    if (d && d.day_of_week) set[String(d.day_of_week).toLowerCase()] = true
-                })
+                if (s && s.is_available === false) return
+                var dayKey = s && s.day_of_week ? String(s.day_of_week).toLowerCase() : ''
+                if (dayKey) set[dayKey] = true
             })
             var order = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
             var keys = Object.keys(set).sort(function (a, b) { return order.indexOf(a) - order.indexOf(b) })
@@ -401,12 +400,11 @@
             }
 
             var daySchedules = doctorSchedules.filter(function (s) {
-                var days = Array.isArray(s.days) ? s.days : []
-                return days.some(function (d) { return String(d.day_of_week || '').toLowerCase() === dayKey })
+                return String(s.day_of_week || '').toLowerCase() === dayKey && s.is_available !== false
             })
 
             if (!daySchedules.length) {
-                timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Doctor is not available on this day.</div>'
+                timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Doctor has no available slots on this day.</div>'
                 return
             }
 
@@ -465,7 +463,7 @@
         function loadDoctorSchedulesAndAvailability(doctorId, dateStr) {
             if (!doctorId || typeof apiFetch !== 'function') return
             clearAvailability()
-            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId) + "&per_page=200", { method: 'GET' })
+            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId) + "&per_page=500", { method: 'GET' })
                 .then(function (response) { return readResponse(response) })
                 .then(function (result) {
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])

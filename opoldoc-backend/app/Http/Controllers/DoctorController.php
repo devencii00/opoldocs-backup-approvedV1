@@ -25,7 +25,7 @@ class DoctorController extends Controller
 
         $paginator = User::query()
             ->where('role', 'doctor')
-            ->with(['doctorSchedules.days'])
+            ->with(['doctorSchedules'])
             ->paginate($perPage);
 
         $availableOnly = $request->boolean('available_only');
@@ -63,7 +63,7 @@ class DoctorController extends Controller
             abort(404);
         }
 
-        $doctor->load(['doctorSchedules.days']);
+        $doctor->load(['doctorSchedules']);
         $availability = $this->availabilityForDoctorId((int) $doctor->user_id);
         $doctor->is_available = $availability['is_available'];
         $doctor->unavailable_reason = $availability['unavailable_reason'];

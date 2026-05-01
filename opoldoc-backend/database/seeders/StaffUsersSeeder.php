@@ -14,6 +14,7 @@ class StaffUsersSeeder extends Seeder
             'doctor' => [
                 'email' => 'doctor@example.com',
                 'password' => 'doctor123',
+                
             ],
             'receptionist' => [
                 'email' => 'receptionist@example.com',

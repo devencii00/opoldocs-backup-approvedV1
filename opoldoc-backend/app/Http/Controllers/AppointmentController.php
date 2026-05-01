@@ -182,11 +182,10 @@ class AppointmentController extends Controller
 
             $schedule = DoctorSchedule::query()
                 ->where('doctor_id', $doctorId)
+                ->where('day_of_week', $dayKey)
                 ->whereTime('start_time', '<=', $timeValue)
                 ->whereTime('end_time', '>', $timeValue)
-                ->whereHas('days', function ($q) use ($dayKey) {
-                    $q->where('day_of_week', $dayKey);
-                })
+                ->where('is_available', true)
                 ->orderBy('start_time')
                 ->first();
 

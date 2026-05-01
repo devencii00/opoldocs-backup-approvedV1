@@ -23,24 +23,29 @@
         <div id="errorBox" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"></div>
         <div id="successBox" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"></div>
 
-        <form id="firstLoginForm" class="space-y-3">
+        <form id="firstLoginForm" class="space-y-3" novalidate>
             <div>
                 <label for="new_email" class="block text-xs text-slate-600 mb-1">New email (optional)</label>
-                <input type="email" id="new_email" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <div id="newEmailError" class="hidden mb-1 text-[0.7rem] text-red-600"></div>
+                <input type="text" id="new_email" inputmode="email" autocomplete="email" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
             </div>
-            <div class="relative">
-                <label for="new_password" class="block text-xs text-slate-600 mb-1">New password (optional)</label>
-                <input type="password" id="new_password" class="w-full pr-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                <button type="button" id="toggleNewPassword" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 text-xl">
-                    <span id="toggleNewPasswordIcon" class="material-symbols-outlined text-[20px] leading-none">visibility</span>
-                </button>
+            <div>
+                <label for="new_password" class="block text-xs text-slate-600 mb-1">New password</label>
+                <div id="newPasswordError" class="hidden mb-1 text-[0.7rem] text-red-600"></div>
+                <div class="relative">
+                    <input type="password" id="new_password" class="w-full pr-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <button type="button" id="toggleNewPassword" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 text-xl">
+                        <span id="toggleNewPasswordIcon" class="material-symbols-outlined text-[20px] leading-none">visibility</span>
+                    </button>
+                </div>
             </div>
             <div>
                 <label for="new_password_confirmation" class="block text-xs text-slate-600 mb-1">Confirm new password</label>
                 <input type="password" id="new_password_confirmation" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
             </div>
-            <button type="submit" class="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-700 text-white text-sm font-semibold hover:from-cyan-600 hover:to-cyan-800 transition-colors">
-                Save and continue
+            <button id="firstLoginSubmit" type="submit" class="w-full mt-2 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-700 text-white text-sm font-semibold hover:from-cyan-600 hover:to-cyan-800 transition-colors disabled:opacity-70 disabled:hover:from-cyan-500 disabled:hover:to-cyan-700">
+                <span id="firstLoginSpinner" class="hidden w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin align-[-3px]"></span>
+                <span id="firstLoginSubmitLabel">Save and continue</span>
             </button>
         </form>
     </div>
@@ -69,6 +74,27 @@
             icon.textContent = isPassword ? 'visibility_off' : 'visibility';
         }
 
+        function isValidEmail(value) {
+            if (!value) {
+                return false;
+            }
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
+        }
+
+        function isExampleDotComEmail(value) {
+            if (!isValidEmail(value)) {
+                return false;
+            }
+            return String(value).trim().toLowerCase().endsWith('@example.com');
+        }
+
+        function isStrongPassword(value) {
+            if (!value) {
+                return false;
+            }
+            return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(String(value));
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('firstLoginForm');
             const errorBox = document.getElementById('errorBox');
@@ -77,6 +103,11 @@
             const newPasswordInput = document.getElementById('new_password');
             const newPasswordConfirmInput = document.getElementById('new_password_confirmation');
             const toggleNewPassword = document.getElementById('toggleNewPassword');
+            const newEmailError = document.getElementById('newEmailError');
+            const newPasswordError = document.getElementById('newPasswordError');
+            const submitBtn = document.getElementById('firstLoginSubmit');
+            const spinner = document.getElementById('firstLoginSpinner');
+            const submitLabel = document.getElementById('firstLoginSubmitLabel');
 
             if (toggleNewPassword) {
                 toggleNewPassword.addEventListener('click', function () {
@@ -88,8 +119,44 @@
                 return;
             }
 
+            function clearInlineErrors() {
+                if (newEmailError) {
+                    newEmailError.classList.add('hidden');
+                    newEmailError.textContent = '';
+                }
+                if (newPasswordError) {
+                    newPasswordError.classList.add('hidden');
+                    newPasswordError.textContent = '';
+                }
+            }
+
+            function setInlineError(el, message) {
+                if (!el) {
+                    return;
+                }
+                el.textContent = message || '';
+                el.classList.toggle('hidden', !message);
+            }
+
+            function setLoading(isLoading) {
+                if (submitBtn) {
+                    submitBtn.disabled = !!isLoading;
+                }
+                if (spinner) {
+                    spinner.classList.toggle('hidden', !isLoading);
+                    spinner.classList.toggle('inline-block', !!isLoading);
+                }
+                if (submitLabel) {
+                    submitLabel.classList.toggle('hidden', !!isLoading);
+                }
+            }
+
             form.addEventListener('submit', async function (e) {
                 e.preventDefault();
+
+                if (submitBtn && submitBtn.disabled) {
+                    return;
+                }
 
                 if (errorBox) {
                     errorBox.classList.add('hidden');
@@ -99,31 +166,38 @@
                     successBox.classList.add('hidden');
                     successBox.textContent = '';
                 }
+                clearInlineErrors();
 
                 const body = {};
 
                 if (newEmailInput && newEmailInput.value) {
+                    if (!isExampleDotComEmail(newEmailInput.value)) {
+                        setInlineError(newEmailError, 'Please enter a valid email ending with @example.com.');
+                        newEmailInput.focus();
+                        return;
+                    }
                     body.email = newEmailInput.value;
                 }
 
-                if (newPasswordInput && newPasswordInput.value) {
-                    if (!newPasswordConfirmInput || newPasswordInput.value !== newPasswordConfirmInput.value) {
-                        if (errorBox) {
-                            errorBox.textContent = 'Passwords do not match.';
-                            errorBox.classList.remove('hidden');
-                        }
-                        return;
-                    }
-                    body.password = newPasswordInput.value;
-                }
-
-                if (!body.email && !body.password) {
-                    if (errorBox) {
-                        errorBox.textContent = 'Please change the email and/or password.';
-                        errorBox.classList.remove('hidden');
+                if (!newPasswordInput || !newPasswordInput.value) {
+                    setInlineError(newPasswordError, 'Password change is required.');
+                    if (newPasswordInput) {
+                        newPasswordInput.focus();
                     }
                     return;
                 }
+
+                if (!newPasswordConfirmInput || newPasswordInput.value !== newPasswordConfirmInput.value) {
+                    setInlineError(newPasswordError, 'Passwords do not match.');
+                    newPasswordInput.focus();
+                    return;
+                }
+                if (!isStrongPassword(newPasswordInput.value)) {
+                    setInlineError(newPasswordError, 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.');
+                    newPasswordInput.focus();
+                    return;
+                }
+                body.password = newPasswordInput.value;
 
                 body.must_change_credentials = false;
 
@@ -142,14 +216,26 @@
                     return;
                 }
 
+                setLoading(true);
+                let keepLoading = false;
+
                 try {
+                    const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                    const timeoutId = setTimeout(function () {
+                        if (abortController) {
+                            abortController.abort();
+                        }
+                    }, 15000);
+
                     const response = await apiFetch("{{ url('/api/users') }}/" + userId, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                         },
+                        signal: abortController ? abortController.signal : undefined,
                         body: JSON.stringify(body),
                     });
+                    clearTimeout(timeoutId);
 
                     let data = {};
 
@@ -160,10 +246,19 @@
                     }
 
                     if (!response.ok) {
-                        const message = data.message || 'Failed to update credentials.';
-                        if (errorBox) {
-                            errorBox.textContent = message;
-                            errorBox.classList.remove('hidden');
+                        if (response.status === 422 && data && data.errors) {
+                            if (data.errors.email && data.errors.email.length) {
+                                setInlineError(newEmailError, 'Please enter a valid email ending with @example.com.');
+                            }
+                            if (data.errors.password && data.errors.password.length) {
+                                setInlineError(newPasswordError, 'Password change is required.');
+                            }
+                        } else {
+                            const message = data.message || 'Failed to update credentials.';
+                            if (errorBox) {
+                                errorBox.textContent = message;
+                                errorBox.classList.remove('hidden');
+                            }
                         }
                         return;
                     }
@@ -172,6 +267,8 @@
                         successBox.textContent = 'Credentials updated. Redirecting to dashboard.';
                         successBox.classList.remove('hidden');
                     }
+                    keepLoading = true;
+                    setLoading(true);
 
                     let role = 'admin';
 
@@ -186,6 +283,10 @@
                     if (errorBox) {
                         errorBox.textContent = 'Network error. Please try again.';
                         errorBox.classList.remove('hidden');
+                    }
+                } finally {
+                    if (!keepLoading) {
+                        setLoading(false);
                     }
                 }
             });

@@ -72,6 +72,13 @@
             icon.textContent = isPassword ? 'visibility_off' : 'visibility'
         }
 
+        function isStrongPassword(value) {
+            if (!value) {
+                return false
+            }
+            return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(String(value))
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             var form = document.getElementById('staffFirstLoginForm')
             var errorBox = document.getElementById('staffFirstLoginError')
@@ -116,6 +123,14 @@
                 if (password !== confirm) {
                     if (errorBox) {
                         errorBox.textContent = 'Passwords do not match.'
+                        errorBox.classList.remove('hidden')
+                    }
+                    return
+                }
+
+                if (!isStrongPassword(password)) {
+                    if (errorBox) {
+                        errorBox.textContent = 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.'
                         errorBox.classList.remove('hidden')
                     }
                     return

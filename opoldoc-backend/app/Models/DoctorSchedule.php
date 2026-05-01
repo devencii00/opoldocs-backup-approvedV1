@@ -15,18 +15,19 @@ class DoctorSchedule extends Model
 
     protected $fillable = [
         'doctor_id',
+        'day_of_week',
         'start_time',
         'end_time',
         'max_patients',
+        'is_available',
+    ];
+
+    protected $casts = [
+        'is_available' => 'boolean',
     ];
 
     public function doctor()
     {
         return $this->belongsTo(User::class, 'doctor_id', 'user_id');
-    }
-
-    public function days()
-    {
-        return $this->hasMany(DoctorScheduleDay::class, 'schedule_id');
     }
 }

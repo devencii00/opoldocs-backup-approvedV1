@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\DoctorSchedule;
-use App\Models\DoctorScheduleDay;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -11,6 +10,11 @@ class DoctorScheduleController extends Controller
 {
     public function index(Request $request)
     {
+        $request->validate([
+            'doctor_id' => ['nullable', 'integer', 'exists:users,user_id'],
+            'available_only' => ['nullable', 'boolean'],
+        ]);
+
         $perPage = (int) $request->query('per_page', 50);
         if ($perPage < 1) {
             $perPage = 50;
@@ -19,90 +23,251 @@ class DoctorScheduleController extends Controller
             $perPage = 100;
         }
 
+        $currentUser = $request->user();
+        $doctorId = $request->query('doctor_id');
+        $availableOnly = $request->boolean('available_only');
+
+        if ($currentUser && $currentUser->role === 'doctor') {
+            $doctorId = $doctorId ?: $currentUser->user_id;
+            if ((int) $doctorId !== (int) $currentUser->user_id) {
+                abort(403);
+            }
+        }
+
         return DoctorSchedule::query()
-            ->with(['doctor', 'days'])
-            ->when($request->query('doctor_id'), function ($q) use ($request) {
-                $q->where('doctor_id', $request->query('doctor_id'));
+            ->with(['doctor'])
+            ->when($doctorId, function ($q) use ($doctorId) {
+                $q->where('doctor_id', (int) $doctorId);
             })
-            ->latest('schedule_id')
+            ->when($availableOnly, function ($q) {
+                $q->where('is_available', true);
+            })
+            ->orderByRaw("CASE day_of_week WHEN 'mon' THEN 1 WHEN 'tue' THEN 2 WHEN 'wed' THEN 3 WHEN 'thu' THEN 4 WHEN 'fri' THEN 5 WHEN 'sat' THEN 6 WHEN 'sun' THEN 7 ELSE 8 END")
+            ->orderBy('start_time')
+            ->orderBy('schedule_id')
             ->paginate($perPage);
     }
 
     public function store(Request $request)
     {
+        $currentUser = $request->user();
+        if (! $currentUser || $currentUser->role !== 'admin') {
+            abort(403);
+        }
+
         $data = $request->validate([
-            'doctor_id' => ['required', 'exists:users,user_id'],
+            'doctor_id' => ['required', 'integer', 'exists:users,user_id'],
+            'from_day' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
+            'to_day' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
             'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'end_time' => ['required', 'date_format:H:i'],
+            'slot_minutes' => ['sometimes', 'integer', 'min:15', 'max:240'],
             'max_patients' => ['nullable', 'integer', 'min:1'],
-            'days' => ['required', 'array', 'min:1'],
-            'days.*' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
         ]);
 
-        return DB::transaction(function () use ($data) {
-            $schedule = DoctorSchedule::create([
-                'doctor_id' => $data['doctor_id'],
-                'start_time' => $data['start_time'],
-                'end_time' => $data['end_time'],
-                'max_patients' => $data['max_patients'] ?? null,
-            ]);
+        $slotMinutes = (int) ($data['slot_minutes'] ?? 60);
 
-            $uniqueDays = array_values(array_unique($data['days']));
-            foreach ($uniqueDays as $day) {
-                DoctorScheduleDay::create([
-                    'schedule_id' => $schedule->schedule_id,
-                    'day_of_week' => $day,
-                ]);
+        $startMinutes = $this->minutesFromTime($data['start_time']);
+        $endMinutes = $this->minutesFromTime($data['end_time']);
+
+        if ($startMinutes === null || $endMinutes === null || $endMinutes <= $startMinutes) {
+            return response()->json(['message' => 'End time must be after start time.'], 422);
+        }
+
+        $diff = $endMinutes - $startMinutes;
+        if ($diff % $slotMinutes !== 0) {
+            return response()->json([
+                'message' => 'Time range must be divisible by slot minutes.',
+            ], 422);
+        }
+
+        $days = $this->daysBetween($data['from_day'], $data['to_day']);
+        $doctorId = (int) $data['doctor_id'];
+
+        return DB::transaction(function () use ($doctorId, $days, $startMinutes, $endMinutes, $slotMinutes, $data) {
+            $created = 0;
+            $updated = 0;
+            $slotIds = [];
+
+            foreach ($days as $dayKey) {
+                for ($m = $startMinutes; $m < $endMinutes; $m += $slotMinutes) {
+                    $slotStart = $this->timeFromMinutes($m);
+                    $slotEnd = $this->timeFromMinutes($m + $slotMinutes);
+
+                    $existing = DoctorSchedule::query()
+                        ->where('doctor_id', $doctorId)
+                        ->where('day_of_week', $dayKey)
+                        ->whereTime('start_time', $slotStart)
+                        ->whereTime('end_time', $slotEnd)
+                        ->first();
+
+                    if ($existing) {
+                        $existing->max_patients = $data['max_patients'] ?? null;
+                        $existing->save();
+                        $updated++;
+                        $slotIds[] = (int) $existing->schedule_id;
+                        continue;
+                    }
+
+                    $row = DoctorSchedule::create([
+                        'doctor_id' => $doctorId,
+                        'day_of_week' => $dayKey,
+                        'start_time' => $slotStart,
+                        'end_time' => $slotEnd,
+                        'max_patients' => $data['max_patients'] ?? null,
+                        'is_available' => true,
+                    ]);
+
+                    $created++;
+                    $slotIds[] = (int) $row->schedule_id;
+                }
             }
 
-            return response()->json($schedule->load(['doctor', 'days']), 201);
+            $slots = DoctorSchedule::query()
+                ->with(['doctor'])
+                ->whereIn('schedule_id', $slotIds)
+                ->orderByRaw("CASE day_of_week WHEN 'mon' THEN 1 WHEN 'tue' THEN 2 WHEN 'wed' THEN 3 WHEN 'thu' THEN 4 WHEN 'fri' THEN 5 WHEN 'sat' THEN 6 WHEN 'sun' THEN 7 ELSE 8 END")
+                ->orderBy('start_time')
+                ->orderBy('schedule_id')
+                ->get();
+
+            return response()->json([
+                'created' => $created,
+                'updated' => $updated,
+                'slots' => $slots,
+            ], 201);
         });
     }
 
     public function update(Request $request, DoctorSchedule $doctorSchedule)
     {
+        $currentUser = $request->user();
+        if (! $currentUser || $currentUser->role !== 'admin') {
+            abort(403);
+        }
+
         $data = $request->validate([
+            'day_of_week' => ['sometimes', 'in:mon,tue,wed,thu,fri,sat,sun'],
             'start_time' => ['sometimes', 'date_format:H:i'],
             'end_time' => ['sometimes', 'date_format:H:i'],
             'max_patients' => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'days' => ['sometimes', 'array', 'min:1'],
-            'days.*' => ['required_with:days', 'in:mon,tue,wed,thu,fri,sat,sun'],
+            'is_available' => ['sometimes', 'boolean'],
         ]);
 
-        if (array_key_exists('start_time', $data) && array_key_exists('end_time', $data)) {
-            if ($data['end_time'] <= $data['start_time']) {
-                return response()->json(['message' => 'End time must be after start time.'], 422);
-            }
+        $start = array_key_exists('start_time', $data) ? (string) $data['start_time'] : (string) $doctorSchedule->start_time;
+        $end = array_key_exists('end_time', $data) ? (string) $data['end_time'] : (string) $doctorSchedule->end_time;
+        $startMinutes = $this->minutesFromTime(substr($start, 0, 5));
+        $endMinutes = $this->minutesFromTime(substr($end, 0, 5));
+
+        if ($startMinutes === null || $endMinutes === null || $endMinutes <= $startMinutes) {
+            return response()->json(['message' => 'End time must be after start time.'], 422);
         }
 
-        return DB::transaction(function () use ($doctorSchedule, $data) {
-            $doctorSchedule->update([
-                'start_time' => $data['start_time'] ?? $doctorSchedule->start_time,
-                'end_time' => $data['end_time'] ?? $doctorSchedule->end_time,
-                'max_patients' => array_key_exists('max_patients', $data) ? $data['max_patients'] : $doctorSchedule->max_patients,
-            ]);
+        $doctorSchedule->update([
+            'day_of_week' => $data['day_of_week'] ?? $doctorSchedule->day_of_week,
+            'start_time' => $data['start_time'] ?? $doctorSchedule->start_time,
+            'end_time' => $data['end_time'] ?? $doctorSchedule->end_time,
+            'max_patients' => array_key_exists('max_patients', $data) ? $data['max_patients'] : $doctorSchedule->max_patients,
+            'is_available' => array_key_exists('is_available', $data) ? (bool) $data['is_available'] : $doctorSchedule->is_available,
+        ]);
 
-            if (array_key_exists('days', $data)) {
-                DoctorScheduleDay::where('schedule_id', $doctorSchedule->schedule_id)->delete();
-                $uniqueDays = array_values(array_unique($data['days']));
-                foreach ($uniqueDays as $day) {
-                    DoctorScheduleDay::create([
-                        'schedule_id' => $doctorSchedule->schedule_id,
-                        'day_of_week' => $day,
-                    ]);
-                }
-            }
-
-            return $doctorSchedule->refresh()->load(['doctor', 'days']);
-        });
+        return $doctorSchedule->refresh()->load(['doctor']);
     }
 
     public function destroy(DoctorSchedule $doctorSchedule)
     {
+        $currentUser = request()->user();
+        if (! $currentUser || $currentUser->role !== 'admin') {
+            abort(403);
+        }
+
         $doctorSchedule->delete();
 
         return response()->json([
             'message' => 'Schedule deleted',
         ]);
+    }
+
+    public function bulkAvailability(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser) {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'schedule_ids' => ['required', 'array', 'min:1'],
+            'schedule_ids.*' => ['required', 'integer', 'exists:doctor_schedules,schedule_id'],
+            'is_available' => ['required', 'boolean'],
+        ]);
+
+        $ids = array_values(array_unique(array_map('intval', $data['schedule_ids'])));
+        $isAvailable = (bool) $data['is_available'];
+
+        $query = DoctorSchedule::query()->whereIn('schedule_id', $ids);
+
+        if ($currentUser->role === 'doctor') {
+            $query->where('doctor_id', (int) $currentUser->user_id);
+        } elseif ($currentUser->role !== 'admin') {
+            abort(403);
+        }
+
+        $count = (int) $query->count();
+        if ($count !== count($ids)) {
+            abort(403);
+        }
+
+        $updated = (int) DoctorSchedule::query()
+            ->whereIn('schedule_id', $ids)
+            ->when($currentUser->role === 'doctor', function ($q) use ($currentUser) {
+                $q->where('doctor_id', (int) $currentUser->user_id);
+            })
+            ->update(['is_available' => $isAvailable]);
+
+        return response()->json([
+            'updated' => $updated,
+        ]);
+    }
+
+    private function minutesFromTime(string $value): ?int
+    {
+        $value = trim($value);
+        if (! preg_match('/^\d{2}:\d{2}$/', $value)) {
+            return null;
+        }
+        [$h, $m] = array_map('intval', explode(':', $value, 2));
+        if ($h < 0 || $h > 23 || $m < 0 || $m > 59) {
+            return null;
+        }
+
+        return ($h * 60) + $m;
+    }
+
+    private function timeFromMinutes(int $minutes): string
+    {
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+
+        return sprintf('%02d:%02d', $h, $m);
+    }
+
+    private function daysBetween(string $from, string $to): array
+    {
+        $order = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+        $fromIndex = array_search($from, $order, true);
+        $toIndex = array_search($to, $order, true);
+
+        if ($fromIndex === false || $toIndex === false) {
+            return [];
+        }
+
+        if ($fromIndex <= $toIndex) {
+            return array_slice($order, $fromIndex, $toIndex - $fromIndex + 1);
+        }
+
+        return array_merge(
+            array_slice($order, $fromIndex),
+            array_slice($order, 0, $toIndex + 1)
+        );
     }
 }
