@@ -2,14 +2,17 @@
     @php
         $metrics = $adminMetrics ?? [];
         $sectionKey = $section ?? 'overview';
+        if ($sectionKey === 'medical-background-viewer') {
+            $sectionKey = 'patient-records';
+        }
 
         $sectionTitles = [
             'user-management' => 'User Management',
             'doctor-management' => 'Doctor Management',
             'services-management' => 'Services Management',
             'medicines-management' => 'Medicines',
-            'medical-background-viewer' => 'Medical Background',
             'appointments' => 'Appointments',
+            'patient-records' => 'Patient Records',
             'verification-oversight' => 'Verification Oversight',
             'reports' => 'Reports',
             'chatbot-management' => 'Chatbot Management',
@@ -22,8 +25,8 @@
             'doctor-management' => 'Manage doctor profiles and schedules. Doctor accounts are created in the Users module by assigning the Doctor role.',
             'services-management' => 'Add, edit, delete, and update pricing for clinic services.',
             'medicines-management' => 'Manage medicine reference data and active status.',
-            'medical-background-viewer' => 'Admin-only insight tool for reviewing patient medical background entries.',
             'appointments' => 'Global appointment monitoring across doctors and dates.',
+            'patient-records' => 'Review patient medical backgrounds and visit history.',
             'verification-oversight' => 'Review and override patient verification requests with document viewing and audit logs.',
             'reports' => 'View transactions, revenue trends, appointments, and no-show analytics.',
             'chatbot-management' => 'Manage chatbot questions, options, and conversation flow.',
@@ -262,10 +265,10 @@
             @include('dashviews.admin.services_management')
         @elseif ($sectionKey === 'medicines-management')
             @include('dashviews.admin.medicines_management')
-        @elseif ($sectionKey === 'medical-background-viewer')
-            @include('dashviews.admin.medical_background_viewer')
         @elseif ($sectionKey === 'appointments')
             @include('dashviews.admin.appointments_view')
+        @elseif ($sectionKey === 'patient-records')
+            @include('dashviews.admin.patient_records')
         @elseif ($sectionKey === 'verification-oversight')
             @include('dashviews.admin.verification_approvals')
         @elseif ($sectionKey === 'reports')

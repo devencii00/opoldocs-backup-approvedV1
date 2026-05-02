@@ -13,11 +13,19 @@ class ChatbotQuestion extends Model
 
     protected $primaryKey = 'question_id';
 
-    public $timestamps = false;
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     protected $fillable = [
         'question_text',
+        'is_active',
     ];
+
+    public function getRouteKeyName()
+    {
+        return 'question_id';
+    }
 
     public function options()
     {

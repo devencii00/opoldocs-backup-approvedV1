@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LogEntry;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -35,6 +36,17 @@ class AuthController extends Controller
 
         $token = $user->createToken($credentials['device_name'] ?? 'api')->plainTextToken;
 
+        LogEntry::write(
+            (int) $user->user_id,
+            'auth_login',
+            'users',
+            (int) $user->user_id,
+            [
+                'device_name' => $credentials['device_name'] ?? 'api',
+            ],
+            60
+        );
+
         return response()->json([
             'token' => $token,
             'user' => $user,
@@ -47,6 +59,17 @@ class AuthController extends Controller
 
         if ($user && $user->currentAccessToken()) {
             $user->currentAccessToken()->delete();
+        }
+
+        if ($user) {
+            LogEntry::write(
+                (int) $user->user_id,
+                'auth_logout',
+                'users',
+                (int) $user->user_id,
+                [],
+                60
+            );
         }
 
         return response()->json([

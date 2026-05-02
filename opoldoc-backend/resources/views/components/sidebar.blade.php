@@ -14,6 +14,9 @@
 
     $currentSection = request()->query('section');
     $currentSection = $currentSection ?: 'overview';
+    if ($currentSection === 'medical-background-viewer') {
+        $currentSection = 'patient-records';
+    }
 
     $navBase = 'flex items-center gap-2.5 p-2 rounded-xl text-[0.87rem] font-medium mb-1';
     $navInactive = 'text-slate-600 hover:bg-slate-50 hover:text-slate-900';
@@ -34,125 +37,176 @@
     </div> 
 </div>
 
-
     <nav class="flex-1 px-3 py-2 overflow-y-auto scrollbar-hidden">
-        <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest pt-4 pb-1">Main Menu</div>
-
         @php
             $isDashboardActive = $currentSection === 'overview';
         @endphp
 
-        <a href="{{ route('dashboard', ['role' => $roleKey]) }}" class="{{ $navBase }} {{ $isDashboardActive ? $navActive : $navInactive }}">
-            <span class="material-symbols-outlined flex-shrink-0 text-[18px] leading-none {{ $isDashboardActive ? 'text-cyan-600' : '' }}">dashboard</span>
-            Dashboard
-            @if ($isDashboardActive)
-                <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-            @endif
-        </a>
+        @if ($roleKey !== 'admin')
+            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest pt-4 pb-1">Main Menu</div>
+
+            <a href="{{ route('dashboard', ['role' => $roleKey]) }}" class="{{ $navBase }} {{ $isDashboardActive ? $navActive : $navInactive }}">
+                <span class="material-symbols-outlined flex-shrink-0 text-[18px] leading-none {{ $isDashboardActive ? 'text-cyan-600' : '' }}">dashboard</span>
+                Dashboard
+                @if ($isDashboardActive)
+                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                @endif
+            </a>
+        @endif
 
         @if ($roleKey === 'admin')
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Admin Panel</div>
             @php
                 $isUserManagement = $currentSection === 'user-management';
                 $isDoctorManagement = $currentSection === 'doctor-management';
                 $isServicesManagement = $currentSection === 'services-management';
                 $isMedicinesManagement = $currentSection === 'medicines-management';
-                $isMedicalBackgroundViewer = $currentSection === 'medical-background-viewer';
+                $isPatientRecords = $currentSection === 'patient-records';
                 $isAppointments = $currentSection === 'appointments';
                 $isVerificationOversight = $currentSection === 'verification-oversight';
                 $isReports = $currentSection === 'reports';
                 $isChatbotManagement = $currentSection === 'chatbot-management';
                 $isLogs = $currentSection === 'logs';
                 $isSettings = $currentSection === 'settings';
+
+                $groupHeaderBase = 'flex items-center justify-between gap-2 pt-4 pb-1 text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest';
+                $groupToggleBtn = 'inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-700';
             @endphp
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'user-management']) }}" class="{{ $navBase }} {{ $isUserManagement ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isUserManagement ? 'text-cyan-600' : '' }}">group</span>
-                Users
-                @if ($isUserManagement)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Main Menu</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="admin-main">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="admin-main">
+                <a href="{{ route('dashboard', ['role' => $roleKey]) }}" class="{{ $navBase }} {{ $isDashboardActive ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined flex-shrink-0 text-[18px] leading-none {{ $isDashboardActive ? 'text-cyan-600' : '' }}">dashboard</span>
+                    Dashboard
+                    @if ($isDashboardActive)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'doctor-management']) }}" class="{{ $navBase }} {{ $isDoctorManagement ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorManagement ? 'text-cyan-600' : '' }}">stethoscope</span>
-                Doctors
-                @if ($isDoctorManagement)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Clinical Management</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="admin-clinical">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="admin-clinical">
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'doctor-management']) }}" class="{{ $navBase }} {{ $isDoctorManagement ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isDoctorManagement ? 'text-cyan-600' : '' }}">stethoscope</span>
+                    Doctors
+                    @if ($isDoctorManagement)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'services-management']) }}" class="{{ $navBase }} {{ $isServicesManagement ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isServicesManagement ? 'text-cyan-600' : '' }}">medical_services</span>
-                Services
-                @if ($isServicesManagement)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'appointments']) }}" class="{{ $navBase }} {{ $isAppointments ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isAppointments ? 'text-cyan-600' : '' }}">event</span>
+                    Appointments
+                    @if ($isAppointments)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'medicines-management']) }}" class="{{ $navBase }} {{ $isMedicinesManagement ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isMedicinesManagement ? 'text-cyan-600' : '' }}">vaccines</span>
-                Medicines
-                @if ($isMedicinesManagement)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'patient-records']) }}" class="{{ $navBase }} {{ $isPatientRecords ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isPatientRecords ? 'text-cyan-600' : '' }}">assignment</span>
+                    Patient Records
+                    @if ($isPatientRecords)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'medical-background-viewer']) }}" class="{{ $navBase }} {{ $isMedicalBackgroundViewer ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isMedicalBackgroundViewer ? 'text-cyan-600' : '' }}">assignment</span>
-                Medical Background
-                @if ($isMedicalBackgroundViewer)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Inventory & Services</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="admin-inventory">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="admin-inventory">
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'services-management']) }}" class="{{ $navBase }} {{ $isServicesManagement ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isServicesManagement ? 'text-cyan-600' : '' }}">medical_services</span>
+                    Services
+                    @if ($isServicesManagement)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'appointments']) }}" class="{{ $navBase }} {{ $isAppointments ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isAppointments ? 'text-cyan-600' : '' }}">event</span>
-                Appointments
-                @if ($isAppointments)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'medicines-management']) }}" class="{{ $navBase }} {{ $isMedicinesManagement ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isMedicinesManagement ? 'text-cyan-600' : '' }}">vaccines</span>
+                    Medicines
+                    @if ($isMedicinesManagement)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isVerificationOversight ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isVerificationOversight ? 'text-cyan-600' : '' }}">verified_user</span>
-                Verification Oversight
-                @if ($isVerificationOversight)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Administrative Tools</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="admin-tools">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="admin-tools">
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'user-management']) }}" class="{{ $navBase }} {{ $isUserManagement ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isUserManagement ? 'text-cyan-600' : '' }}">group</span>
+                    Users
+                    @if ($isUserManagement)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'reports']) }}" class="{{ $navBase }} {{ $isReports ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isReports ? 'text-cyan-600' : '' }}">insights</span>
-                Reports
-                @if ($isReports)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isVerificationOversight ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isVerificationOversight ? 'text-cyan-600' : '' }}">verified_user</span>
+                    Verification Oversight
+                    @if ($isVerificationOversight)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'chatbot-management']) }}" class="{{ $navBase }} {{ $isChatbotManagement ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isChatbotManagement ? 'text-cyan-600' : '' }}">smart_toy</span>
-                Chatbot
-                @if ($isChatbotManagement)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+            <div class="{{ $groupHeaderBase }}">
+                <div>System & Analytics</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="admin-system">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="admin-system">
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'reports']) }}" class="{{ $navBase }} {{ $isReports ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isReports ? 'text-cyan-600' : '' }}">insights</span>
+                    Reports
+                    @if ($isReports)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'logs']) }}" class="{{ $navBase }} {{ $isLogs ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isLogs ? 'text-cyan-600' : '' }}">rule_folder</span>
-                Logs
-                @if ($isLogs)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'logs']) }}" class="{{ $navBase }} {{ $isLogs ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isLogs ? 'text-cyan-600' : '' }}">rule_folder</span>
+                    Logs
+                    @if ($isLogs)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
 
-            <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings']) }}" class="{{ $navBase }} {{ $isSettings ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined text-[18px] leading-none {{ $isSettings ? 'text-cyan-600' : '' }}">settings</span>
-                Settings
-                @if ($isSettings)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'chatbot-management']) }}" class="{{ $navBase }} {{ $isChatbotManagement ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isChatbotManagement ? 'text-cyan-600' : '' }}">smart_toy</span>
+                    Chatbot
+                    @if ($isChatbotManagement)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'settings']) }}" class="{{ $navBase }} {{ $isSettings ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isSettings ? 'text-cyan-600' : '' }}">settings</span>
+                    Settings
+                    @if ($isSettings)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
         @elseif ($roleKey === 'receptionist')
             @php
                 $isReceptionRegister = $currentSection === 'register-patient';
@@ -332,6 +386,43 @@
         }
 
         document.addEventListener('DOMContentLoaded', function () {
+            var toggles = document.querySelectorAll('.sidebar-group-toggle')
+            toggles.forEach(function (btn) {
+                var group = btn.getAttribute('data-group')
+                if (!group) {
+                    return
+                }
+                var body = document.querySelector('[data-group-body="' + group + '"]')
+                var icon = btn.querySelector('.material-symbols-outlined')
+                var storageKey = 'sidebar_group_' + group
+                var collapsed = false
+                try {
+                    collapsed = window.localStorage ? window.localStorage.getItem(storageKey) === '1' : false
+                } catch (_) {
+                    collapsed = false
+                }
+                if (body) {
+                    body.classList.toggle('hidden', collapsed)
+                }
+                if (icon) {
+                    icon.textContent = collapsed ? 'chevron_right' : 'expand_more'
+                }
+                btn.addEventListener('click', function () {
+                    collapsed = !collapsed
+                    if (body) {
+                        body.classList.toggle('hidden', collapsed)
+                    }
+                    if (icon) {
+                        icon.textContent = collapsed ? 'chevron_right' : 'expand_more'
+                    }
+                    try {
+                        if (window.localStorage) {
+                            window.localStorage.setItem(storageKey, collapsed ? '1' : '0')
+                        }
+                    } catch (_) {}
+                })
+            })
+
             var nameEl = document.getElementById('sidebarUserName')
             var emailEl = document.getElementById('sidebarUserEmail')
             if (!nameEl || !emailEl) {

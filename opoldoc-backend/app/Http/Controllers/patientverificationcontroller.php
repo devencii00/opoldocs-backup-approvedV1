@@ -208,6 +208,17 @@ class PatientVerificationController extends Controller
             abort(403);
         }
 
+        LogEntry::write(
+            $currentUser ? (int) $currentUser->user_id : null,
+            'access_verification_document',
+            'patient_verifications',
+            (int) $patientVerification->verification_id,
+            [
+                'patient_id' => (int) $patientVerification->patient_id,
+            ],
+            120
+        );
+
         $path = $patientVerification->document_path;
         if (! $path) {
             abort(404);

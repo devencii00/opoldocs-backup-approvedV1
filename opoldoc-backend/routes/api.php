@@ -13,6 +13,7 @@ use App\Http\Controllers\PatientVerificationController;
 use App\Http\Controllers\PersonalInformationController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\QueueController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VisitController;
@@ -72,7 +73,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{conversation}/messages', [MessagingController::class, 'messages']);
     Route::post('/conversations/{conversation}/messages', [MessagingController::class, 'send']);
 
-    Route::get('/chatbot/questions', [\App\Http\Controllers\ChatbotController::class, 'questions']);
-    Route::get('/chatbot/questions/{chatbotQuestion}', [\App\Http\Controllers\ChatbotController::class, 'question']);
-    Route::get('/chatbot/options/{chatbotOption}', [\App\Http\Controllers\ChatbotController::class, 'option']);
+    Route::get('/chatbot/config', [ChatbotController::class, 'config']);
+    Route::get('/chatbot/options', [ChatbotController::class, 'options']);
+    Route::post('/chatbot/options', [ChatbotController::class, 'storeOption']);
+    Route::put('/chatbot/options/{chatbotOption}', [ChatbotController::class, 'updateOption']);
+    Route::delete('/chatbot/options/{chatbotOption}', [ChatbotController::class, 'destroyOption']);
 });

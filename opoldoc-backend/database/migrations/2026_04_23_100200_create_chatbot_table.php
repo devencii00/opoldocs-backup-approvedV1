@@ -11,22 +11,30 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('chatbot_questions', function (Blueprint $table) {
-            $table->id('question_id');
-            $table->text('question_text');
-        });
-
-        Schema::create('chatbot_options', function (Blueprint $table) {
-            $table->id('option_id');
-
-            $table->unsignedBigInteger('question_id');
-            $table->foreign('question_id')->references('question_id')->on('chatbot_questions')->cascadeOnDelete();
-
-            $table->string('option_text');
-            $table->text('response_text')->nullable();
-
-            $table->unsignedBigInteger('next_question_id')->nullable();
-        });
+    Schema::create('chatbot_system', function (Blueprint $table) {
+    $table->id();
+    
+    // Self-referential parent with cascade delete
+    $table->unsignedBigInteger('parent_id')->nullable();
+    $table->foreign('parent_id')
+          ->references('id')
+          ->on('chatbot_system')
+          ->onDelete('cascade');
+    
+    // Content
+    $table->string('button_text');
+    $table->text('response_text');
+    
+    // Display rules
+    $table->boolean('is_starting_option')->default(false);
+    $table->integer('sort_order')->default(0);
+    
+    $table->timestamps();
+    
+    // Indexes
+    $table->index('parent_id');
+    $table->index('is_starting_option');
+});
     }
 
     /**
@@ -34,7 +42,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('chatbot_options');
-        Schema::dropIfExists('chatbot_questions');
+        
+        Schema::dropIfExists('chatbot_system');
     }
 };

@@ -23,17 +23,12 @@ const { width, height } = Dimensions.get('window');
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api').replace(/\/+$/, '');
 
 type ChatbotOption = {
-  option_id: number;
-  question_id: number;
-  option_text: string;
-  response_text: string | null;
-  next_question_id: number | null;
-};
-
-type ChatbotQuestion = {
-  question_id: number;
-  question_text: string;
-  options?: ChatbotOption[];
+  id: number;
+  parent_id: number | null;
+  button_text: string;
+  response_text: string;
+  is_starting_option: boolean;
+  sort_order: number;
 };
 
 type ChatMessage = {
@@ -57,105 +52,89 @@ export default function HomeLanding() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState('');
-  const [questions, setQuestions] = useState<ChatbotQuestion[]>([]);
-  const [currentQuestionId, setCurrentQuestionId] = useState<number | null>(null);
+  const [greeting, setGreeting] = useState('How can I help you today?');
+  const [options, setOptions] = useState<ChatbotOption[]>([]);
+  const [currentParentId, setCurrentParentId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [freeText, setFreeText] = useState('');
   const scrollRef = useRef<ScrollView | null>(null);
 
-  const questionsById = useMemo(() => {
-    const map = new Map<number, ChatbotQuestion>();
-    for (const q of questions) {
-      map.set(Number(q.question_id), q);
-    }
-    return map;
-  }, [questions]);
+  const startingOptions = useMemo(() => {
+    return [...options]
+      .filter((o) => o.parent_id == null && !!o.is_starting_option)
+      .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+  }, [options]);
 
-  const currentQuestion = useMemo(() => {
-    if (currentQuestionId == null) return null;
-    return questionsById.get(currentQuestionId) ?? null;
-  }, [currentQuestionId, questionsById]);
+  const currentOptions = useMemo(() => {
+    if (currentParentId == null) return startingOptions;
+    const children = options
+      .filter((o) => Number(o.parent_id ?? 0) === Number(currentParentId))
+      .sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+    return children.length > 0 ? children : startingOptions;
+  }, [currentParentId, options, startingOptions]);
 
-  function resetChat(nextQuestions?: ChatbotQuestion[]) {
-    const source = nextQuestions ?? questions;
-    const first = [...source].sort((a, b) => Number(a.question_id) - Number(b.question_id))[0] ?? null;
-    if (!first) {
-      setMessages([{ id: 'bot-empty', from: 'bot', text: 'No chatbot questions configured yet.' }]);
-      setCurrentQuestionId(null);
-      return;
-    }
-    setMessages([{ id: `bot-q-${first.question_id}`, from: 'bot', text: String(first.question_text ?? '') }]);
-    setCurrentQuestionId(Number(first.question_id));
+  function resetChat(nextGreeting?: string) {
+    const greet = typeof nextGreeting === 'string' && nextGreeting.trim() ? nextGreeting.trim() : greeting;
+    setMessages([{ id: `bot-greet-${Date.now()}`, from: 'bot', text: greet }]);
+    setCurrentParentId(null);
   }
 
   async function ensureChatLoaded() {
-    if (questions.length > 0) return;
+    if (options.length > 0) return;
     const token = (globalThis as any)?.apiToken as string | undefined;
     if (!token) {
       setChatError('Please log in again.');
-      setQuestions([]);
+      setOptions([]);
       setMessages([{ id: 'bot-auth', from: 'bot', text: 'Please log in to use the chatbot.' }]);
-      setCurrentQuestionId(null);
+      setCurrentParentId(null);
       return;
     }
 
     setChatLoading(true);
     setChatError('');
     try {
-      const res = await fetch(`${API_BASE_URL}/chatbot/questions`, {
+      const res = await fetch(`${API_BASE_URL}/chatbot/config`, {
         headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
       });
-      const data = await res.json().catch(() => ([]));
+      const data = await res.json().catch(() => (null));
       if (!res.ok) {
         const msg = typeof (data as any)?.message === 'string' ? (data as any).message : 'Unable to load chatbot.';
         setChatError(msg);
         setMessages([{ id: 'bot-load-fail', from: 'bot', text: msg }]);
-        setCurrentQuestionId(null);
+        setCurrentParentId(null);
         return;
       }
-      const list: ChatbotQuestion[] = Array.isArray(data)
-        ? data
-        : Array.isArray((data as any)?.data)
-          ? (data as any).data
-          : [];
-      setQuestions(list);
-      resetChat(list);
+      const greet = typeof (data as any)?.greeting === 'string' ? String((data as any).greeting) : 'How can I help you today?';
+      const list: ChatbotOption[] = Array.isArray((data as any)?.options) ? ((data as any).options as ChatbotOption[]) : [];
+      setGreeting(greet);
+      setOptions(list);
+      resetChat(greet);
     } catch {
       setChatError('Network error. Please try again.');
       setMessages([{ id: 'bot-net', from: 'bot', text: 'Network error. Please try again.' }]);
-      setCurrentQuestionId(null);
+      setCurrentParentId(null);
     } finally {
       setChatLoading(false);
     }
   }
 
   function pickOption(option: ChatbotOption) {
-    const optionText = String(option.option_text ?? '').trim();
+    const optionText = String(option.button_text ?? '').trim();
     const responseText = String(option.response_text ?? '').trim();
     const ts = Date.now();
     setMessages((prev) => {
       const next: ChatMessage[] = [
         ...prev,
-        { id: `user-${option.option_id}-${ts}`, from: 'user', text: optionText || 'Selected option' },
+        { id: `user-${option.id}-${ts}`, from: 'user', text: optionText || 'Selected option' },
       ];
       if (responseText) {
-        next.push({ id: `bot-r-${option.option_id}-${ts}`, from: 'bot', text: responseText });
+        next.push({ id: `bot-r-${option.id}-${ts}`, from: 'bot', text: responseText });
       }
       return next;
     });
 
-    const nextId = option.next_question_id != null ? Number(option.next_question_id) : null;
-    if (nextId != null && questionsById.has(nextId)) {
-      const nextQ = questionsById.get(nextId)!;
-      setMessages((prev) => [
-        ...prev,
-        { id: `bot-q-${nextId}-${Date.now()}`, from: 'bot', text: String(nextQ.question_text ?? '') },
-      ]);
-      setCurrentQuestionId(nextId);
-      return;
-    }
-
-    setCurrentQuestionId(null);
+    const hasChildren = options.some((o) => Number(o.parent_id ?? 0) === Number(option.id));
+    setCurrentParentId(hasChildren ? Number(option.id) : null);
   }
 
   function sendFreeText() {
@@ -383,15 +362,15 @@ export default function HomeLanding() {
               </ScrollView>
 
               <View style={styles.optionsWrap}>
-                {currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0 ? (
+                {currentOptions.length > 0 ? (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.optionRow}>
-                    {currentQuestion.options.map((o) => (
+                    {currentOptions.map((o) => (
                       <Pressable
-                        key={o.option_id}
+                        key={o.id}
                         onPress={() => pickOption(o)}
                         style={({ pressed }) => [styles.optionChip, pressed && { opacity: 0.85 }]}
                       >
-                        <Text style={styles.optionChipText}>{String(o.option_text ?? '')}</Text>
+                        <Text style={styles.optionChipText}>{String(o.button_text ?? '')}</Text>
                       </Pressable>
                     ))}
                   </ScrollView>

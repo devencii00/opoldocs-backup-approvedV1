@@ -92,8 +92,15 @@ class DashboardController extends Controller
                 ->get();
 
             $recentAuditLogs = LogEntry::with('user')
+                ->where('action', 'not like', 'access_%')
                 ->latest('created_at')
-                ->limit(10)
+                ->limit(60)
+                ->get();
+
+            $recentAccessLogs = LogEntry::with('user')
+                ->where('action', 'like', 'access_%')
+                ->latest('created_at')
+                ->limit(60)
                 ->get();
 
             $data['adminMetrics'] = [
@@ -123,6 +130,7 @@ class DashboardController extends Controller
             $data['adminRecentVerifications'] = $recentVerifications;
             $data['adminRecentTransactions'] = $recentTransactions;
             $data['adminRecentAuditLogs'] = $recentAuditLogs;
+            $data['adminRecentAccessLogs'] = $recentAccessLogs;
 
             $appointmentsCounts = Appointment::query()
                 ->selectRaw('DATE(appointment_datetime) as day, COUNT(*) as total_count')

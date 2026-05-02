@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LogEntry;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -79,6 +80,17 @@ class TransactionController extends Controller
             }
             $transaction->update($updateData);
 
+            LogEntry::write(
+                optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+                'transaction_updated',
+                'transactions',
+                (int) $transaction->transaction_id,
+                [
+                    'appointment_id' => (int) $transaction->appointment_id,
+                    'payment_status' => (string) ($transaction->payment_status ?? ''),
+                ]
+            );
+
             return response()->json($transaction->refresh()->load('appointment'), 200);
         }
 
@@ -87,6 +99,17 @@ class TransactionController extends Controller
         }
 
         $transaction = Transaction::create($data);
+
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'transaction_created',
+            'transactions',
+            (int) $transaction->transaction_id,
+            [
+                'appointment_id' => (int) $transaction->appointment_id,
+                'payment_status' => (string) ($transaction->payment_status ?? ''),
+            ]
+        );
 
         return response()->json($transaction->load('appointment'), 201);
     }
@@ -142,6 +165,17 @@ class TransactionController extends Controller
 
         $transaction->update($data);
 
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'transaction_updated',
+            'transactions',
+            (int) $transaction->transaction_id,
+            [
+                'appointment_id' => (int) $transaction->appointment_id,
+                'fields' => array_keys($data),
+            ]
+        );
+
         return $transaction->refresh()->load([
             'appointment.patient',
             'appointment.doctor',
@@ -158,6 +192,16 @@ class TransactionController extends Controller
         }
 
         $transaction->delete();
+
+        LogEntry::write(
+            optional(request()->user())->user_id ? (int) request()->user()->user_id : null,
+            'transaction_deleted',
+            'transactions',
+            (int) $transaction->transaction_id,
+            [
+                'appointment_id' => (int) $transaction->appointment_id,
+            ]
+        );
 
         return response()->json([
             'message' => 'Transaction deleted',

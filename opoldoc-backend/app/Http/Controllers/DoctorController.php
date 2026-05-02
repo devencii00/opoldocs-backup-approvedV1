@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Conversation;
+use App\Models\LogEntry;
 use App\Models\Message;
 use App\Models\Notification;
 use App\Models\User;
@@ -195,6 +196,18 @@ class DoctorController extends Controller
                 'flagged_appointments' => $flaggedCount,
             ];
         });
+
+        LogEntry::write(
+            $currentUser ? (int) $currentUser->user_id : null,
+            'doctor_availability_changed',
+            'users',
+            (int) $doctor->user_id,
+            [
+                'is_available' => $isAvailable,
+                'reason' => $reason,
+                'flagged_appointments' => (int) ($result['flagged_appointments'] ?? 0),
+            ]
+        );
 
         return response()->json($result);
     }

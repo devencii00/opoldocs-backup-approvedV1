@@ -32,13 +32,15 @@
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
                     <th class="py-2 pr-4 font-semibold">Name</th>
                     <th class="py-2 pr-4 font-semibold">Specialization</th>
+                    <th class="py-2 pr-4 font-semibold">License #</th>
+                    <th class="py-2 pr-4 font-semibold">Contact</th>
                     <th class="py-2 pr-4 font-semibold">Schedule summary</th>
                     <th class="py-2 pr-4 font-semibold">Actions</th>
                 </tr>
             </thead>
             <tbody id="admin_doctor_table_body">
                 <tr>
-                    <td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">
+                    <td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">
                         Loading doctors…
                     </td>
                 </tr>
@@ -824,7 +826,7 @@
 
         function loadDoctors() {
             if (!tableBody) return
-            tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">Loading doctors…</td></tr>'
+            tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">Loading doctors…</td></tr>'
 
             apiFetch(apiUrl('/api/doctors'), {
                 method: 'GET'
@@ -877,7 +879,7 @@
             })
 
             if (!filtered.length) {
-                tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">No doctors found.</td></tr>'
+                tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">No doctors found.</td></tr>'
                 return
             }
 
@@ -892,6 +894,8 @@
                     fullName = 'Doctor #' + doctor.user_id
                 }
                 var specialization = (doctor.specialization || '').trim()
+                var licenseNumber = (doctor.license_number || '').trim()
+                var contactNumber = (doctor.contact_number || '').trim()
                 var schedules = Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
                 var scheduleCount = schedules.length
                 var daySet = {}
@@ -939,6 +943,8 @@
                         (specialization ? specialization : '<span class="text-slate-400">—</span>') +
                         '<div class="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] font-semibold border ' + availabilityClass + '">' + availabilityLabel + '</div>' +
                     '</td>' +
+                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + (licenseNumber ? licenseNumber : '<span class="text-slate-400">—</span>') + '</td>' +
+                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + (contactNumber ? contactNumber : '<span class="text-slate-400">—</span>') + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + scheduleSummary + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<div class="flex items-center gap-2">' +

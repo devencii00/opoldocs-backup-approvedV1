@@ -9,21 +9,27 @@ class ChatbotOption extends Model
 {
     use HasFactory;
 
-    protected $table = 'chatbot_options';
+    protected $table = 'chatbot_system';
 
-    protected $primaryKey = 'option_id';
-
-    public $timestamps = false;
-
-    protected $fillable = [
-        'question_id',
-        'option_text',
-        'response_text',
-        'next_question_id',
+    protected $casts = [
+        'is_starting_option' => 'boolean',
     ];
 
-    public function question()
+    protected $fillable = [
+        'parent_id',
+        'button_text',
+        'response_text',
+        'is_starting_option',
+        'sort_order',
+    ];
+
+    public function parent()
     {
-        return $this->belongsTo(ChatbotQuestion::class, 'question_id', 'question_id');
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(self::class, 'parent_id');
     }
 }

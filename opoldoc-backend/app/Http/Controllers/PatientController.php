@@ -17,9 +17,18 @@ class PatientController extends Controller
             abort(403);
         }
 
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1) {
+            $perPage = 15;
+        }
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+
         $request->validate([
             'search' => ['nullable', 'string'],
             'parents_only' => ['nullable', 'boolean'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $search = trim((string) $request->query('search', ''));
@@ -46,7 +55,7 @@ class PatientController extends Controller
             });
         }
 
-        return $query->orderByDesc('user_id')->paginate();
+        return $query->orderByDesc('user_id')->paginate($perPage);
     }
 
     public function store(Request $request)

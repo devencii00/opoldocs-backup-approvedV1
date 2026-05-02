@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Conversation;
 use App\Models\DoctorSchedule;
+use App\Models\LogEntry;
 use App\Models\MedicalBackground;
 use App\Models\Message;
 use App\Models\Service;
@@ -173,6 +174,17 @@ class AppointmentController extends Controller
         $serviceId = $data['service_id'] ?? null;
         unset($data['service_id']);
 
+        $service = null;
+        if ($serviceId) {
+            $service = Service::query()->find((int) $serviceId);
+            if (! $service || $service->is_active === false) {
+                return response()->json([
+                    'message' => 'Selected service is inactive.',
+                    'code' => 'SERVICE_INACTIVE',
+                ], 422);
+            }
+        }
+
         if (! empty($data['appointment_datetime'])) {
             $dt = Carbon::parse($data['appointment_datetime']);
             $doctorId = (int) ($data['doctor_id'] ?? 0);
@@ -242,7 +254,6 @@ class AppointmentController extends Controller
             }
 
             if ($serviceId) {
-                $service = Service::query()->find($serviceId);
                 $doctor = User::query()->find($doctorId);
 
                 if ($service && $doctor) {
@@ -297,6 +308,18 @@ class AppointmentController extends Controller
             }
             return $appointment;
         });
+
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'appointment_created',
+            'appointments',
+            (int) $appointment->appointment_id,
+            [
+                'patient_id' => (int) $appointment->patient_id,
+                'doctor_id' => (int) $appointment->doctor_id,
+                'status' => (string) ($appointment->status ?? ''),
+            ]
+        );
 
         return response()->json($appointment->load(['patient', 'doctor', 'services']), 201);
     }
@@ -373,6 +396,16 @@ class AppointmentController extends Controller
             ]);
         }
 
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'appointment_updated',
+            'appointments',
+            (int) $appointment->appointment_id,
+            [
+                'fields' => array_keys($data),
+            ]
+        );
+
         return $appointment->load(['patient', 'doctor', 'queue', 'transaction', 'services']);
     }
 
@@ -390,6 +423,17 @@ class AppointmentController extends Controller
         }
 
         $appointment->delete();
+
+        LogEntry::write(
+            optional(request()->user())->user_id ? (int) request()->user()->user_id : null,
+            'appointment_deleted',
+            'appointments',
+            (int) $appointment->appointment_id,
+            [
+                'patient_id' => (int) $appointment->patient_id,
+                'doctor_id' => (int) $appointment->doctor_id,
+            ]
+        );
 
         return response()->json([
             'message' => 'Appointment deleted',

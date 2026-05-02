@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\StaffInviteMail;
+use App\Models\LogEntry;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -51,6 +52,16 @@ class UserController extends Controller
         }
 
         $user = User::create($data);
+
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'user_created',
+            'users',
+            (int) $user->user_id,
+            [
+                'role' => $user->role,
+            ]
+        );
 
         return response()->json($user, 201);
     }
@@ -133,6 +144,16 @@ class UserController extends Controller
 
         $user->update($data);
 
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'user_updated',
+            'users',
+            (int) $user->user_id,
+            [
+                'fields' => array_keys($data),
+            ]
+        );
+
         return $user->refresh();
     }
 
@@ -144,6 +165,13 @@ class UserController extends Controller
         }
 
         $user->delete();
+
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'user_deleted',
+            'users',
+            (int) $user->user_id
+        );
 
         return response()->json([
             'message' => 'User deleted',
@@ -170,6 +198,13 @@ class UserController extends Controller
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
         ]);
+
+        LogEntry::write(
+            (int) $user->user_id,
+            'patient_registered',
+            'users',
+            (int) $user->user_id
+        );
 
         return response()->json($user, 201);
     }
@@ -207,6 +242,16 @@ class UserController extends Controller
         $user = User::create($data);
 
         Mail::to($user->email)->send(new StaffInviteMail($user, $plainPassword));
+
+        LogEntry::write(
+            optional($request->user())->user_id ? (int) $request->user()->user_id : null,
+            'user_invited',
+            'users',
+            (int) $user->user_id,
+            [
+                'role' => $user->role,
+            ]
+        );
 
         return response()->json($user, 201);
     }

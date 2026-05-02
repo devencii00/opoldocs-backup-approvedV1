@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DoctorSchedule;
+use App\Models\LogEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -102,7 +103,7 @@ class DoctorScheduleController extends Controller
         $days = $this->daysBetween($data['from_day'], $data['to_day']);
         $doctorId = (int) $data['doctor_id'];
 
-        return DB::transaction(function () use ($doctorId, $days, $startMinutes, $endMinutes, $slotMinutes, $data) {
+        $result = DB::transaction(function () use ($doctorId, $days, $startMinutes, $endMinutes, $slotMinutes, $data) {
             $created = 0;
             $updated = 0;
             $slotIds = [];
@@ -149,12 +150,36 @@ class DoctorScheduleController extends Controller
                 ->orderBy('schedule_id')
                 ->get();
 
-            return response()->json([
+            return [
                 'created' => $created,
                 'updated' => $updated,
                 'slots' => $slots,
-            ], 201);
+                'slot_ids' => $slotIds,
+            ];
         });
+
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            'doctor_schedule_bulk_upsert',
+            'users',
+            $doctorId,
+            [
+                'created' => (int) ($result['created'] ?? 0),
+                'updated' => (int) ($result['updated'] ?? 0),
+                'from_day' => (string) ($data['from_day'] ?? ''),
+                'to_day' => (string) ($data['to_day'] ?? ''),
+                'start_time' => (string) ($data['start_time'] ?? ''),
+                'end_time' => (string) ($data['end_time'] ?? ''),
+                'slot_minutes' => (int) $slotMinutes,
+                'max_patients' => array_key_exists('max_patients', $data) ? $data['max_patients'] : null,
+            ]
+        );
+
+        return response()->json([
+            'created' => (int) ($result['created'] ?? 0),
+            'updated' => (int) ($result['updated'] ?? 0),
+            'slots' => $result['slots'] ?? [],
+        ], 201);
     }
 
     public function update(Request $request, DoctorSchedule $doctorSchedule)
@@ -163,6 +188,14 @@ class DoctorScheduleController extends Controller
         if (! $currentUser || $currentUser->role !== 'admin') {
             abort(403);
         }
+
+        $before = [
+            'day_of_week' => (string) $doctorSchedule->day_of_week,
+            'start_time' => (string) $doctorSchedule->start_time,
+            'end_time' => (string) $doctorSchedule->end_time,
+            'max_patients' => $doctorSchedule->max_patients,
+            'is_available' => (bool) $doctorSchedule->is_available,
+        ];
 
         $data = $request->validate([
             'day_of_week' => ['sometimes', 'in:mon,tue,wed,thu,fri,sat,sun'],
@@ -189,6 +222,25 @@ class DoctorScheduleController extends Controller
             'is_available' => array_key_exists('is_available', $data) ? (bool) $data['is_available'] : $doctorSchedule->is_available,
         ]);
 
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            'doctor_schedule_updated',
+            'doctor_schedules',
+            (int) $doctorSchedule->schedule_id,
+            [
+                'doctor_id' => (int) $doctorSchedule->doctor_id,
+                'before' => $before,
+                'after' => [
+                    'day_of_week' => (string) $doctorSchedule->day_of_week,
+                    'start_time' => (string) $doctorSchedule->start_time,
+                    'end_time' => (string) $doctorSchedule->end_time,
+                    'max_patients' => $doctorSchedule->max_patients,
+                    'is_available' => (bool) $doctorSchedule->is_available,
+                ],
+                'fields' => array_keys($data),
+            ]
+        );
+
         return $doctorSchedule->refresh()->load(['doctor']);
     }
 
@@ -199,7 +251,22 @@ class DoctorScheduleController extends Controller
             abort(403);
         }
 
+        $snapshot = [
+            'doctor_id' => (int) $doctorSchedule->doctor_id,
+            'day_of_week' => (string) $doctorSchedule->day_of_week,
+            'start_time' => (string) $doctorSchedule->start_time,
+            'end_time' => (string) $doctorSchedule->end_time,
+        ];
+
         $doctorSchedule->delete();
+
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            'doctor_schedule_deleted',
+            'doctor_schedules',
+            (int) $doctorSchedule->schedule_id,
+            $snapshot
+        );
 
         return response()->json([
             'message' => 'Schedule deleted',
@@ -235,12 +302,47 @@ class DoctorScheduleController extends Controller
             abort(403);
         }
 
+        $doctorIds = DoctorSchedule::query()
+            ->whereIn('schedule_id', $ids)
+            ->pluck('doctor_id')
+            ->unique()
+            ->values()
+            ->map(function ($v) { return (int) $v; })
+            ->all();
+
         $updated = (int) DoctorSchedule::query()
             ->whereIn('schedule_id', $ids)
             ->when($currentUser->role === 'doctor', function ($q) use ($currentUser) {
                 $q->where('doctor_id', (int) $currentUser->user_id);
             })
             ->update(['is_available' => $isAvailable]);
+
+        if (count($doctorIds) === 1) {
+            LogEntry::write(
+                (int) $currentUser->user_id,
+                'doctor_schedule_availability_bulk_changed',
+                'users',
+                (int) $doctorIds[0],
+                [
+                    'schedule_ids_count' => count($ids),
+                    'updated' => $updated,
+                    'is_available' => $isAvailable,
+                ]
+            );
+        } else {
+            LogEntry::write(
+                (int) $currentUser->user_id,
+                'doctor_schedule_availability_bulk_changed',
+                'doctor_schedules',
+                null,
+                [
+                    'doctor_ids' => $doctorIds,
+                    'schedule_ids_count' => count($ids),
+                    'updated' => $updated,
+                    'is_available' => $isAvailable,
+                ]
+            );
+        }
 
         return response()->json([
             'updated' => $updated,

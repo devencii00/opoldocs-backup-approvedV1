@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LogEntry;
 use App\Models\MedicalBackground;
 use Illuminate\Http\Request;
 
@@ -25,7 +26,17 @@ class MedicalBackgroundController extends Controller
         if ($isPatient) {
             $query->whereIn('patient_id', $currentUser->accessiblePatientIds());
         } elseif ($request->filled('patient_id')) {
-            $query->where('patient_id', $request->query('patient_id'));
+            $patientId = (int) $request->query('patient_id');
+            $query->where('patient_id', $patientId);
+
+            LogEntry::write(
+                $currentUser ? (int) $currentUser->user_id : null,
+                'access_patient_medical_background',
+                'patients',
+                $patientId,
+                [],
+                120
+            );
         }
 
         if ($request->filled('category')) {

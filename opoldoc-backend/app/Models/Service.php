@@ -19,10 +19,12 @@ class Service extends Model
         'service_name',
         'description',
         'price',
+        'is_active',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'is_active' => 'bool',
     ];
 
     public function appointments()
