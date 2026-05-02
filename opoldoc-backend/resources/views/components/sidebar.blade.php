@@ -290,7 +290,7 @@
                 <div id="sidebarUserEmail" class="text-slate-400 text-[0.7rem]"></div>
             </div>
         </div>
-        <button type="button" onclick="if(confirm('Are you sure you want to log out?')) { window.location.href='{{ route('webadmin.login') }}'; }" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
+        <button type="button" onclick="if(confirm('Are you sure you want to log out?')) { try { if (window.localStorage) { window.localStorage.removeItem('api_token'); window.localStorage.removeItem('current_user_id'); } } catch (_) {} window.location.href='{{ route('webadmin.login') }}'; }" class="w-full flex items-center justify-center gap-2.5 p-2 rounded-xl border border-red-400/25 bg-red-50 text-red-600 text-[0.83rem] font-semibold hover:bg-red-100 hover:border-red-400/40">
             <span class="material-symbols-outlined text-[16px] leading-none">logout</span>
             Sign Out
         </button>

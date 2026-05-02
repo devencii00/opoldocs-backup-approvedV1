@@ -104,6 +104,7 @@ class UserController extends Controller
             'account_activated' => ['sometimes', 'boolean'],
             'license_number' => ['sometimes', 'nullable', 'string'],
             'specialization' => ['sometimes', 'nullable', 'string'],
+            'hire_date' => ['sometimes', 'nullable', 'date'],
         ], [
             'email.regex' => 'Email must be a valid email ending with @example.com.',
             'password.required' => 'Password is required.',
@@ -115,7 +116,7 @@ class UserController extends Controller
         ]);
 
         if ($currentUser && $currentUser->role === 'patient') {
-            unset($data['role'], $data['status'], $data['account_activated'], $data['license_number'], $data['specialization']);
+            unset($data['role'], $data['status'], $data['account_activated'], $data['license_number'], $data['specialization'], $data['hire_date']);
         }
 
         if (array_key_exists('password', $data)) {

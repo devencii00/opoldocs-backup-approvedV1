@@ -5,17 +5,20 @@ namespace App\Http\Controllers;
 use App\Models\DoctorSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DoctorScheduleController extends Controller
 {
     public function index(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'doctor_id' => ['nullable', 'integer', 'exists:users,user_id'],
             'available_only' => ['nullable', 'boolean'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $perPage = (int) $request->query('per_page', 50);
+        $perPage = (int) ($data['per_page'] ?? $request->query('per_page', 50));
         if ($perPage < 1) {
             $perPage = 50;
         }
@@ -24,7 +27,7 @@ class DoctorScheduleController extends Controller
         }
 
         $currentUser = $request->user();
-        $doctorId = $request->query('doctor_id');
+        $doctorId = $data['doctor_id'] ?? $request->query('doctor_id');
         $availableOnly = $request->boolean('available_only');
 
         if ($currentUser && $currentUser->role === 'doctor') {
@@ -34,18 +37,33 @@ class DoctorScheduleController extends Controller
             }
         }
 
-        return DoctorSchedule::query()
-            ->with(['doctor'])
-            ->when($doctorId, function ($q) use ($doctorId) {
-                $q->where('doctor_id', (int) $doctorId);
-            })
-            ->when($availableOnly, function ($q) {
-                $q->where('is_available', true);
-            })
-            ->orderByRaw("CASE day_of_week WHEN 'mon' THEN 1 WHEN 'tue' THEN 2 WHEN 'wed' THEN 3 WHEN 'thu' THEN 4 WHEN 'fri' THEN 5 WHEN 'sat' THEN 6 WHEN 'sun' THEN 7 ELSE 8 END")
-            ->orderBy('start_time')
-            ->orderBy('schedule_id')
-            ->paginate($perPage);
+        try {
+            $result = DoctorSchedule::query()
+                ->with(['doctor'])
+                ->when($doctorId, function ($q) use ($doctorId) {
+                    $q->where('doctor_id', (int) $doctorId);
+                })
+                ->when($availableOnly, function ($q) {
+                    $q->where('is_available', true);
+                })
+                ->orderByRaw("CASE day_of_week WHEN 'mon' THEN 1 WHEN 'tue' THEN 2 WHEN 'wed' THEN 3 WHEN 'thu' THEN 4 WHEN 'fri' THEN 5 WHEN 'sat' THEN 6 WHEN 'sun' THEN 7 ELSE 8 END")
+                ->orderBy('start_time')
+                ->orderBy('schedule_id')
+                ->paginate($perPage);
+
+            return response()->json($result);
+        } catch (\Throwable $e) {
+            Log::error('DoctorSchedule index error', [
+                'message' => $e->getMessage(),
+                'doctor_id' => $doctorId,
+                'user_id' => $currentUser?->user_id,
+                'role' => $currentUser?->role,
+            ]);
+
+            return response()->json([
+                'message' => config('app.debug') ? ('Failed to load schedules: '.$e->getMessage()) : 'Failed to load schedules.',
+            ], 500);
+        }
     }
 
     public function store(Request $request)

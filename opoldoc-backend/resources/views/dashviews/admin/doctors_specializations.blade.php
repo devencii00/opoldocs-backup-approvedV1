@@ -138,7 +138,7 @@
             <div class="flex items-center gap-2">
                 <button type="submit" id="adminDoctorScheduleSubmit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors w-full disabled:opacity-60 disabled:hover:bg-cyan-600">
                     <span id="adminDoctorScheduleSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    <span id="adminDoctorScheduleSubmitLabel">Generate slots</span>
+                    <span id="adminDoctorScheduleSubmitLabel">Generate schedule</span>
                 </button>
             </div>
         </form>
@@ -373,6 +373,79 @@
         var doctorEditConfirmCancel = document.getElementById('adminDoctorEditConfirmCancel')
         var doctorEditConfirmResolver = null
 
+        var apiBasePath = "{{ request()->getBasePath() }}"
+        function apiUrl(path) {
+            return String(apiBasePath || '') + String(path || '')
+        }
+
+        function fetchAllDoctorSchedules(doctorId, onSuccess, onFailure) {
+            var perPage = 100
+            var page = 1
+            var all = []
+
+            function fail(message) {
+                if (typeof onFailure === 'function') onFailure(message || 'Failed to load schedules.')
+            }
+
+            function fetchPage() {
+                var url = apiUrl('/api/doctor-schedules') +
+                    '?doctor_id=' + encodeURIComponent(doctorId) +
+                    '&per_page=' + encodeURIComponent(perPage) +
+                    '&page=' + encodeURIComponent(page)
+
+                apiFetch(url, { method: 'GET' })
+                    .then(function (response) { return readResponse(response) })
+                    .then(function (result) {
+                        if (!result.ok || !result.data) {
+                            if (result.status === 401) {
+                                fail('Session expired. Please log in again.')
+                                return
+                            }
+                            if (result.status === 403) {
+                                fail('Forbidden (403). Your account does not have permission to view this doctor’s schedules. Please sign out and sign in as an admin.')
+                                return
+                            }
+                            var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to load schedules.'
+                            if (!result.data && result.raw) {
+                                msg += ' HTTP ' + String(result.status || '')
+                            }
+                            fail(msg)
+                            return
+                        }
+
+                        var payload = result.data
+                        var items = Array.isArray(payload && payload.data) ? payload.data : []
+                        all = all.concat(items)
+
+                        var lastPage = parseInt(payload && payload.last_page ? payload.last_page : 1, 10)
+                        if (isNaN(lastPage) || lastPage < 1) lastPage = 1
+
+                        if (page < lastPage) {
+                            page += 1
+                            fetchPage()
+                            return
+                        }
+
+                        if (typeof onSuccess === 'function') {
+                            try {
+                                onSuccess(all)
+                            } catch (e) {
+                                var renderMsg = 'Failed to render schedules.'
+                                if (e && e.message) renderMsg += ' ' + String(e.message)
+                                fail(renderMsg)
+                            }
+                        }
+                    })
+                    .catch(function (err) {
+                        var msg = 'Network error while loading schedules.'
+                        if (err && err.message) msg += ' ' + String(err.message)
+                        fail(msg)
+                    })
+            }
+
+            fetchPage()
+        }
+
         function showDoctorError(message) {
             if (!errorBox) return
             errorBox.textContent = message || ''
@@ -581,7 +654,7 @@
                         if (payload.contact_number === '' || payload.contact_number === '+63') payload.contact_number = null
                         if (payload.email === '') delete payload.email
 
-                        return apiFetch("{{ url('/api/doctors') }}/" + editingDoctorId, {
+                        return apiFetch(apiUrl('/api/doctors') + "/" + editingDoctorId, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -621,7 +694,7 @@
         function setScheduleSubmitting(isSubmitting) {
             if (scheduleSubmit) scheduleSubmit.disabled = !!isSubmitting
             if (scheduleSpinner) scheduleSpinner.classList.toggle('hidden', !isSubmitting)
-            if (scheduleSubmitLabel) scheduleSubmitLabel.textContent = currentScheduleId ? (isSubmitting ? 'Saving...' : 'Save changes') : (isSubmitting ? 'Saving...' : 'Generate slots')
+            if (scheduleSubmitLabel) scheduleSubmitLabel.textContent = currentScheduleId ? (isSubmitting ? 'Saving...' : 'Save changes') : (isSubmitting ? 'Saving...' : 'Generate schedule')
         }
 
         function showAvailabilityError(message) {
@@ -736,11 +809,24 @@
             })
         }
 
+        function formatTimeCompact(hhmm) {
+            var t = String(hhmm || '').slice(0, 5)
+            if (!/^\d{2}:\d{2}$/.test(t)) return ''
+            var parts = t.split(':')
+            var h24 = parseInt(parts[0], 10)
+            var m = parts[1]
+            var ap = h24 >= 12 ? 'PM' : 'AM'
+            var h12 = h24 % 12
+            if (h12 === 0) h12 = 12
+            if (m === '00') return String(h12) + ap
+            return String(h12) + ':' + m + ap
+        }
+
         function loadDoctors() {
             if (!tableBody) return
             tableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">Loading doctors…</td></tr>'
 
-            apiFetch("{{ url('/api/doctors') }}", {
+            apiFetch(apiUrl('/api/doctors'), {
                 method: 'GET'
             })
                 .then(function (response) {
@@ -819,7 +905,30 @@
                 dayKeys.sort(function (a, b) {
                     return dayOrder.indexOf(a) - dayOrder.indexOf(b)
                 })
-                var scheduleSummary = scheduleCount ? (scheduleCount + ' slot' + (scheduleCount === 1 ? '' : 's') + (dayKeys.length ? (' · ' + dayKeys.join(', ')) : '')) : 'No schedules'
+                var scheduleSummary = 'No schedules'
+                if (scheduleCount && dayKeys.length) {
+                    var fromDay = dayKeys[0]
+                    var toDay = dayKeys[dayKeys.length - 1]
+                    var dayText = fromDay === toDay ? ('[ ' + String(fromDay).toUpperCase() + ' ]') : ('[ ' + String(fromDay).toUpperCase() + ' - ' + String(toDay).toUpperCase() + ' ]')
+
+                    var range = (schedules || []).reduce(function (acc, s) {
+                        var st = String(s && s.start_time ? s.start_time : '').slice(0, 5)
+                        var et = String(s && s.end_time ? s.end_time : '').slice(0, 5)
+                        if (/^\d{2}:\d{2}$/.test(st)) {
+                            if (!acc.start || st < acc.start) acc.start = st
+                        }
+                        if (/^\d{2}:\d{2}$/.test(et)) {
+                            if (!acc.end || et > acc.end) acc.end = et
+                        }
+                        return acc
+                    }, { start: null, end: null })
+
+                    var timeText = (range && range.start && range.end)
+                        ? ('[ ' + (formatTimeCompact(range.start) || range.start) + ' - ' + (formatTimeCompact(range.end) || range.end) + ' ]')
+                        : ''
+
+                    scheduleSummary = dayText + (timeText ? (' ' + timeText) : '')
+                }
                 var unavailableCount = schedules.filter(function (s) { return s && s.is_available === false }).length
                 var availabilityLabel = scheduleCount ? (unavailableCount ? ('Unavailable slots: ' + unavailableCount) : 'All slots available') : 'No schedule'
                 var availabilityClass = scheduleCount && unavailableCount ? 'text-rose-700 bg-rose-50 border-rose-100' : 'text-emerald-700 bg-emerald-50 border-emerald-100'
@@ -902,21 +1011,8 @@
             }
             currentScheduleId = null
 
-            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId) + "&per_page=500", {
-                method: 'GET'
-            })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data }
-                    })
-                })
-                .then(function (result) {
-                    if (!result.ok) {
-                        scheduleList.textContent = 'Failed to load schedules.'
-                        return
-                    }
-                    var payload = result.data
-                    loadedSchedules = Array.isArray(payload.data) ? payload.data : payload
+            fetchAllDoctorSchedules(doctorId, function (all) {
+                loadedSchedules = Array.isArray(all) ? all : []
                     if (!loadedSchedules.length) {
                         scheduleList.textContent = 'No schedules defined yet for this doctor.'
                         if (scheduleGrid) {
@@ -988,7 +1084,7 @@
                             confirmAction('Delete this schedule?')
                                 .then(function (confirmed) {
                                     if (!confirmed) return
-                                    apiFetch("{{ url('/api/doctor-schedules') }}/" + scheduleId, {
+                                    apiFetch(apiUrl('/api/doctor-schedules') + "/" + scheduleId, {
                                         method: 'DELETE'
                                     })
                                         .then(function (response) {
@@ -1012,10 +1108,9 @@
                                 })
                         })
                     })
-                })
-                .catch(function () {
-                    scheduleList.textContent = 'Network error while loading schedules.'
-                })
+            }, function (message) {
+                scheduleList.textContent = message || 'Failed to load schedules.'
+            })
         }
 
         function openAvailabilityModal(doctorId, doctorName) {
@@ -1055,25 +1150,13 @@
             availabilityList.innerHTML = 'Loading schedules…'
             loadedAvailabilitySchedules = []
 
-            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId) + "&per_page=500", {
-                method: 'GET'
+            fetchAllDoctorSchedules(doctorId, function (all) {
+                loadedAvailabilitySchedules = Array.isArray(all) ? all : []
+                renderAvailabilityList()
+            }, function (message) {
+                showAvailabilityError(message || 'Failed to load schedules.')
+                availabilityList.innerHTML = ''
             })
-                .then(function (response) { return readResponse(response) })
-                .then(function (result) {
-                    if (!result.ok) {
-                        var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to load schedules.'
-                        showAvailabilityError(msg)
-                        availabilityList.innerHTML = ''
-                        return
-                    }
-                    var payload = result.data
-                    loadedAvailabilitySchedules = Array.isArray(payload && payload.data) ? payload.data : (Array.isArray(payload) ? payload : [])
-                    renderAvailabilityList()
-                })
-                .catch(function () {
-                    showAvailabilityError('Network error while loading schedules.')
-                    availabilityList.innerHTML = ''
-                })
         }
 
         function renderAvailabilityList() {
@@ -1088,53 +1171,61 @@
                 { key: 'sat', label: 'Saturday' },
                 { key: 'sun', label: 'Sunday' }
             ]
+            if (!Array.isArray(dayOrder)) dayOrder = []
 
             var grouped = {}
-            dayOrder.forEach(function (d) { grouped[d.key] = [] })
+            for (var i = 0; i < dayOrder.length; i++) {
+                grouped[dayOrder[i].key] = []
+            }
 
-            (loadedAvailabilitySchedules || []).forEach(function (s) {
+            var availabilitySlots = Array.isArray(loadedAvailabilitySchedules) ? loadedAvailabilitySchedules : []
+            for (var a = 0; a < availabilitySlots.length; a++) {
+                var s = availabilitySlots[a]
                 var key = s && s.day_of_week ? String(s.day_of_week).toLowerCase() : ''
-                if (!key || !grouped[key]) return
-                if (dayFilter && dayFilter !== key) return
+                if (!key || !grouped[key]) continue
+                if (dayFilter && dayFilter !== key) continue
                 grouped[key].push(s)
-            })
+            }
 
-            dayOrder.forEach(function (d) {
-                grouped[d.key].sort(function (a, b) {
+            for (var j = 0; j < dayOrder.length; j++) {
+                var dayKey = dayOrder[j].key
+                grouped[dayKey].sort(function (a, b) {
                     var sa = String(a.start_time || '').slice(0, 5)
                     var sb = String(b.start_time || '').slice(0, 5)
                     if (sa < sb) return -1
                     if (sa > sb) return 1
                     return 0
                 })
-            })
+            }
 
             var html = ''
-            dayOrder.forEach(function (d) {
+            for (var k = 0; k < dayOrder.length; k++) {
+                var d = dayOrder[k]
                 var rows = grouped[d.key] || []
-                if (!rows.length) return
+                if (!rows.length) continue
                 html += '<div class="rounded-xl border border-slate-200 bg-white p-3">' +
                     '<div class="text-[0.72rem] font-semibold text-slate-900 mb-2">' + d.label + '</div>'
 
-                rows.forEach(function (s) {
-                    var start = String(s.start_time || '').slice(0, 5)
-                    var end = String(s.end_time || '').slice(0, 5)
+                for (var r = 0; r < rows.length; r++) {
+                    var s2 = rows[r]
+                    var start = String(s2.start_time || '').slice(0, 5)
+                    var end = String(s2.end_time || '').slice(0, 5)
                     var label = (formatTimeLabel(start) || start) + '–' + (formatTimeLabel(end) || end)
-                    var isUnavailable = s.is_available === false
+                    var isUnavailable = s2.is_available === false
                     var badgeClass = isUnavailable ? 'text-rose-700 bg-rose-50 border-rose-100' : 'text-emerald-700 bg-emerald-50 border-emerald-100'
                     var badgeText = isUnavailable ? 'Unavailable' : 'Available'
 
                     html += '<label class="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/60 px-3 py-2 mb-1">' +
                         '<div class="flex items-center gap-2">' +
-                            '<input type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" data-schedule-id="' + s.schedule_id + '">' +
+                            '<input type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500" data-schedule-id="' + s2.schedule_id + '">' +
                             '<span class="text-[0.78rem] text-slate-700 font-semibold">' + label + '</span>' +
                         '</div>' +
                         '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] font-semibold border ' + badgeClass + '">' + badgeText + '</span>' +
                     '</label>'
-                })
+                }
 
                 html += '</div>'
-            })
+            }
 
             if (!html) {
                 html = '<div class="text-[0.78rem] text-slate-500">No schedules found for the selected filter.</div>'
@@ -1203,7 +1294,7 @@
                         if (!confirmed) return
                         setAvailabilitySubmitting(true)
 
-                        apiFetch("{{ url('/api/doctor-schedules/bulk-availability') }}", {
+                        apiFetch(apiUrl('/api/doctor-schedules/bulk-availability'), {
                             method: 'PATCH',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -1307,7 +1398,7 @@
                     body.max_patients = parseInt(maxPatients, 10)
                 }
 
-                var url = "{{ url('/api/doctor-schedules') }}"
+                var url = apiUrl('/api/doctor-schedules')
                 var method = 'POST'
                 if (currentScheduleId) {
                     url = url + '/' + currentScheduleId
@@ -1405,31 +1496,38 @@
                 { key: 'sat', label: 'Sat' },
                 { key: 'sun', label: 'Sun' }
             ]
+            if (!Array.isArray(dayOrder)) dayOrder = []
 
             var slotsByDay = {}
-            dayOrder.forEach(function (d) { slotsByDay[d.key] = [] })
+            for (var i = 0; i < dayOrder.length; i++) {
+                slotsByDay[dayOrder[i].key] = []
+            }
 
-            (schedules || []).forEach(function (s) {
-                var key = s && s.day_of_week ? String(s.day_of_week).toLowerCase() : null
-                if (!key || !slotsByDay[key]) return
+            var inputSchedules = Array.isArray(schedules) ? schedules : []
+            for (var s = 0; s < inputSchedules.length; s++) {
+                var slot = inputSchedules[s]
+                var key = slot && slot.day_of_week ? String(slot.day_of_week).toLowerCase() : null
+                if (!key || !slotsByDay[key]) continue
                 slotsByDay[key].push({
-                    start: (s.start_time || '').slice(0, 5),
-                    end: (s.end_time || '').slice(0, 5),
-                    max: s.max_patients || null,
-                    available: s.is_available !== false
+                    start: (slot.start_time || '').slice(0, 5),
+                    end: (slot.end_time || '').slice(0, 5),
+                    max: slot.max_patients || null,
+                    available: slot.is_available !== false
                 })
-            })
+            }
 
-            dayOrder.forEach(function (d) {
-                slotsByDay[d.key].sort(function (a, b) {
+            for (var j = 0; j < dayOrder.length; j++) {
+                var dayKey = dayOrder[j].key
+                slotsByDay[dayKey].sort(function (a, b) {
                     if (a.start < b.start) return -1
                     if (a.start > b.start) return 1
                     return 0
                 })
-            })
+            }
 
             scheduleGrid.innerHTML = ''
-            dayOrder.forEach(function (d) {
+            for (var k = 0; k < dayOrder.length; k++) {
+                var d = dayOrder[k]
                 var col = document.createElement('div')
                 col.className = 'rounded-xl border border-slate-200 bg-white p-2'
                 var header = '<div class="text-[0.68rem] font-semibold uppercase tracking-widest text-slate-400 mb-2">' + d.label + '</div>'
@@ -1447,7 +1545,7 @@
                 }
                 col.innerHTML = header + items
                 scheduleGrid.appendChild(col)
-            })
+            }
         }
 
         loadDoctors()

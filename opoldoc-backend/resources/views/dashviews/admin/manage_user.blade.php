@@ -83,6 +83,10 @@
                         <label for="adminUserEditContact" class="block text-[0.7rem] text-slate-600 mb-1">Contact number</label>
                         <input id="adminUserEditContact" type="tel" inputmode="tel" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="+63XXXXXXXXXX">
                     </div>
+                    <div>
+                        <label for="adminUserEditHireDate" class="block text-[0.7rem] text-slate-600 mb-1">Hire date</label>
+                        <input id="adminUserEditHireDate" type="date" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    </div>
                     <div class="md:col-span-2">
                         <label for="adminUserEditEmail" class="block text-[0.7rem] text-slate-600 mb-1">Email</label>
                         <input id="adminUserEditEmail" type="email" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
@@ -174,6 +178,7 @@
                 <tr class="border-b border-slate-100 text-[0.68rem] uppercase tracking-widest text-slate-400">
                     <th class="py-2 pr-4 font-semibold">ID</th>
                     <th class="py-2 pr-4 font-semibold">Employee no.</th>
+                    <th class="py-2 pr-4 font-semibold">Hire date</th>
                     <th class="py-2 pr-4 font-semibold">Name</th>
                     <th class="py-2 pr-4 font-semibold">Contact</th>
                     <th class="py-2 pr-4 font-semibold">Email</th>
@@ -217,6 +222,13 @@
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                             @if ($user->employee_number)
                                 {{ $user->employee_number }}
+                            @else
+                                <span class="text-slate-400">—</span>
+                            @endif
+                        </td>
+                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
+                            @if ($user->role !== 'patient' && $user->hire_date)
+                                {{ optional($user->hire_date)->format('Y-m-d') }}
                             @else
                                 <span class="text-slate-400">—</span>
                             @endif
@@ -271,7 +283,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="py-4 text-center text-[0.78rem] text-slate-400">
+                        <td colspan="10" class="py-4 text-center text-[0.78rem] text-slate-400">
                             No users found yet.
                         </td>
                     </tr>
@@ -476,6 +488,7 @@
         var userEditMiddlename = document.getElementById('adminUserEditMiddlename')
         var userEditLastname = document.getElementById('adminUserEditLastname')
         var userEditContact = document.getElementById('adminUserEditContact')
+        var userEditHireDate = document.getElementById('adminUserEditHireDate')
         var userEditEmail = document.getElementById('adminUserEditEmail')
         var userEditSave = document.getElementById('adminUserEditSave')
         var userEditSpinner = document.getElementById('adminUserEditSpinner')
@@ -571,6 +584,10 @@
             if (userEditContact) {
                 var normalizedContact = normalizePhilippinesNumber(user.contact_number || '')
                 userEditContact.value = normalizedContact || '+63'
+            }
+            if (userEditHireDate) {
+                var hireDateRaw = user && user.hire_date ? String(user.hire_date) : ''
+                userEditHireDate.value = hireDateRaw ? hireDateRaw.slice(0, 10) : ''
             }
             if (userEditEmail) userEditEmail.value = user.email || ''
 
@@ -691,6 +708,7 @@
                 var m = userEditMiddlename ? String(userEditMiddlename.value || '').trim() : ''
                 var l = userEditLastname ? String(userEditLastname.value || '').trim() : ''
                 var c = userEditContact ? String(userEditContact.value || '').trim() : ''
+                var hireDate = userEditHireDate ? String(userEditHireDate.value || '').trim() : ''
 
                 if (!isValidName(f) || !isValidName(m) || !isValidName(l)) {
                     showInlineBox(userEditError, 'Name fields must contain letters only.')
@@ -715,7 +733,8 @@
                             middlename: m,
                             lastname: l,
                             email: userEditEmail ? String(userEditEmail.value || '').trim() : '',
-                            contact_number: c ? normalizePhilippinesNumber(c) : ''
+                            contact_number: c ? normalizePhilippinesNumber(c) : '',
+                            hire_date: hireDate || null
                         }
 
                         if (payload.firstname === '') payload.firstname = null

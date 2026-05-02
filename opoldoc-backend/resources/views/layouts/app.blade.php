@@ -49,7 +49,35 @@
                 headers['Accept'] = 'application/json'
             }
 
-            return fetch(path, Object.assign({}, baseOptions, { headers: headers }))
+            if (!headers['X-Requested-With']) {
+                headers['X-Requested-With'] = 'XMLHttpRequest'
+            }
+
+            var resolvedPath = path
+            try {
+                var u = new URL(String(path || ''), window.location.origin)
+                if (u.origin !== window.location.origin) {
+                    resolvedPath = u.pathname + u.search + u.hash
+                } else {
+                    resolvedPath = u.toString()
+                }
+            } catch (e) {
+                resolvedPath = path
+            }
+
+            if (typeof AbortController !== 'function') {
+                return fetch(resolvedPath, Object.assign({}, baseOptions, { headers: headers, credentials: 'same-origin' }))
+            }
+
+            var controller = new AbortController()
+            var timeoutId = setTimeout(function () {
+                try { controller.abort() } catch (_) {}
+            }, 30000)
+
+            var merged = Object.assign({}, baseOptions, { headers: headers, credentials: 'same-origin', signal: controller.signal })
+            return fetch(resolvedPath, merged).finally(function () {
+                clearTimeout(timeoutId)
+            })
         }
     </script>
 
