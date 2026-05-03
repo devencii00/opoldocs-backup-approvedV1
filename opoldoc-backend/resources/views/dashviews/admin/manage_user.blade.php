@@ -899,6 +899,23 @@
             return age
         }
 
+        function formatLongDate(dateValue) {
+            if (!dateValue) return ''
+            var raw = String(dateValue)
+            var normalized = raw.split('T')[0]
+            var d = new Date(normalized)
+            if (isNaN(d.getTime())) {
+                d = new Date(raw)
+            }
+            if (isNaN(d.getTime())) return ''
+            try {
+                return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(d)
+            } catch (e) {
+                var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+                return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear()
+            }
+        }
+
         function openDependentsDrawer() {
             if (!dependentsOverlay || !dependentsDrawer) return
             dependentsOverlay.classList.remove('hidden')
@@ -949,9 +966,8 @@
             }
 
             var html = ''
-            html += '<div class="flex items-center justify-between mb-3">' +
+            html += '<div class="flex items-center mb-3">' +
                 '<div class="text-[0.78rem] font-semibold text-slate-900">Dependents</div>' +
-                '<a class="text-[0.72rem] font-semibold text-slate-600 hover:text-slate-900" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(dependentsParentUserId || '') + '" target="_blank" rel="noopener">Open as patient</a>' +
                 '</div>'
 
             html += '<div class="overflow-x-auto scrollbar-hidden">' +
@@ -988,8 +1004,6 @@
                     '<td class="py-2 pr-4">' +
                         '<div class="flex items-center gap-2 flex-wrap">' +
                             '<button type="button" class="text-[0.72rem] font-semibold text-slate-700 hover:text-slate-900 admin-dependent-details" data-dependent-id="' + escapeHtml(d.user_id) + '">View details</button>' +
-                            '<a class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(d.user_id) + '" target="_blank" rel="noopener">View records</a>' +
-                            (!activated ? '<button type="button" class="text-[0.72rem] font-semibold text-emerald-700 hover:text-emerald-800 admin-dependent-activate" data-dependent-id="' + escapeHtml(d.user_id) + '">Activate account</button>' : '') +
                         '</div>' +
                     '</td>' +
                     '</tr>'
@@ -997,36 +1011,6 @@
 
             html += '</tbody></table></div>'
             dependentsListView.innerHTML = html
-
-            var activateButtons = dependentsListView.querySelectorAll('.admin-dependent-activate')
-            activateButtons.forEach(function (button) {
-                button.addEventListener('click', function () {
-                    var dependentId = this.getAttribute('data-dependent-id')
-                    if (!dependentId) return
-                    apiFetch("{{ url('/api/users') }}/" + dependentId, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ account_activated: true, status: 'active' })
-                    })
-                        .then(function (response) {
-                            return response.json().then(function (data) {
-                                return { ok: response.ok, data: data }
-                            }).catch(function () {
-                                return { ok: response.ok, data: null }
-                            })
-                        })
-                        .then(function (r) {
-                            if (!r.ok) {
-                                showUserError('Failed to activate dependent account.')
-                                return
-                            }
-                            loadDependents(dependentsParentUserId)
-                        })
-                        .catch(function () {
-                            showUserError('Network error while activating dependent account.')
-                        })
-                })
-            })
 
             var detailsButtons = dependentsListView.querySelectorAll('.admin-dependent-details')
             detailsButtons.forEach(function (button) {
@@ -1049,7 +1033,7 @@
                 ['Name', fullName || '—'],
                 ['Email', user.email || '—'],
                 ['Contact', user.contact_number || '—'],
-                ['Birthdate', user.birthdate || '—'],
+                ['Birthdate', formatLongDate(user.birthdate) || '—'],
                 ['Sex', user.sex || '—'],
                 ['Address', user.address || '—'],
                 ['Relationship', user.relationship || '—'],
@@ -1058,11 +1042,10 @@
             ]
 
             var html = ''
-            html += '<div class="flex items-center justify-between mb-3">' +
+            html += '<div class="flex items-center mb-3">' +
                 '<button type="button" class="inline-flex items-center gap-1 text-[0.72rem] font-semibold text-slate-700 hover:text-slate-900 admin-dependent-back">' +
                 '<span class="material-symbols-outlined text-[18px] leading-none">arrow_back</span>' +
                 'Back</button>' +
-                '<a class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(user.user_id) + '" target="_blank" rel="noopener">View records</a>' +
                 '</div>'
 
             html += '<div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">' +

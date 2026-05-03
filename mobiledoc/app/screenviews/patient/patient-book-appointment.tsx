@@ -393,7 +393,7 @@ export default function PatientBookAppointmentScreen() {
 
         const appointments = Array.isArray((data as any)?.data) ? (data as any).data : Array.isArray(data) ? (data as any) : [];
         const apptTimes: string[] = appointments
-          .filter((a: any) => String(a?.status ?? '') !== 'cancelled')
+          .filter((a: any) => String(a?.status ?? '') !== 'cancelled' && String(a?.appointment_type ?? 'scheduled') === 'scheduled')
           .map((a: any) => String(a?.appointment_datetime ?? '').replace('T', ' ').slice(0, 16))
           .filter((v: string) => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(v))
           .map((v: string) => v.slice(11, 16));
@@ -401,35 +401,59 @@ export default function PatientBookAppointmentScreen() {
         const dayKey = dayKeyFromDate(date);
         const daySchedules = doctorSchedules.filter((s) => (s as any)?.is_available !== false && String((s as any)?.day_of_week ?? '').toLowerCase() === dayKey);
 
-        const slots: TimeSlot[] = daySchedules
-          .map((s) => {
-            const start = String(s.start_time ?? '').slice(0, 5);
-            const end = String(s.end_time ?? '').slice(0, 5);
-            const startMin = minutesFromHHMM(start);
-            const endMin = minutesFromHHMM(end);
-            let booked = 0;
-            for (const t of apptTimes) {
-              const m = minutesFromHHMM(t);
-              if (m == null || startMin == null || endMin == null) continue;
-              if (m >= startMin && m < endMin) booked += 1;
-            }
-            const cap = s.max_patients != null ? Number(s.max_patients) : null;
-            const isFull = cap != null && Number.isFinite(cap) && booked >= cap;
-            const remaining = cap != null && Number.isFinite(cap) ? Math.max(cap - booked, 0) : null;
-            return {
-              scheduleId: String(s.schedule_id),
+        const slotMinutes = 90;
+        const bookedSet = new Set(apptTimes);
+
+        const intervals: Array<{ start: number; end: number }> = [];
+        for (const s of daySchedules) {
+          const start = String((s as any)?.start_time ?? '').slice(0, 5);
+          const end = String((s as any)?.end_time ?? '').slice(0, 5);
+          const startMin = minutesFromHHMM(start);
+          const endMin = minutesFromHHMM(end);
+          if (startMin == null || endMin == null) continue;
+          if (endMin <= startMin) continue;
+          intervals.push({ start: startMin, end: endMin });
+        }
+        intervals.sort((a, b) => a.start - b.start);
+
+        const merged: Array<{ start: number; end: number }> = [];
+        for (const it of intervals) {
+          const last = merged.length ? merged[merged.length - 1] : null;
+          if (!last) {
+            merged.push({ start: it.start, end: it.end });
+            continue;
+          }
+          if (it.start <= last.end) {
+            last.end = Math.max(last.end, it.end);
+          } else {
+            merged.push({ start: it.start, end: it.end });
+          }
+        }
+
+        const toHHMM = (mins: number) => {
+          const h = Math.floor(mins / 60);
+          const m = mins % 60;
+          const hh = String(h).padStart(2, '0');
+          const mm = String(m).padStart(2, '0');
+          return `${hh}:${mm}`;
+        };
+
+        const slots: TimeSlot[] = [];
+        for (const block of merged) {
+          for (let m = block.start; m + slotMinutes <= block.end; m += slotMinutes) {
+            const start = toHHMM(m);
+            const end = toHHMM(m + slotMinutes);
+            const isFull = bookedSet.has(start);
+            slots.push({
+              scheduleId: `${date}_${start}`,
               start,
               end,
               label: `${formatTimeLabel(start)}–${formatTimeLabel(end)}`,
-              remaining,
+              remaining: null,
               isFull,
-            };
-          })
-          .sort((a, b) => {
-            const ma = minutesFromHHMM(a.start) ?? 0;
-            const mb = minutesFromHHMM(b.start) ?? 0;
-            return ma - mb;
-          });
+            });
+          }
+        }
 
         if (!cancelled) setTimeSlots(slots);
       } catch {

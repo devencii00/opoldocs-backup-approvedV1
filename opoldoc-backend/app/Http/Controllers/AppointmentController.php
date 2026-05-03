@@ -123,6 +123,7 @@ class AppointmentController extends Controller
     {
         $currentUser = $request->user();
         $isPatient = $currentUser && $currentUser->role === 'patient';
+        $isReceptionist = $currentUser && $currentUser->role === 'receptionist';
 
         $queueRequest = $request->boolean('queue_request');
 
@@ -165,7 +166,7 @@ class AppointmentController extends Controller
             $data['appointment_type'] = 'scheduled';
         }
 
-        if ($data['appointment_type'] === 'scheduled' && ! $queueRequest && ! array_key_exists('appointment_datetime', $data)) {
+        if ($data['appointment_type'] === 'scheduled' && ! $queueRequest && empty($data['appointment_datetime'])) {
             return response()->json([
                 'message' => 'Appointment datetime is required.',
             ], 422);
@@ -189,45 +190,104 @@ class AppointmentController extends Controller
             $dt = Carbon::parse($data['appointment_datetime']);
             $doctorId = (int) ($data['doctor_id'] ?? 0);
 
+            if ($data['appointment_type'] === 'scheduled' && $dt->isPast()) {
+                return response()->json([
+                    'message' => 'Appointment datetime must be in the future.',
+                    'code' => 'DATETIME_IN_PAST',
+                ], 422);
+            }
+
             $dayKey = strtolower($dt->format('D'));
             $timeValue = $dt->format('H:i:s');
 
-            $schedule = DoctorSchedule::query()
+            $daySchedules = DoctorSchedule::query()
                 ->where('doctor_id', $doctorId)
                 ->where('day_of_week', $dayKey)
-                ->whereTime('start_time', '<=', $timeValue)
-                ->whereTime('end_time', '>', $timeValue)
                 ->where('is_available', true)
                 ->orderBy('start_time')
-                ->first();
+                ->get();
 
-            if (! $schedule) {
+            if ($daySchedules->isEmpty()) {
                 return response()->json([
                     'message' => 'Doctor is not available at the selected time.',
                     'code' => 'DOCTOR_NOT_AVAILABLE',
                 ], 422);
             }
 
-            $slotStart = $dt->copy()->setTimeFromTimeString((string) $schedule->start_time);
-            $slotEnd = $dt->copy()->setTimeFromTimeString((string) $schedule->end_time);
+            $slotMinutes = 90;
+            $intervals = [];
 
-            $booked = Appointment::query()
+            foreach ($daySchedules as $row) {
+                $startStr = (string) $row->start_time;
+                $endStr = (string) $row->end_time;
+
+                $startStr = str_contains($startStr, ':') ? $startStr : '';
+                $endStr = str_contains($endStr, ':') ? $endStr : '';
+                if ($startStr === '' || $endStr === '') {
+                    continue;
+                }
+
+                $startTime = Carbon::createFromFormat('H:i:s', substr($startStr, 0, 8));
+                $endTime = Carbon::createFromFormat('H:i:s', substr($endStr, 0, 8));
+
+                $startMin = ((int) $startTime->format('H')) * 60 + (int) $startTime->format('i');
+                $endMin = ((int) $endTime->format('H')) * 60 + (int) $endTime->format('i');
+
+                if ($endMin <= $startMin) {
+                    continue;
+                }
+
+                $intervals[] = [$startMin, $endMin];
+            }
+
+            usort($intervals, fn ($a, $b) => $a[0] <=> $b[0]);
+
+            $merged = [];
+            foreach ($intervals as $interval) {
+                if (empty($merged)) {
+                    $merged[] = $interval;
+                    continue;
+                }
+                $lastIdx = count($merged) - 1;
+                [$ls, $le] = $merged[$lastIdx];
+                [$cs, $ce] = $interval;
+                if ($cs <= $le) {
+                    $merged[$lastIdx] = [$ls, max($le, $ce)];
+                } else {
+                    $merged[] = $interval;
+                }
+            }
+
+            $selectedMin = ((int) $dt->format('H')) * 60 + (int) $dt->format('i');
+            $allowed = [];
+            foreach ($merged as [$startMin, $endMin]) {
+                for ($m = $startMin; $m + $slotMinutes <= $endMin; $m += $slotMinutes) {
+                    $allowed[$m] = true;
+                }
+            }
+
+            if (! isset($allowed[$selectedMin])) {
+                return response()->json([
+                    'message' => 'Selected time slot is not available.',
+                    'code' => 'SLOT_INVALID',
+                ], 422);
+            }
+
+            $slotStart = $dt->copy()->seconds(0);
+            $slotEnd = $slotStart->copy()->addMinutes($slotMinutes);
+
+            $existingDoctorAppointments = Appointment::query()
                 ->where('doctor_id', $doctorId)
                 ->whereNotNull('appointment_datetime')
+                ->where('appointment_type', 'scheduled')
                 ->where('status', '!=', 'cancelled')
-                ->where('appointment_datetime', '>=', $slotStart)
-                ->where('appointment_datetime', '<', $slotEnd)
-                ->count();
+                ->whereDate('appointment_datetime', $slotStart->toDateString())
+                ->get(['appointment_id', 'appointment_datetime']);
 
-            if ($schedule->max_patients) {
-                if ($booked >= (int) $schedule->max_patients) {
-                    return response()->json([
-                        'message' => 'Selected time slot is fully booked.',
-                        'code' => 'SLOT_FULL',
-                    ], 422);
-                }
-            } else {
-                if ($booked > 0) {
+            foreach ($existingDoctorAppointments as $appt) {
+                $existingStart = Carbon::parse((string) $appt->appointment_datetime)->seconds(0);
+                $existingEnd = $existingStart->copy()->addMinutes($slotMinutes);
+                if ($existingStart->lt($slotEnd) && $existingEnd->gt($slotStart)) {
                     return response()->json([
                         'message' => 'Selected time slot already has an appointment.',
                         'code' => 'DOCTOR_CONFLICT',
@@ -237,19 +297,23 @@ class AppointmentController extends Controller
 
             $patientId = (int) ($data['patient_id'] ?? 0);
             if ($patientId > 0) {
-                $patientBooked = Appointment::query()
+                $existingPatientAppointments = Appointment::query()
                     ->where('patient_id', $patientId)
                     ->whereNotNull('appointment_datetime')
+                    ->where('appointment_type', 'scheduled')
                     ->where('status', '!=', 'cancelled')
-                    ->where('appointment_datetime', '>=', $slotStart)
-                    ->where('appointment_datetime', '<', $slotEnd)
-                    ->exists();
+                    ->whereDate('appointment_datetime', $slotStart->toDateString())
+                    ->get(['appointment_id', 'appointment_datetime']);
 
-                if ($patientBooked) {
-                    return response()->json([
-                        'message' => 'Patient already has an appointment in the selected time slot.',
-                        'code' => 'PATIENT_CONFLICT',
-                    ], 422);
+                foreach ($existingPatientAppointments as $appt) {
+                    $existingStart = Carbon::parse((string) $appt->appointment_datetime)->seconds(0);
+                    $existingEnd = $existingStart->copy()->addMinutes($slotMinutes);
+                    if ($existingStart->lt($slotEnd) && $existingEnd->gt($slotStart)) {
+                        return response()->json([
+                            'message' => 'Patient already has an appointment in the selected time slot.',
+                            'code' => 'PATIENT_CONFLICT',
+                        ], 422);
+                    }
                 }
             }
 
@@ -293,7 +357,9 @@ class AppointmentController extends Controller
 
         $data['created_by'] = $request->user()->user_id ?? null;
 
-        if (! isset($data['status'])) {
+        if ($isReceptionist) {
+            $data['status'] = 'confirmed';
+        } elseif (! isset($data['status'])) {
             $data['status'] = 'pending';
         }
 

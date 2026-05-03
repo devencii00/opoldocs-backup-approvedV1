@@ -11,8 +11,38 @@
 
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
         <div class="flex-1">
-            <label for="admin_pr_patients_search" class="block text-[0.7rem] text-slate-600 mb-1">Search patient</label>
-            <input id="admin_pr_patients_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Name, email, or address">
+            <label for="admin_pr_patients_search" class="block text-[0.7rem] text-slate-600 mb-1">Search patient name</label>
+            <input id="admin_pr_patients_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search by name (starts with)">
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <div class="text-[0.7rem] text-slate-600 mb-1">Age filter</div>
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="admin-pr-age-filter px-3 py-1.5 rounded-xl border border-slate-200 bg-cyan-600 text-white text-[0.72rem] font-semibold" data-age-filter="all">
+                All
+                <span id="adminPrAgeCountAll" class="ml-1 inline-flex items-center rounded-full bg-white/15 px-2 py-0.5 text-[0.68rem] font-semibold">0</span>
+            </button>
+            <button type="button" class="admin-pr-age-filter px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-[0.72rem] font-semibold" data-age-filter="1_5">
+                1–5
+                <span id="adminPrAgeCount1_5" class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold text-slate-700">0</span>
+            </button>
+            <button type="button" class="admin-pr-age-filter px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-[0.72rem] font-semibold" data-age-filter="6_12">
+                6–12
+                <span id="adminPrAgeCount6_12" class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold text-slate-700">0</span>
+            </button>
+            <button type="button" class="admin-pr-age-filter px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-[0.72rem] font-semibold" data-age-filter="13_18">
+                13–18
+                <span id="adminPrAgeCount13_18" class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold text-slate-700">0</span>
+            </button>
+            <button type="button" class="admin-pr-age-filter px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-[0.72rem] font-semibold" data-age-filter="19_30">
+                19–30
+                <span id="adminPrAgeCount19_30" class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold text-slate-700">0</span>
+            </button>
+            <button type="button" class="admin-pr-age-filter px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-[0.72rem] font-semibold" data-age-filter="31_up">
+                31+
+                <span id="adminPrAgeCount31Up" class="ml-1 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[0.68rem] font-semibold text-slate-700">0</span>
+            </button>
         </div>
     </div>
 
@@ -65,7 +95,7 @@
 
         <div class="px-5 pt-4">
             <div class="flex items-center gap-2">
-                <button type="button" id="adminPrPanelTabBackground" class="px-3 py-2 rounded-xl text-[0.78rem] font-semibold border border-slate-200 bg-slate-900 text-white">Medical background</button>
+                <button type="button" id="adminPrPanelTabBackground" class="px-3 py-2 rounded-xl text-[0.78rem] font-semibold border border-slate-200 bg-cyan-600 text-white">Medical background</button>
                 <button type="button" id="adminPrPanelTabVisits" class="px-3 py-2 rounded-xl text-[0.78rem] font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50">Visit history</button>
             </div>
         </div>
@@ -128,6 +158,15 @@
         var patientsTableBody = document.getElementById('admin_pr_patients_table_body')
         var patientsRows = []
 
+        var activeAgeFilter = 'all'
+        var ageFilterButtons = Array.prototype.slice.call(document.querySelectorAll('.admin-pr-age-filter'))
+        var ageCountAll = document.getElementById('adminPrAgeCountAll')
+        var ageCount1_5 = document.getElementById('adminPrAgeCount1_5')
+        var ageCount6_12 = document.getElementById('adminPrAgeCount6_12')
+        var ageCount13_18 = document.getElementById('adminPrAgeCount13_18')
+        var ageCount19_30 = document.getElementById('adminPrAgeCount19_30')
+        var ageCount31Up = document.getElementById('adminPrAgeCount31Up')
+
         var overlay = document.getElementById('adminPrSlideoverOverlay')
         var panel = document.getElementById('adminPrSlideoverPanel')
         var panelClose = document.getElementById('adminPrPanelClose')
@@ -184,6 +223,15 @@
             return fallback || ('#' + (p.user_id || ''))
         }
 
+        function nameOnly(p) {
+            if (!p) return ''
+            var parts = []
+            if (p.firstname) parts.push(String(p.firstname))
+            if (p.middlename) parts.push(String(p.middlename))
+            if (p.lastname) parts.push(String(p.lastname))
+            return parts.join(' ').trim()
+        }
+
         function ageFromBirthdate(birthdate) {
             if (!birthdate) return null
             var d = new Date(String(birthdate))
@@ -196,6 +244,43 @@
             }
             if (age < 0) return null
             return age
+        }
+
+        function matchesAgeFilter(age, filterKey) {
+            if (filterKey === 'all') return true
+            if (age == null) return false
+            if (filterKey === '1_5') return age >= 1 && age <= 5
+            if (filterKey === '6_12') return age >= 6 && age <= 12
+            if (filterKey === '13_18') return age >= 13 && age <= 18
+            if (filterKey === '19_30') return age >= 19 && age <= 30
+            if (filterKey === '31_up') return age >= 31
+            return true
+        }
+
+        function setAgeFilterActiveStyles() {
+            ageFilterButtons.forEach(function (btn) {
+                var key = btn.getAttribute('data-age-filter') || ''
+                var isActive = key === activeAgeFilter
+                btn.classList.remove(
+                    'bg-cyan-600',
+                    'text-white',
+                    'bg-cyan-600',
+                    'bg-white',
+                    'text-slate-700',
+                    'border-slate-200',
+                    'hover:bg-slate-50'
+                )
+                if (isActive) {
+                    btn.classList.add('bg-cyan-600', 'text-white', 'border-cyan-600')
+                } else {
+                    btn.classList.add('bg-white', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-50')
+                }
+            })
+        }
+
+        function setText(el, text) {
+            if (!el) return
+            el.textContent = text == null ? '' : String(text)
         }
 
         function openPanel() {
@@ -224,16 +309,16 @@
         function setTabButtonActive(btn, isActive) {
             if (!btn) return
             btn.classList.remove(
-                'bg-slate-900',
+                'bg-cyan-600',
                 'text-white',
-                'border-slate-900',
+                'border-cyan-600',
                 'bg-white',
                 'text-slate-700',
                 'border-slate-200',
                 'hover:bg-slate-50'
             )
             if (isActive) {
-                btn.classList.add('bg-slate-900', 'text-white', 'border-slate-900')
+                btn.classList.add('bg-cyan-600', 'text-white', 'border-cyan-600')
             } else {
                 btn.classList.add('bg-white', 'text-slate-700', 'border-slate-200', 'hover:bg-slate-50')
             }
@@ -252,27 +337,47 @@
             patientsTableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">Loading patients…</td></tr>'
             showInlineBox(patientsError, '')
 
-            apiFetch("{{ url('/api/patients') }}?per_page=100", { method: 'GET' })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data }
-                    }).catch(function () {
-                        return { ok: response.ok, data: null }
+            var perPage = 100
+            var all = []
+
+            function fetchPage(page) {
+                return apiFetch("{{ url('/api/patients') }}?per_page=" + perPage + "&page=" + encodeURIComponent(page), { method: 'GET' })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, data: data }
+                        }).catch(function () {
+                            return { ok: response.ok, data: null }
+                        })
                     })
-                })
-                .then(function (result) {
-                    if (!result.ok || !result.data) {
-                        patientsRows = []
-                        showInlineBox(patientsError, 'Failed to load patients.')
-                        renderPatients()
-                        return
-                    }
-                    patientsRows = Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
+                    .then(function (result) {
+                        if (!result.ok || !result.data) {
+                            throw new Error('LOAD_FAILED')
+                        }
+
+                        var pageRows = Array.isArray(result.data.data)
+                            ? result.data.data
+                            : (Array.isArray(result.data) ? result.data : [])
+
+                        all = all.concat(pageRows)
+
+                        var currentPage = (result.data && result.data.current_page) ? parseInt(result.data.current_page, 10) : page
+                        var lastPage = (result.data && result.data.last_page) ? parseInt(result.data.last_page, 10) : currentPage
+
+                        if (currentPage < lastPage) {
+                            return fetchPage(currentPage + 1)
+                        }
+                        return all
+                    })
+            }
+
+            fetchPage(1)
+                .then(function (rows) {
+                    patientsRows = Array.isArray(rows) ? rows : []
                     renderPatients()
                 })
                 .catch(function () {
                     patientsRows = []
-                    showInlineBox(patientsError, 'Network error while loading patients.')
+                    showInlineBox(patientsError, 'Failed to load patients.')
                     renderPatients()
                 })
         }
@@ -280,16 +385,57 @@
         function renderPatients() {
             if (!patientsTableBody) return
             var query = patientsSearch ? String(patientsSearch.value || '').toLowerCase().trim() : ''
-            var filtered = (patientsRows || []).slice()
+            var base = (patientsRows || []).slice()
 
             if (query) {
-                filtered = filtered.filter(function (p) {
-                    var name = fullName(p, '').toLowerCase()
-                    var email = p && p.email ? String(p.email).toLowerCase() : ''
-                    var address = p && p.address ? String(p.address).toLowerCase() : ''
-                    return name.indexOf(query) !== -1 || email.indexOf(query) !== -1 || address.indexOf(query) !== -1
+                base = base.filter(function (p) {
+                    var name = nameOnly(p).toLowerCase()
+                    return name !== '' && name.indexOf(query) === 0
                 })
             }
+
+            var counts = {
+                all: 0,
+                '1_5': 0,
+                '6_12': 0,
+                '13_18': 0,
+                '19_30': 0,
+                '31_up': 0
+            }
+
+            base.forEach(function (p) {
+                var age = ageFromBirthdate(p && p.birthdate ? String(p.birthdate) : null)
+                counts.all++
+                if (matchesAgeFilter(age, '1_5')) counts['1_5']++
+                if (matchesAgeFilter(age, '6_12')) counts['6_12']++
+                if (matchesAgeFilter(age, '13_18')) counts['13_18']++
+                if (matchesAgeFilter(age, '19_30')) counts['19_30']++
+                if (matchesAgeFilter(age, '31_up')) counts['31_up']++
+            })
+
+            setText(ageCountAll, counts.all)
+            setText(ageCount1_5, counts['1_5'])
+            setText(ageCount6_12, counts['6_12'])
+            setText(ageCount13_18, counts['13_18'])
+            setText(ageCount19_30, counts['19_30'])
+            setText(ageCount31Up, counts['31_up'])
+
+            var filtered = base.filter(function (p) {
+                var age = ageFromBirthdate(p && p.birthdate ? String(p.birthdate) : null)
+                return matchesAgeFilter(age, activeAgeFilter)
+            })
+
+            filtered.sort(function (a, b) {
+                var na = nameOnly(a).toLowerCase()
+                var nb = nameOnly(b).toLowerCase()
+                if (na < nb) return -1
+                if (na > nb) return 1
+                var ia = a && a.user_id != null ? parseInt(a.user_id, 10) : 0
+                var ib = b && b.user_id != null ? parseInt(b.user_id, 10) : 0
+                if (ia < ib) return -1
+                if (ia > ib) return 1
+                return 0
+            })
 
             if (!filtered.length) {
                 patientsTableBody.innerHTML = '<tr><td colspan="4" class="py-4 text-center text-[0.78rem] text-slate-400">No patients found.</td></tr>'
@@ -467,6 +613,17 @@
 
         if (patientsSearch) patientsSearch.addEventListener('input', renderPatients)
 
+        if (ageFilterButtons && ageFilterButtons.length) {
+            ageFilterButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var next = this.getAttribute('data-age-filter') || 'all'
+                    activeAgeFilter = next
+                    setAgeFilterActiveStyles()
+                    renderPatients()
+                })
+            })
+        }
+
         if (patientsTableBody) {
             patientsTableBody.addEventListener('click', function (e) {
                 var target = e && e.target ? e.target : null
@@ -501,6 +658,8 @@
         if (panelTabBackground) panelTabBackground.addEventListener('click', function () { setPanelTab('background') })
         if (panelTabVisits) panelTabVisits.addEventListener('click', function () { setPanelTab('visits') })
 
+        setAgeFilterActiveStyles()
+        renderPatients()
         loadPatients()
     })
 </script>
