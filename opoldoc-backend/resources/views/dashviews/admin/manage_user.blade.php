@@ -325,6 +325,9 @@
             successBox.textContent = message || ''
             if (message) {
                 successBox.classList.remove('hidden')
+                setTimeout(function () {
+                    showUserSuccess('')
+                }, 3500)
             } else {
                 successBox.classList.add('hidden')
             }
@@ -562,7 +565,19 @@
             if (v === '') {
                 return true
             }
-            return /^[A-Za-z][A-Za-z\s.'-]*$/.test(v)
+            try {
+                return /^[\p{L}\p{M}][\p{L}\p{M}\s.'\-\u00B7]*$/u.test(v)
+            } catch (_) {
+                return /^[A-Za-z][A-Za-z\s.'-]*$/.test(v)
+            }
+        }
+
+        function normalizePersonName(value) {
+            var s = String(value || '').trim()
+            if (!s) return ''
+            s = s.replace(/\s+/g, ' ')
+            s = s.replace(/\s*([.'\-\u00B7])\s*/g, '$1')
+            return s
         }
 
         function openUserEditModal(user) {
@@ -704,14 +719,14 @@
 
                 showInlineBox(userEditError, '')
 
-                var f = userEditFirstname ? String(userEditFirstname.value || '').trim() : ''
-                var m = userEditMiddlename ? String(userEditMiddlename.value || '').trim() : ''
-                var l = userEditLastname ? String(userEditLastname.value || '').trim() : ''
+                var f = userEditFirstname ? normalizePersonName(userEditFirstname.value) : ''
+                var m = userEditMiddlename ? normalizePersonName(userEditMiddlename.value) : ''
+                var l = userEditLastname ? normalizePersonName(userEditLastname.value) : ''
                 var c = userEditContact ? String(userEditContact.value || '').trim() : ''
                 var hireDate = userEditHireDate ? String(userEditHireDate.value || '').trim() : ''
 
                 if (!isValidName(f) || !isValidName(m) || !isValidName(l)) {
-                    showInlineBox(userEditError, 'Name fields must contain letters only.')
+                    showInlineBox(userEditError, 'Name fields must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.')
                     return
                 }
 
@@ -721,6 +736,10 @@
                         return
                     }
                 }
+
+                if (userEditFirstname) userEditFirstname.value = f
+                if (userEditMiddlename) userEditMiddlename.value = m
+                if (userEditLastname) userEditLastname.value = l
 
                 confirmAction('Are you sure you want to save these changes?')
                     .then(function (confirmed) {
@@ -891,6 +910,7 @@
                         '<thead>' +
                         '<tr class="border-b border-slate-200 text-[0.68rem] uppercase tracking-widest text-slate-400">' +
                         '<th class="py-2 pr-4 font-semibold">Name</th>' +
+                        '<th class="py-2 pr-4 font-semibold">Relationship</th>' +
                         '<th class="py-2 pr-4 font-semibold">Age</th>' +
                         '<th class="py-2 pr-4 font-semibold">Status</th>' +
                         '<th class="py-2 pr-4 font-semibold">Actions</th>' +
@@ -903,6 +923,7 @@
                         if (!name) {
                             name = d.email ? d.email : ('User #' + d.user_id)
                         }
+                        var relationship = d && d.relationship ? String(d.relationship) : ''
                         var age = computeAge(d.birthdate)
                         var activated = !!d.account_activated
                         var statusLabel = activated ? 'Activated' : 'Not activated'
@@ -910,6 +931,7 @@
 
                         html += '<tr class="border-b border-slate-200/60 last:border-0">' +
                             '<td class="py-2 pr-4 text-slate-700">' + String(name).replace(/</g, '&lt;') + '</td>' +
+                            '<td class="py-2 pr-4 text-slate-500">' + (relationship ? String(relationship).replace(/</g, '&lt;') : '—') + '</td>' +
                             '<td class="py-2 pr-4 text-slate-500">' + (age === null ? '—' : age) + '</td>' +
                             '<td class="py-2 pr-4">' +
                                 '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border ' + statusClass + '">' + statusLabel + '</span>' +

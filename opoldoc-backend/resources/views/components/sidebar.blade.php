@@ -43,15 +43,27 @@
         @endphp
 
         @if ($roleKey !== 'admin')
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest pt-4 pb-1">Main Menu</div>
+            @php
+                $groupHeaderBase = 'flex items-center justify-between gap-2 pt-4 pb-1 text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest';
+                $groupToggleBtn = 'inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-700';
+                $mainGroupKey = $roleKey . '-main';
+            @endphp
 
-            <a href="{{ route('dashboard', ['role' => $roleKey]) }}" class="{{ $navBase }} {{ $isDashboardActive ? $navActive : $navInactive }}">
-                <span class="material-symbols-outlined flex-shrink-0 text-[18px] leading-none {{ $isDashboardActive ? 'text-cyan-600' : '' }}">dashboard</span>
-                Dashboard
-                @if ($isDashboardActive)
-                    <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
-                @endif
-            </a>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Main Menu</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="{{ $mainGroupKey }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="{{ $mainGroupKey }}">
+                <a href="{{ route('dashboard', ['role' => $roleKey]) }}" class="{{ $navBase }} {{ $isDashboardActive ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined flex-shrink-0 text-[18px] leading-none {{ $isDashboardActive ? 'text-cyan-600' : '' }}">dashboard</span>
+                    Dashboard
+                    @if ($isDashboardActive)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
         @endif
 
         @if ($roleKey === 'admin')
@@ -215,9 +227,19 @@
                 $isReceptionQueue = $currentSection === 'queue-management';
                 $isReceptionRecordPayments = $currentSection === 'record-payment';
                 $isReceptionVerificationOversight = $currentSection === 'verification-oversight';
+                $isReceptionMessages = $currentSection === 'messages';
+
+                $groupHeaderBase = 'flex items-center justify-between gap-2 pt-4 pb-1 text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest';
+                $groupToggleBtn = 'inline-flex items-center justify-center w-7 h-7 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-700';
             @endphp
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-4 mb-1">Patients & Appointments</div>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Patients & Appointments</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-patients">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="reception-patients">
 
             <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'register-patient']) }}" class="{{ $navBase }} {{ $isReceptionRegister ? $navActive : $navInactive }}">
                 <span class="material-symbols-outlined text-[18px] leading-none {{ $isReceptionRegister ? 'text-cyan-600' : '' }}">person_add</span>
@@ -250,8 +272,15 @@
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
+            </div>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Verification</div>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Verification</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-verification">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="reception-verification">
 
             <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'verification-oversight']) }}" class="{{ $navBase }} {{ $isReceptionVerificationOversight ? $navActive : $navInactive }} mb-3">
                 <span class="material-symbols-outlined text-[18px] leading-none {{ $isReceptionVerificationOversight ? 'text-cyan-600' : '' }}">verified_user</span>
@@ -260,8 +289,15 @@
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
+            </div>
 
-            <div class="text-slate-400 text-[0.67rem] font-semibold uppercase tracking-widest mt-2 mb-1">Billing</div>
+            <div class="{{ $groupHeaderBase }}">
+                <div>Billing</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-billing">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="reception-billing">
 
             <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'record-payment']) }}" class="{{ $navBase }} {{ $isReceptionRecordPayments ? $navActive : $navInactive }}">
                 <span class="material-symbols-outlined text-[18px] leading-none {{ $isReceptionRecordPayments ? 'text-cyan-600' : '' }}">payments</span>
@@ -270,6 +306,23 @@
                     <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
                 @endif
             </a>
+            </div>
+
+            <div class="{{ $groupHeaderBase }}">
+                <div>Communication</div>
+                <button type="button" class="{{ $groupToggleBtn }} sidebar-group-toggle" data-group="reception-communication">
+                    <span class="material-symbols-outlined text-[18px] leading-none">expand_more</span>
+                </button>
+            </div>
+            <div data-group-body="reception-communication">
+                <a href="{{ route('dashboard', ['role' => $roleKey, 'section' => 'messages']) }}" class="{{ $navBase }} {{ $isReceptionMessages ? $navActive : $navInactive }}">
+                    <span class="material-symbols-outlined text-[18px] leading-none {{ $isReceptionMessages ? 'text-cyan-600' : '' }}">chat</span>
+                    Messages
+                    @if ($isReceptionMessages)
+                        <span class="absolute left-0 top-[25%] bottom-[25%] w-1.5 rounded-r bg-cyan-500"></span>
+                    @endif
+                </a>
+            </div>
         @elseif ($roleKey === 'doctor')
             @php
                 $isDoctorSchedule = $currentSection === 'my-schedule';

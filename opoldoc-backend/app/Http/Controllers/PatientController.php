@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\StaffInviteMail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PatientController extends Controller
@@ -66,20 +68,23 @@ class PatientController extends Controller
         }
 
         $data = $request->validate([
-            'email' => ['nullable', 'string'],
+            'email' => ['required', 'email', 'unique:users,email'],
             'password' => ['nullable', 'string', 'min:8'],
-            'firstname' => ['nullable', 'string'],
-            'lastname' => ['nullable', 'string'],
-            'middlename' => ['nullable', 'string'],
-            'birthdate' => ['nullable', 'date'],
+            'firstname' => ['nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'lastname' => ['nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'middlename' => ['nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'birthdate' => ['required', 'date'],
             'sex' => ['nullable', 'string'],
             'address' => ['nullable', 'string'],
-            'contact_number' => ['nullable', 'string'],
+            'contact_number' => ['nullable', 'string', 'regex:/^\+639\d{9}$/'],
         ]);
 
-        $requestedEmail = isset($data['email']) ? trim((string) $data['email']) : '';
-        if ($requestedEmail === '') {
-            $requestedEmail = null;
+        foreach (['firstname', 'middlename', 'lastname'] as $key) {
+            if (array_key_exists($key, $data) && $data[$key] !== null) {
+                $normalized = preg_replace('/\s+/u', ' ', trim((string) $data[$key]));
+                $normalized = preg_replace("/\\s*([\\.'\\-\\x{00B7}])\\s*/u", '$1', $normalized);
+                $data[$key] = $normalized === '' ? null : $normalized;
+            }
         }
 
         $plainPassword = isset($data['password']) ? (string) $data['password'] : '';
@@ -88,16 +93,8 @@ class PatientController extends Controller
             $plainPassword = Str::random(12);
         }
 
-        if ($requestedEmail !== null) {
-            $request->validate([
-                'email' => ['email', 'unique:users,email'],
-            ]);
-        }
-
-        $accountActivated = $requestedEmail !== null;
-
         $user = User::create([
-            'email' => $requestedEmail,
+            'email' => $data['email'],
             'password_hash' => Hash::make($plainPassword),
             'role' => 'patient',
             'status' => 'active',
@@ -109,24 +106,16 @@ class PatientController extends Controller
             'address' => $data['address'] ?? null,
             'contact_number' => $data['contact_number'] ?? null,
             'is_first_login' => true,
-            'account_activated' => $accountActivated,
+            'account_activated' => true,
         ]);
 
-        if ($requestedEmail === null) {
-            $generatedEmail = 'patient'.$user->user_id.'@temp.com';
-            if (! User::where('email', $generatedEmail)->exists()) {
-                $user->update(['email' => $generatedEmail]);
-            }
-        }
+        Mail::to($user->email)->send(new StaffInviteMail($user, $plainPassword));
 
-        $payload = $user->refresh()->toArray();
-        $payload['credentials'] = [
-            'email' => $user->email,
-            'password' => $plainPassword,
-            'generated' => ! $passwordWasProvided || $requestedEmail === null,
-        ];
-
-        return response()->json($payload, 201);
+        return response()->json([
+            'user' => $user->refresh(),
+            'credentials_emailed' => true,
+            'generated_password' => ! $passwordWasProvided,
+        ], 201);
     }
 
     public function show(Request $request, User $patient)
@@ -201,17 +190,25 @@ class PatientController extends Controller
 
         $data = $request->validate([
             'parent_user_id' => ['required', 'exists:users,user_id'],
-            'firstname' => ['nullable', 'string'],
-            'lastname' => ['nullable', 'string'],
-            'middlename' => ['nullable', 'string'],
+            'firstname' => ['nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'lastname' => ['nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'middlename' => ['nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
             'birthdate' => ['required', 'date'],
             'sex' => ['nullable', 'string'],
             'address' => ['nullable', 'string'],
-            'contact_number' => ['nullable', 'string'],
-            'relationship' => ['nullable', 'in:mother,father,guardian'],
+            'contact_number' => ['nullable', 'string', 'regex:/^\+639\d{9}$/'],
+            'relationship' => ['required', 'in:mother,father,guardian'],
             'email' => ['nullable', 'email'],
             'password' => ['nullable', 'string', 'min:8'],
         ]);
+
+        foreach (['firstname', 'middlename', 'lastname'] as $key) {
+            if (array_key_exists($key, $data) && $data[$key] !== null) {
+                $normalized = preg_replace('/\s+/u', ' ', trim((string) $data[$key]));
+                $normalized = preg_replace("/\\s*([\\.'\\-\\x{00B7}])\\s*/u", '$1', $normalized);
+                $data[$key] = $normalized === '' ? null : $normalized;
+            }
+        }
 
         $parent = User::query()->findOrFail((int) $data['parent_user_id']);
         if ($parent->role !== 'patient' || $parent->is_dependent) {
@@ -242,6 +239,10 @@ class PatientController extends Controller
 
         if (! $requiresEmailActivation && ! $passwordProvided) {
             $plainPassword = Str::random(12);
+        }
+
+        if (! isset($data['address']) || trim((string) $data['address']) === '') {
+            $data['address'] = $parent->address;
         }
 
         $user = User::create([

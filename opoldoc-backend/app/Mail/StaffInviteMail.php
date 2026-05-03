@@ -27,7 +27,7 @@ class StaffInviteMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Opol Clinic staff account details',
+            subject: 'Your sign-in details — Opol Doctors Medical Clinic',
         );
     }
 

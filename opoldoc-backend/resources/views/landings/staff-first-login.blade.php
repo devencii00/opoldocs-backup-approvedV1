@@ -26,12 +26,14 @@
         <div id="staffFirstLoginSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700"></div>
 
         <form id="staffFirstLoginForm" class="space-y-3">
-            <div class="relative">
+            <div>
                 <label for="staff_new_password" class="block text-xs text-slate-600 mb-1">New password</label>
-                <input type="password" id="staff_new_password" class="w-full pr-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                <button type="button" id="staffTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 text-xl">
-                    <span id="staffTogglePasswordIcon" class="material-symbols-outlined text-[20px] leading-none">visibility</span>
-                </button>
+                <div class="relative">
+                    <input type="password" id="staff_new_password" class="w-full pr-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <button type="button" id="staffTogglePassword" class="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 text-xl">
+                        <span id="staffTogglePasswordIcon" class="material-symbols-outlined text-[20px] leading-none">visibility</span>
+                    </button>
+                </div>
             </div>
             <div>
                 <label for="staff_new_password_confirmation" class="block text-xs text-slate-600 mb-1">Confirm new password</label>

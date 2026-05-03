@@ -107,9 +107,9 @@ class UserController extends Controller
             'must_change_credentials' => ['sometimes', 'boolean'],
             'role' => ['sometimes', 'in:admin,doctor,receptionist,patient'],
             'status' => ['sometimes', 'in:active,inactive,suspended'],
-            'firstname' => ['sometimes', 'nullable', 'string', "regex:/^[A-Za-z][A-Za-z\\s\\.'-]*$/"],
-            'lastname' => ['sometimes', 'nullable', 'string', "regex:/^[A-Za-z][A-Za-z\\s\\.'-]*$/"],
-            'middlename' => ['sometimes', 'nullable', 'string', "regex:/^[A-Za-z][A-Za-z\\s\\.'-]*$/"],
+            'firstname' => ['sometimes', 'nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'lastname' => ['sometimes', 'nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
+            'middlename' => ['sometimes', 'nullable', 'string', 'regex:/^[\p{L}\p{M}][\p{L}\p{M}\s\.\'\-\x{00B7}]*$/u'],
             'birthdate' => ['sometimes', 'nullable', 'date'],
             'sex' => ['sometimes', 'nullable', 'string'],
             'address' => ['sometimes', 'nullable', 'string'],
@@ -122,9 +122,9 @@ class UserController extends Controller
             'email.regex' => 'Email must be a valid email ending with @example.com.',
             'password.required' => 'Password is required.',
             'password.regex' => 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.',
-            'firstname.regex' => 'First name must contain letters only.',
-            'middlename.regex' => 'Middle name must contain letters only.',
-            'lastname.regex' => 'Last name must contain letters only.',
+            'firstname.regex' => 'First name must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.',
+            'middlename.regex' => 'Middle name must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.',
+            'lastname.regex' => 'Last name must contain letters only (accents allowed), plus hyphens, apostrophes, periods, and middle dots.',
             'contact_number.regex' => 'Contact number must be a valid PH number.',
         ]);
 
@@ -142,6 +142,14 @@ class UserController extends Controller
                 $user->is_first_login = false;
             }
             unset($data['must_change_credentials']);
+        }
+
+        foreach (['firstname', 'middlename', 'lastname'] as $key) {
+            if (array_key_exists($key, $data) && $data[$key] !== null) {
+                $normalized = preg_replace('/\s+/u', ' ', trim((string) $data[$key]));
+                $normalized = preg_replace("/\\s*([\\.'\\-\\x{00B7}])\\s*/u", '$1', $normalized);
+                $data[$key] = $normalized === '' ? null : $normalized;
+            }
         }
 
         $user->update($data);
