@@ -137,6 +137,24 @@
         </div>
     </div>
 
+    <div id="adminDependentsOverlay" class="hidden fixed inset-0 z-[80] bg-slate-900/40">
+        <div id="adminDependentsDrawer" class="absolute inset-y-0 right-0 w-full max-w-lg bg-white border-l border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] transform translate-x-full transition-transform duration-200 ease-out">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div id="adminDependentsTitle" class="text-sm font-semibold text-slate-900 truncate">Dependents</div>
+                    <div id="adminDependentsSubtitle" class="text-[0.72rem] text-slate-500 truncate">Loading…</div>
+                </div>
+                <button type="button" id="adminDependentsClose" class="text-slate-400 hover:text-slate-600 flex-shrink-0">
+                    <span class="material-symbols-outlined text-[20px] leading-none">close</span>
+                </button>
+            </div>
+            <div id="adminDependentsBody" class="p-5">
+                <div id="adminDependentsListView"></div>
+                <div id="adminDependentsDetailView" class="hidden"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-end">
         <div class="flex-1">
             <label for="admin_user_search" class="block text-[0.7rem] text-slate-600 mb-1">Search users</label>
@@ -266,11 +284,9 @@
                                 <button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-user-edit" data-user-id="{{ $user->user_id }}">
                                     Edit
                                 </button>
-                                @if ($childrenCount > 0)
-                                    <button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
-                                        View dependents
-                                    </button>
-                                @endif
+                                <button type="button" class="text-[0.72rem] text-slate-700 hover:text-slate-900 font-semibold admin-user-dependents" data-user-id="{{ $user->user_id }}">
+                                    View dependents
+                                </button>
                                 <button type="button" class="text-[0.72rem] text-amber-700 hover:text-amber-800 font-semibold admin-user-toggle-status" data-user-id="{{ $user->user_id }}">
                                     @if ($status === 'suspended' || $status === 'inactive')
                                         Activate
@@ -479,7 +495,16 @@
         var editButtons = document.querySelectorAll('.admin-user-edit')
         var statusButtons = document.querySelectorAll('.admin-user-toggle-status')
         var dependentsButtons = document.querySelectorAll('.admin-user-dependents')
-        var dependentsPanel = null
+        var dependentsOverlay = document.getElementById('adminDependentsOverlay')
+        var dependentsDrawer = document.getElementById('adminDependentsDrawer')
+        var dependentsClose = document.getElementById('adminDependentsClose')
+        var dependentsTitle = document.getElementById('adminDependentsTitle')
+        var dependentsSubtitle = document.getElementById('adminDependentsSubtitle')
+        var dependentsListView = document.getElementById('adminDependentsListView')
+        var dependentsDetailView = document.getElementById('adminDependentsDetailView')
+
+        var dependentsParentUserId = null
+        var dependentsCache = []
 
         var userEditOverlay = document.getElementById('adminUserEditOverlay')
         var userEditClose = document.getElementById('adminUserEditClose')
@@ -852,138 +877,288 @@
             })
         }
 
-        function showDependents(userId) {
-            if (!userId) {
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+        }
+
+        function computeAge(birthdate) {
+            if (!birthdate) return null
+            var d = new Date(birthdate)
+            if (isNaN(d.getTime())) return null
+            var today = new Date()
+            var age = today.getFullYear() - d.getFullYear()
+            var m = today.getMonth() - d.getMonth()
+            if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
+                age--
+            }
+            return age
+        }
+
+        function openDependentsDrawer() {
+            if (!dependentsOverlay || !dependentsDrawer) return
+            dependentsOverlay.classList.remove('hidden')
+            document.body.classList.add('overflow-hidden')
+            requestAnimationFrame(function () {
+                dependentsDrawer.classList.remove('translate-x-full')
+            })
+        }
+
+        function closeDependentsDrawer() {
+            if (!dependentsOverlay || !dependentsDrawer) return
+            dependentsDrawer.classList.add('translate-x-full')
+            document.body.classList.remove('overflow-hidden')
+            setTimeout(function () {
+                dependentsOverlay.classList.add('hidden')
+            }, 210)
+            dependentsParentUserId = null
+            dependentsCache = []
+            if (dependentsListView) dependentsListView.innerHTML = ''
+            if (dependentsDetailView) {
+                dependentsDetailView.innerHTML = ''
+                dependentsDetailView.classList.add('hidden')
+            }
+        }
+
+        function setDependentsSubtitle(text) {
+            if (dependentsSubtitle) dependentsSubtitle.textContent = text || ''
+        }
+
+        function showDependentsListView() {
+            if (dependentsDetailView) dependentsDetailView.classList.add('hidden')
+            if (dependentsListView) dependentsListView.classList.remove('hidden')
+        }
+
+        function showDependentsDetailView() {
+            if (dependentsListView) dependentsListView.classList.add('hidden')
+            if (dependentsDetailView) dependentsDetailView.classList.remove('hidden')
+        }
+
+        function renderDependentsList(dependents) {
+            if (!dependentsListView) return
+            showDependentsListView()
+
+            if (!Array.isArray(dependents) || dependents.length === 0) {
+                dependentsListView.innerHTML =
+                    '<div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[0.78rem] text-slate-600">No dependents found for this user.</div>'
                 return
             }
 
-            apiFetch("{{ url('/api/users') }}/" + userId + "/dependents", {
-                method: 'GET'
+            var html = ''
+            html += '<div class="flex items-center justify-between mb-3">' +
+                '<div class="text-[0.78rem] font-semibold text-slate-900">Dependents</div>' +
+                '<a class="text-[0.72rem] font-semibold text-slate-600 hover:text-slate-900" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(dependentsParentUserId || '') + '" target="_blank" rel="noopener">Open as patient</a>' +
+                '</div>'
+
+            html += '<div class="overflow-x-auto scrollbar-hidden">' +
+                '<table class="min-w-full text-left text-[0.78rem] text-slate-600">' +
+                '<thead>' +
+                '<tr class="border-b border-slate-200 text-[0.68rem] uppercase tracking-widest text-slate-400">' +
+                '<th class="py-2 pr-4 font-semibold">Name</th>' +
+                '<th class="py-2 pr-4 font-semibold">Relationship</th>' +
+                '<th class="py-2 pr-4 font-semibold">Age</th>' +
+                '<th class="py-2 pr-4 font-semibold">Status</th>' +
+                '<th class="py-2 pr-4 font-semibold">Actions</th>' +
+                '</tr>' +
+                '</thead>' +
+                '<tbody>'
+
+            dependents.forEach(function (d) {
+                var name = ((d.firstname || '') + ' ' + (d.lastname || '')).trim()
+                if (!name) {
+                    name = d.email ? d.email : ('User #' + d.user_id)
+                }
+                var relationship = d && d.relationship ? String(d.relationship) : ''
+                var age = computeAge(d.birthdate)
+                var activated = !!d.account_activated
+                var statusLabel = activated ? 'Activated' : 'Not activated'
+                var statusClass = activated ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
+
+                html += '<tr class="border-b border-slate-200/60 last:border-0">' +
+                    '<td class="py-2 pr-4 text-slate-700">' + escapeHtml(name) + '</td>' +
+                    '<td class="py-2 pr-4 text-slate-500">' + (relationship ? escapeHtml(relationship) : '—') + '</td>' +
+                    '<td class="py-2 pr-4 text-slate-500">' + (age === null ? '—' : String(age)) + '</td>' +
+                    '<td class="py-2 pr-4">' +
+                        '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border ' + statusClass + '">' + escapeHtml(statusLabel) + '</span>' +
+                    '</td>' +
+                    '<td class="py-2 pr-4">' +
+                        '<div class="flex items-center gap-2 flex-wrap">' +
+                            '<button type="button" class="text-[0.72rem] font-semibold text-slate-700 hover:text-slate-900 admin-dependent-details" data-dependent-id="' + escapeHtml(d.user_id) + '">View details</button>' +
+                            '<a class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(d.user_id) + '" target="_blank" rel="noopener">View records</a>' +
+                            (!activated ? '<button type="button" class="text-[0.72rem] font-semibold text-emerald-700 hover:text-emerald-800 admin-dependent-activate" data-dependent-id="' + escapeHtml(d.user_id) + '">Activate account</button>' : '') +
+                        '</div>' +
+                    '</td>' +
+                    '</tr>'
             })
+
+            html += '</tbody></table></div>'
+            dependentsListView.innerHTML = html
+
+            var activateButtons = dependentsListView.querySelectorAll('.admin-dependent-activate')
+            activateButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var dependentId = this.getAttribute('data-dependent-id')
+                    if (!dependentId) return
+                    apiFetch("{{ url('/api/users') }}/" + dependentId, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ account_activated: true, status: 'active' })
+                    })
+                        .then(function (response) {
+                            return response.json().then(function (data) {
+                                return { ok: response.ok, data: data }
+                            }).catch(function () {
+                                return { ok: response.ok, data: null }
+                            })
+                        })
+                        .then(function (r) {
+                            if (!r.ok) {
+                                showUserError('Failed to activate dependent account.')
+                                return
+                            }
+                            loadDependents(dependentsParentUserId)
+                        })
+                        .catch(function () {
+                            showUserError('Network error while activating dependent account.')
+                        })
+                })
+            })
+
+            var detailsButtons = dependentsListView.querySelectorAll('.admin-dependent-details')
+            detailsButtons.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var dependentId = this.getAttribute('data-dependent-id')
+                    if (!dependentId) return
+                    showDependentDetails(dependentId)
+                })
+            })
+        }
+
+        function renderDependentDetails(user) {
+            if (!dependentsDetailView) return
+
+            var fullName = [user.firstname, user.middlename, user.lastname].filter(function (v) { return !!v }).join(' ')
+            if (!fullName) fullName = user.email ? user.email : ('User #' + user.user_id)
+
+            var rows = [
+                ['User ID', user.user_id ? ('#' + user.user_id) : '—'],
+                ['Name', fullName || '—'],
+                ['Email', user.email || '—'],
+                ['Contact', user.contact_number || '—'],
+                ['Birthdate', user.birthdate || '—'],
+                ['Sex', user.sex || '—'],
+                ['Address', user.address || '—'],
+                ['Relationship', user.relationship || '—'],
+                ['Status', user.status ? String(user.status) : '—'],
+                ['Activated', user.account_activated ? 'Yes' : 'No']
+            ]
+
+            var html = ''
+            html += '<div class="flex items-center justify-between mb-3">' +
+                '<button type="button" class="inline-flex items-center gap-1 text-[0.72rem] font-semibold text-slate-700 hover:text-slate-900 admin-dependent-back">' +
+                '<span class="material-symbols-outlined text-[18px] leading-none">arrow_back</span>' +
+                'Back</button>' +
+                '<a class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(user.user_id) + '" target="_blank" rel="noopener">View records</a>' +
+                '</div>'
+
+            html += '<div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">' +
+                '<div class="px-4 py-3 border-b border-slate-100">' +
+                '<div class="text-[0.78rem] font-semibold text-slate-900">Dependent details</div>' +
+                '<div class="text-[0.72rem] text-slate-500 mt-0.5 truncate">' + escapeHtml(fullName) + '</div>' +
+                '</div>' +
+                '<div class="px-4 py-3 space-y-2">'
+
+            rows.forEach(function (pair) {
+                html += '<div class="grid grid-cols-5 gap-3">' +
+                    '<div class="col-span-2 text-[0.72rem] text-slate-500">' + escapeHtml(pair[0]) + '</div>' +
+                    '<div class="col-span-3 text-[0.78rem] text-slate-800 break-words">' + escapeHtml(pair[1]) + '</div>' +
+                    '</div>'
+            })
+
+            html += '</div></div>'
+
+            dependentsDetailView.innerHTML = html
+            showDependentsDetailView()
+
+            var backBtn = dependentsDetailView.querySelector('.admin-dependent-back')
+            if (backBtn) {
+                backBtn.addEventListener('click', function () {
+                    renderDependentsList(dependentsCache)
+                })
+            }
+        }
+
+        function showDependentDetails(dependentId) {
+            if (!dependentId || !dependentsDetailView) return
+            setDependentsSubtitle('Viewing dependent details')
+            dependentsDetailView.innerHTML =
+                '<div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[0.78rem] text-slate-600">Loading details…</div>'
+            showDependentsDetailView()
+
+            apiFetch("{{ url('/api/users') }}/" + dependentId, { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok || !result.data) {
+                        dependentsDetailView.innerHTML =
+                            '<div class="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-[0.78rem] text-red-700">Failed to load dependent details.</div>'
+                        return
+                    }
+                    renderDependentDetails(result.data)
+                })
+                .catch(function () {
+                    dependentsDetailView.innerHTML =
+                        '<div class="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-[0.78rem] text-red-700">Network error while loading dependent details.</div>'
+                })
+        }
+
+        function loadDependents(userId) {
+            if (!userId) return
+            dependentsParentUserId = userId
+            if (dependentsTitle) dependentsTitle.textContent = 'Dependents'
+            setDependentsSubtitle('Loading dependents…')
+            if (dependentsListView) {
+                dependentsListView.innerHTML =
+                    '<div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-[0.78rem] text-slate-600">Loading…</div>'
+            }
+            showDependentsListView()
+
+            apiFetch("{{ url('/api/users') }}/" + userId + "/dependents", { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
                     })
                 })
                 .then(function (result) {
                     if (!result.ok) {
+                        setDependentsSubtitle('Failed to load dependents')
+                        if (dependentsListView) {
+                            dependentsListView.innerHTML =
+                                '<div class="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-[0.78rem] text-red-700">Failed to load dependents.</div>'
+                        }
                         return
                     }
-
-                    var dependents = Array.isArray(result.data) ? result.data : []
-
-                    if (!dependentsPanel) {
-                        dependentsPanel = document.createElement('div')
-                        dependentsPanel.className = 'mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-[0.78rem] text-slate-700'
-                        var container = document.getElementById('adminCreateUserForm')
-                        if (container && container.parentNode) {
-                            container.parentNode.insertBefore(dependentsPanel, container.nextSibling)
-                        }
-                    }
-
-                    if (!dependents.length) {
-                        dependentsPanel.textContent = 'No dependents found for this user.'
-                        return
-                    }
-
-                    function computeAge(birthdate) {
-                        if (!birthdate) return null
-                        var d = new Date(birthdate)
-                        if (isNaN(d.getTime())) return null
-                        var today = new Date()
-                        var age = today.getFullYear() - d.getFullYear()
-                        var m = today.getMonth() - d.getMonth()
-                        if (m < 0 || (m === 0 && today.getDate() < d.getDate())) {
-                            age--
-                        }
-                        return age
-                    }
-
-                    var html = ''
-                    html += '<div class="flex items-center justify-between mb-2">' +
-                        '<div class="text-[0.78rem] font-semibold text-slate-900">Dependents</div>' +
-                        '<a class="text-[0.72rem] font-semibold text-slate-600 hover:text-slate-900" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(userId) + '" target="_blank" rel="noopener">Open as patient</a>' +
-                        '</div>'
-
-                    html += '<div class="overflow-x-auto scrollbar-hidden">' +
-                        '<table class="min-w-full text-left text-[0.78rem] text-slate-600">' +
-                        '<thead>' +
-                        '<tr class="border-b border-slate-200 text-[0.68rem] uppercase tracking-widest text-slate-400">' +
-                        '<th class="py-2 pr-4 font-semibold">Name</th>' +
-                        '<th class="py-2 pr-4 font-semibold">Relationship</th>' +
-                        '<th class="py-2 pr-4 font-semibold">Age</th>' +
-                        '<th class="py-2 pr-4 font-semibold">Status</th>' +
-                        '<th class="py-2 pr-4 font-semibold">Actions</th>' +
-                        '</tr>' +
-                        '</thead>' +
-                        '<tbody>'
-
-                    dependents.forEach(function (d) {
-                        var name = ((d.firstname || '') + ' ' + (d.lastname || '')).trim()
-                        if (!name) {
-                            name = d.email ? d.email : ('User #' + d.user_id)
-                        }
-                        var relationship = d && d.relationship ? String(d.relationship) : ''
-                        var age = computeAge(d.birthdate)
-                        var activated = !!d.account_activated
-                        var statusLabel = activated ? 'Activated' : 'Not activated'
-                        var statusClass = activated ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-amber-50 text-amber-700 border-amber-100'
-
-                        html += '<tr class="border-b border-slate-200/60 last:border-0">' +
-                            '<td class="py-2 pr-4 text-slate-700">' + String(name).replace(/</g, '&lt;') + '</td>' +
-                            '<td class="py-2 pr-4 text-slate-500">' + (relationship ? String(relationship).replace(/</g, '&lt;') : '—') + '</td>' +
-                            '<td class="py-2 pr-4 text-slate-500">' + (age === null ? '—' : age) + '</td>' +
-                            '<td class="py-2 pr-4">' +
-                                '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border ' + statusClass + '">' + statusLabel + '</span>' +
-                            '</td>' +
-                            '<td class="py-2 pr-4">' +
-                                '<div class="flex items-center gap-2">' +
-                                    '<a class="text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800" href="{{ url('/dashboard/patient') }}?user_id=' + encodeURIComponent(d.user_id) + '" target="_blank" rel="noopener">View records</a>' +
-                                    (!activated ? '<button type="button" class="text-[0.72rem] font-semibold text-emerald-700 hover:text-emerald-800 admin-dependent-activate" data-dependent-id="' + d.user_id + '">Activate account</button>' : '') +
-                                '</div>' +
-                            '</td>' +
-                            '</tr>'
-                    })
-
-                    html += '</tbody></table></div>'
-
-                    dependentsPanel.innerHTML = html
-
-                    var activateButtons = dependentsPanel.querySelectorAll('.admin-dependent-activate')
-                    activateButtons.forEach(function (button) {
-                        button.addEventListener('click', function () {
-                            var dependentId = this.getAttribute('data-dependent-id')
-                            if (!dependentId) return
-
-                            apiFetch("{{ url('/api/users') }}/" + dependentId, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    account_activated: true,
-                                    status: 'active'
-                                })
-                            })
-                                .then(function (response) {
-                                    return response.json().then(function (data) {
-                                        return { ok: response.ok, data: data }
-                                    })
-                                })
-                                .then(function (r) {
-                                    if (!r.ok) {
-                                        showUserError('Failed to activate dependent account.')
-                                        return
-                                    }
-                                    showDependents(userId)
-                                })
-                                .catch(function () {
-                                    showUserError('Network error while activating dependent account.')
-                                })
-                        })
-                    })
+                    dependentsCache = Array.isArray(result.data) ? result.data : []
+                    setDependentsSubtitle(dependentsCache.length ? (dependentsCache.length + ' dependent(s) found') : 'No dependents')
+                    renderDependentsList(dependentsCache)
                 })
                 .catch(function () {
+                    setDependentsSubtitle('Failed to load dependents')
+                    if (dependentsListView) {
+                        dependentsListView.innerHTML =
+                            '<div class="rounded-xl border border-red-200 bg-red-50 px-3 py-3 text-[0.78rem] text-red-700">Network error while loading dependents.</div>'
+                    }
                 })
         }
 
@@ -998,9 +1173,24 @@
         dependentsButtons.forEach(function (button) {
             button.addEventListener('click', function () {
                 var userId = this.getAttribute('data-user-id')
-                showDependents(userId)
+                openDependentsDrawer()
+                loadDependents(userId)
             })
         })
+
+        if (dependentsClose) {
+            dependentsClose.addEventListener('click', function () {
+                closeDependentsDrawer()
+            })
+        }
+
+        if (dependentsOverlay) {
+            dependentsOverlay.addEventListener('click', function (e) {
+                if (e.target === dependentsOverlay) {
+                    closeDependentsDrawer()
+                }
+            })
+        }
 
         function applyUserFilters() {
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
