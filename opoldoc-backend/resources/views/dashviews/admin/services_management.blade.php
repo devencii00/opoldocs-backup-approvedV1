@@ -18,12 +18,12 @@
             <label for="admin_service_description" class="block text-[0.7rem] text-slate-600 mb-1">Description (optional)</label>
             <input id="admin_service_description" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-end gap-2">
             <div class="flex-1">
                 <label for="admin_service_price" class="block text-[0.7rem] text-slate-600 mb-1">Price (optional)</label>
                 <input id="admin_service_price" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
             </div>
-            <button type="submit" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
+            <button type="submit" class="inline-flex h-[34px] items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
                 Add Service
             </button>
         </div>
@@ -609,30 +609,35 @@
                     body.price = parseFloat(priceRaw)
                 }
 
-                apiFetch("{{ url('/api/services') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
-                })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, data: data }
+                confirmAction('Are you sure you want to add this service?', { confirmText: 'Add' })
+                    .then(function (confirmed) {
+                        if (!confirmed) return
+
+                        apiFetch("{{ url('/api/services') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(body)
                         })
-                    })
-                    .then(function (result) {
-                        if (!result.ok) {
-                            showServiceError('Failed to add service.')
-                            return
-                        }
-                        if (nameInput) nameInput.value = ''
-                        if (descInput) descInput.value = ''
-                        if (priceInput) priceInput.value = ''
-                        loadServices()
-                    })
-                    .catch(function () {
-                        showServiceError('Network error while adding service.')
+                            .then(function (response) {
+                                return response.json().then(function (data) {
+                                    return { ok: response.ok, data: data }
+                                })
+                            })
+                            .then(function (result) {
+                                if (!result.ok) {
+                                    showServiceError('Failed to add service.')
+                                    return
+                                }
+                                if (nameInput) nameInput.value = ''
+                                if (descInput) descInput.value = ''
+                                if (priceInput) priceInput.value = ''
+                                loadServices()
+                            })
+                            .catch(function () {
+                                showServiceError('Network error while adding service.')
+                            })
                     })
             })
         }

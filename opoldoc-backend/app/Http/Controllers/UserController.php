@@ -6,8 +6,10 @@ use App\Mail\StaffInviteMail;
 use App\Models\LogEntry;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -302,6 +304,147 @@ class UserController extends Controller
         }
 
         return $currentUser->refresh();
+    }
+
+    public function verifyCurrentPassword(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser) {
+            abort(401);
+        }
+
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+        ]);
+
+        $ip = (string) ($request->ip() ?? '');
+        $verifyKey = 'password_verify:uid:'.(int) $currentUser->user_id.':ip:'.strtolower(trim($ip));
+        $tokenKey = 'password_change_token:'.(int) $currentUser->user_id;
+
+        if (RateLimiter::tooManyAttempts($verifyKey, 3)) {
+            $retryAfter = RateLimiter::availableIn($verifyKey);
+
+            LogEntry::write(
+                (int) $currentUser->user_id,
+                'password_verify_attempt',
+                'users',
+                (int) $currentUser->user_id,
+                [
+                    'success' => false,
+                    'reason' => 'RATE_LIMITED',
+                    'ip' => $ip,
+                    'retry_after' => $retryAfter,
+                ]
+            );
+
+            return response()->json([
+                'message' => 'Too many password attempts. Please try again later.',
+                'code' => 'PASSWORD_COOLDOWN',
+                'retry_after' => $retryAfter,
+            ], 429);
+        }
+
+        $currentPassword = (string) $data['current_password'];
+        if (! Hash::check($currentPassword, (string) $currentUser->password_hash)) {
+            RateLimiter::hit($verifyKey, 300);
+            $tries = RateLimiter::attempts($verifyKey);
+
+            LogEntry::write(
+                (int) $currentUser->user_id,
+                'password_verify_attempt',
+                'users',
+                (int) $currentUser->user_id,
+                [
+                    'success' => false,
+                    'reason' => 'INVALID_CURRENT_PASSWORD',
+                    'ip' => $ip,
+                    'attempts' => $tries,
+                ]
+            );
+
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+                'code' => 'INVALID_CURRENT_PASSWORD',
+                'tries_remaining' => max(0, 3 - $tries),
+            ], 422);
+        }
+
+        RateLimiter::clear($verifyKey);
+
+        $token = Str::random(48);
+        $expiresAt = now()->addMinutes(10);
+
+        Cache::store('file')->put($tokenKey, [
+            'token' => $token,
+            'expires_at' => $expiresAt->toIso8601String(),
+        ], $expiresAt);
+
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            'password_verify_attempt',
+            'users',
+            (int) $currentUser->user_id,
+            [
+                'success' => true,
+                'ip' => $ip,
+            ],
+            5
+        );
+
+        return response()->json([
+            'verified' => true,
+            'token' => $token,
+            'expires_in' => 600,
+        ]);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser) {
+            abort(401);
+        }
+
+        $data = $request->validate([
+            'token' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:8', 'confirmed', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$/'],
+        ], [
+            'password.regex' => 'Password must be at least 8 characters and include uppercase, lowercase, a number, and a symbol.',
+        ]);
+
+        $store = Cache::store('file');
+        $tokenKey = 'password_change_token:'.(int) $currentUser->user_id;
+
+        $tokenState = $store->get($tokenKey);
+        $tokenState = is_array($tokenState) ? $tokenState : null;
+
+        $expectedToken = $tokenState && isset($tokenState['token']) ? (string) $tokenState['token'] : '';
+        if ($expectedToken === '' || ! hash_equals($expectedToken, (string) $data['token'])) {
+            return response()->json([
+                'message' => 'Password verification is required. Please verify your current password again.',
+                'code' => 'PASSWORD_VERIFY_REQUIRED',
+            ], 422);
+        }
+
+        $currentUser->password_hash = Hash::make((string) $data['password']);
+        if ($currentUser->is_first_login) {
+            $currentUser->is_first_login = false;
+        }
+        $currentUser->save();
+
+        $store->forget($tokenKey);
+
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            'password_changed',
+            'users',
+            (int) $currentUser->user_id,
+            []
+        );
+
+        return response()->json([
+            'message' => 'Password updated',
+        ]);
     }
 
     public function signature(User $user)

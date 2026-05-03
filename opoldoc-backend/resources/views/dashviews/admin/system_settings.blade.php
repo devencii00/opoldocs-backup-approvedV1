@@ -4,313 +4,617 @@
         <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Admin</span>
     </div>
     <p class="text-xs text-slate-500 mb-4">
-        Configure clinic information, queue behaviour, payment methods, and admin account preferences.
+        Manage your admin account profile and password.
     </p>
 
+    <div id="settingsAccountNotice" class="hidden mb-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-700"></div>
+    <div id="settingsAccountError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+
     <div class="grid gap-4 grid-cols-1 lg:grid-cols-2 text-[0.78rem] text-slate-600">
-        <div class="border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
             <div class="flex items-center justify-between mb-2">
                 <div>
-                    <h3 class="text-xs font-semibold text-slate-900">Clinic Info</h3>
-                    <p class="text-[0.7rem] text-slate-500">Name, address, and primary contact details.</p>
+                    <h3 class="text-xs font-semibold text-slate-900">Account profile</h3>
+                    <p class="text-[0.7rem] text-slate-500">Update admin name.</p>
                 </div>
-                <span class="material-symbols-outlined text-[18px] text-cyan-600 leading-none">local_hospital</span>
+                <span class="material-symbols-outlined text-[18px] text-slate-700 leading-none">badge</span>
             </div>
 
-            <form id="settingsClinicForm" class="space-y-3">
+            <form id="settingsNameForm" class="space-y-3">
                 <div>
-                    <label for="settings_clinic_name" class="block text-[0.7rem] text-slate-500 mb-1">Clinic name</label>
-                    <input id="settings_clinic_name" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Opol Doctors Clinic">
+                    <label for="settings_first_name" class="block text-[0.7rem] text-slate-500 mb-1">First name</label>
+                    <input id="settings_first_name" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                 </div>
                 <div>
-                    <label for="settings_clinic_address" class="block text-[0.7rem] text-slate-500 mb-1">Address</label>
-                    <textarea id="settings_clinic_address" rows="2" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Street, Barangay, City"></textarea>
+                    <label for="settings_last_name" class="block text-[0.7rem] text-slate-500 mb-1">Last name</label>
+                    <input id="settings_last_name" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                 </div>
-                <div>
-                    <label for="settings_clinic_contact" class="block text-[0.7rem] text-slate-500 mb-1">Contact number</label>
-                    <input id="settings_clinic_contact" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="09xx xxx xxxx">
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                    <p class="text-[0.68rem] text-slate-400">Settings are stored locally for now.</p>
-                    <button type="button" id="settings_clinic_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <span class="material-symbols-outlined text-[16px] leading-none">save</span>
-                        Save clinic
+                <div class="flex items-center justify-end pt-1">
+                    <button type="button" id="settings_name_save" class="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-[0.78rem] font-semibold text-white hover:bg-cyan-700 disabled:opacity-60 disabled:hover:bg-cyan-600">
+                        <span id="settingsNameSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                        Save name
                     </button>
                 </div>
             </form>
         </div>
 
-        <div class="border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4">
             <div class="flex items-center justify-between mb-2">
                 <div>
-                    <h3 class="text-xs font-semibold text-slate-900">Queue Settings</h3>
-                    <p class="text-[0.7rem] text-slate-500">Default max patients and queue cutoff behaviour.</p>
-                </div>
-                <span class="material-symbols-outlined text-[18px] text-slate-700 leading-none">schedule</span>
-            </div>
-
-            <form id="settingsQueueForm" class="space-y-3">
-                <div>
-                    <label for="settings_queue_max" class="block text-[0.7rem] text-slate-500 mb-1">Default max patients per doctor</label>
-                    <input id="settings_queue_max" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 20">
-                </div>
-                <div>
-                    <label for="settings_queue_behavior" class="block text-[0.7rem] text-slate-500 mb-1">Queue behaviour (cutoff logic)</label>
-                    <select id="settings_queue_behavior" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                        <option value="strict">Strict cutoff (block new entries when full)</option>
-                        <option value="warn">Warn reception when near capacity</option>
-                        <option value="flexible">Flexible (allow overbooking with warning)</option>
-                    </select>
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                    <p class="text-[0.68rem] text-slate-400">Behaviour can later drive queue logic in the API.</p>
-                    <button type="button" id="settings_queue_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <span class="material-symbols-outlined text-[16px] leading-none">save</span>
-                        Save queue
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div class="border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
-            <div class="flex items-center justify-between mb-2">
-                <div>
-                    <h3 class="text-xs font-semibold text-slate-900">Payment Settings</h3>
-                    <p class="text-[0.7rem] text-slate-500">Toggle which payment methods are available.</p>
-                </div>
-                <span class="material-symbols-outlined text-[18px] text-emerald-600 leading-none">payments</span>
-            </div>
-
-            <form id="settingsPaymentForm" class="space-y-3">
-                <div class="space-y-1">
-                    <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
-                        <input id="settings_payment_cash" type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
-                        Cash
-                    </label>
-                    <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
-                        <input id="settings_payment_gcash" type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
-                        GCash
-                    </label>
-                    <label class="inline-flex items-center gap-2 text-[0.78rem] text-slate-700">
-                        <input id="settings_payment_card" type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
-                        Card
-                    </label>
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                    <p class="text-[0.68rem] text-slate-400">Use this as reference for reception billing flows.</p>
-                    <button type="button" id="settings_payment_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <span class="material-symbols-outlined text-[16px] leading-none">save</span>
-                        Save payments
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <div class="border border-slate-100 rounded-2xl p-4 bg-slate-50/60">
-            <div class="flex items-center justify-between mb-2">
-                <div>
-                    <h3 class="text-xs font-semibold text-slate-900">Account</h3>
-                    <p class="text-[0.7rem] text-slate-500">Change the current admin password.</p>
+                    <h3 class="text-xs font-semibold text-slate-900">Account password</h3>
+                    <p class="text-[0.7rem] text-slate-500">Verify your current password before setting a new one.</p>
                 </div>
                 <span class="material-symbols-outlined text-[18px] text-slate-700 leading-none">lock</span>
             </div>
 
-            <form id="settingsAccountForm" class="space-y-3">
+            <div id="settingsAccountIdle" class="rounded-2xl border border-slate-200 bg-white p-4">
+                <button type="button" id="settings_account_start" class="inline-flex items-center gap-2 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-2 text-[0.78rem] font-semibold text-cyan-700 hover:bg-cyan-100">
+                    <span class="material-symbols-outlined text-[18px] leading-none">key</span>
+                    Change password
+                </button>
+            </div>
+
+            <div id="settingsAccountVerifyStep" class="hidden rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-[0.72rem] font-semibold text-slate-900 mb-3">Verify current password</div>
                 <div>
                     <label for="settings_current_password" class="block text-[0.7rem] text-slate-500 mb-1">Current password</label>
                     <input id="settings_current_password" type="password" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                 </div>
-                <div>
-                    <label for="settings_new_password" class="block text-[0.7rem] text-slate-500 mb-1">New password</label>
-                    <input id="settings_new_password" type="password" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                </div>
-                <div>
-                    <label for="settings_confirm_password" class="block text-[0.7rem] text-slate-500 mb-1">Confirm new password</label>
-                    <input id="settings_confirm_password" type="password" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                </div>
-                <div class="flex items-center justify-between pt-1">
-                    <p class="text-[0.68rem] text-slate-400">This will call the API password change endpoint once wired.</p>
-                    <button type="button" id="settings_account_save" class="inline-flex items-center gap-1 rounded-xl border border-cyan-500/40 bg-cyan-50 px-3 py-1.5 text-[0.72rem] font-semibold text-cyan-700 hover:bg-cyan-100">
-                        <span class="material-symbols-outlined text-[16px] leading-none">save</span>
-                        Change password
+                <div class="mt-3 flex items-center justify-end gap-2">
+                    <button type="button" id="settings_account_cancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                    <button type="button" id="settings_account_verify" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">
+                        <span id="settingsAccountVerifySpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                        <span id="settingsAccountVerifyLabel">Verify</span>
                     </button>
                 </div>
-            </form>
+            </div>
+
+            <div id="settingsAccountChangeStep" class="hidden rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="text-[0.72rem] font-semibold text-slate-900 mb-3">Set new password</div>
+                <div class="space-y-3">
+                    <div>
+                        <label for="settings_new_password" class="block text-[0.7rem] text-slate-500 mb-1">New password</label>
+                        <input id="settings_new_password" type="password" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    </div>
+                    <div>
+                        <label for="settings_confirm_password" class="block text-[0.7rem] text-slate-500 mb-1">Confirm new password</label>
+                        <input id="settings_confirm_password" type="password" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.78rem] text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-end gap-2">
+                    <button type="button" id="settings_account_back" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Back</button>
+                    <button type="button" id="settings_account_save" class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700">
+                        <span id="settingsAccountSaveSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                        Save new password
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="settingsConfirmOverlay" class="hidden fixed inset-0 z-[70] bg-slate-900/40 items-center justify-center p-4">
+    <div class="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-[0_12px_30px_rgba(15,23,42,0.24)] p-4">
+        <div class="flex items-start gap-3">
+            <div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700">
+                <span class="material-symbols-outlined text-[18px] leading-none">help</span>
+            </div>
+            <div class="flex-1">
+                <div class="text-sm font-semibold text-slate-900">Confirm</div>
+                <div id="settingsConfirmMessage" class="text-[0.78rem] text-slate-600 mt-0.5">Are you sure?</div>
+            </div>
+        </div>
+        <div class="mt-4 flex items-center justify-end gap-2">
+            <button type="button" id="settingsConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+            <button type="button" id="settingsConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
         </div>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var clinicName = document.getElementById('settings_clinic_name')
-        var clinicAddress = document.getElementById('settings_clinic_address')
-        var clinicContact = document.getElementById('settings_clinic_contact')
-        var clinicSave = document.getElementById('settings_clinic_save')
-
-        var queueMax = document.getElementById('settings_queue_max')
-        var queueBehavior = document.getElementById('settings_queue_behavior')
-        var queueSave = document.getElementById('settings_queue_save')
-
-        var paymentCash = document.getElementById('settings_payment_cash')
-        var paymentGcash = document.getElementById('settings_payment_gcash')
-        var paymentCard = document.getElementById('settings_payment_card')
-        var paymentSave = document.getElementById('settings_payment_save')
+        var firstName = document.getElementById('settings_first_name')
+        var lastName = document.getElementById('settings_last_name')
+        var nameSave = document.getElementById('settings_name_save')
+        var nameSaveSpinner = document.getElementById('settingsNameSaveSpinner')
+        var currentUserId = null
 
         var currentPassword = document.getElementById('settings_current_password')
         var newPassword = document.getElementById('settings_new_password')
         var confirmPassword = document.getElementById('settings_confirm_password')
         var accountSave = document.getElementById('settings_account_save')
+        var accountStart = document.getElementById('settings_account_start')
+        var accountCancel = document.getElementById('settings_account_cancel')
+        var accountVerify = document.getElementById('settings_account_verify')
+        var accountBack = document.getElementById('settings_account_back')
+        var verifySpinner = document.getElementById('settingsAccountVerifySpinner')
+        var verifyLabel = document.getElementById('settingsAccountVerifyLabel')
+        var saveSpinner = document.getElementById('settingsAccountSaveSpinner')
+        var accountIdle = document.getElementById('settingsAccountIdle')
+        var accountVerifyStep = document.getElementById('settingsAccountVerifyStep')
+        var accountChangeStep = document.getElementById('settingsAccountChangeStep')
+        var accountError = document.getElementById('settingsAccountError')
+        var accountNotice = document.getElementById('settingsAccountNotice')
+        var passwordVerifyToken = null
+        var cooldownTimer = null
 
-        var storageKey = 'opol_admin_settings'
+        var confirmOverlay = document.getElementById('settingsConfirmOverlay')
+        var confirmMessage = document.getElementById('settingsConfirmMessage')
+        var confirmOk = document.getElementById('settingsConfirmOk')
+        var confirmCancel = document.getElementById('settingsConfirmCancel')
+        var confirmResolver = null
+        var confirmCountdownTimer = null
+        var confirmOkOriginalText = null
 
-        function loadSettings() {
-            var raw = null
+        var passwordTokenKey = 'opol_admin_pw_verify_token'
+        var passwordTokenExpKey = 'opol_admin_pw_verify_expires_at'
+        var passwordCooldownUntilKey = 'opol_admin_pw_verify_cooldown_until'
+
+        function safeLocalGet(key) {
             try {
-                raw = window.localStorage ? window.localStorage.getItem(storageKey) : null
+                return window.localStorage ? window.localStorage.getItem(key) : null
             } catch (_) {
-                raw = null
+                return null
             }
+        }
+
+        function safeLocalSet(key, value) {
+            try {
+                if (window.localStorage) window.localStorage.setItem(key, value)
+            } catch (_) {
+            }
+        }
+
+        function safeLocalRemove(key) {
+            try {
+                if (window.localStorage) window.localStorage.removeItem(key)
+            } catch (_) {
+            }
+        }
+
+        function persistPasswordToken(token, expiresInSeconds) {
+            if (!token) return
+            var ms = parseInt(String(expiresInSeconds || 0), 10)
+            ms = isNaN(ms) || ms < 1 ? 600 : ms
+            var exp = Date.now() + ms * 1000
+            safeLocalSet(passwordTokenKey, String(token))
+            safeLocalSet(passwordTokenExpKey, String(exp))
+        }
+
+        function clearPasswordToken() {
+            safeLocalRemove(passwordTokenKey)
+            safeLocalRemove(passwordTokenExpKey)
+            passwordVerifyToken = null
+        }
+
+        function persistCooldown(seconds) {
+            var s = parseInt(String(seconds || 0), 10)
+            if (isNaN(s) || s < 1) return
+            safeLocalSet(passwordCooldownUntilKey, String(Date.now() + s * 1000))
+        }
+
+        function clearCooldown() {
+            safeLocalRemove(passwordCooldownUntilKey)
+        }
+
+        function showAccountError(message) {
+            if (!accountError) return
+            accountError.textContent = message || ''
+            accountError.classList.toggle('hidden', !message)
+        }
+
+        function showAccountNotice(message) {
+            if (!accountNotice) return
+            accountNotice.textContent = message || ''
+            accountNotice.classList.toggle('hidden', !message)
+        }
+
+        function setAccountStep(step) {
+            if (accountIdle) accountIdle.classList.toggle('hidden', step !== 'idle')
+            if (accountVerifyStep) accountVerifyStep.classList.toggle('hidden', step !== 'verify')
+            if (accountChangeStep) accountChangeStep.classList.toggle('hidden', step !== 'change')
+        }
+
+        function setVerifySubmitting(isSubmitting) {
+            if (accountVerify) {
+                if (isSubmitting) {
+                    accountVerify.disabled = true
+                } else if (!cooldownTimer) {
+                    accountVerify.disabled = false
+                }
+            }
+            if (verifySpinner) verifySpinner.classList.toggle('hidden', !isSubmitting)
+        }
+
+        function setSaveSubmitting(isSubmitting) {
+            if (accountSave) accountSave.disabled = !!isSubmitting
+            if (saveSpinner) saveSpinner.classList.toggle('hidden', !isSubmitting)
+        }
+
+        function stopCooldown() {
+            if (cooldownTimer) {
+                clearInterval(cooldownTimer)
+                cooldownTimer = null
+            }
+        }
+
+        function startCooldown(seconds) {
+            stopCooldown()
+            var remaining = parseInt(String(seconds || 0), 10)
+            if (!remaining || remaining < 1) return
+            persistCooldown(remaining)
+
+            if (accountVerify) {
+                accountVerify.disabled = true
+                accountVerify.classList.add('opacity-60', 'cursor-not-allowed')
+                if (verifyLabel) verifyLabel.textContent = 'Try again (' + remaining + ')'
+            }
+
+            cooldownTimer = setInterval(function () {
+                remaining -= 1
+                if (remaining <= 0) {
+                    stopCooldown()
+                    clearCooldown()
+                    if (accountVerify) {
+                        accountVerify.disabled = false
+                        accountVerify.classList.remove('opacity-60', 'cursor-not-allowed')
+                        if (verifyLabel) verifyLabel.textContent = 'Verify'
+                    }
+                    return
+                }
+                if (accountVerify) {
+                    if (verifyLabel) verifyLabel.textContent = 'Try again (' + remaining + ')'
+                }
+            }, 1000)
+        }
+
+        function restoreCooldownIfAny() {
+            var raw = safeLocalGet(passwordCooldownUntilKey)
             if (!raw) return
-
-            try {
-                var config = JSON.parse(raw)
-                if (clinicName && config.clinic_name) clinicName.value = config.clinic_name
-                if (clinicAddress && config.clinic_address) clinicAddress.value = config.clinic_address
-                if (clinicContact && config.clinic_contact) clinicContact.value = config.clinic_contact
-                if (queueMax && typeof config.queue_max === 'number') queueMax.value = String(config.queue_max)
-                if (queueBehavior && config.queue_behavior) queueBehavior.value = config.queue_behavior
-                if (paymentCash) paymentCash.checked = !!config.payment_cash
-                if (paymentGcash) paymentGcash.checked = !!config.payment_gcash
-                if (paymentCard) paymentCard.checked = !!config.payment_card
-            } catch (_) {
+            var until = parseInt(String(raw || ''), 10)
+            if (isNaN(until) || until <= 0) {
+                clearCooldown()
+                return
+            }
+            var remaining = Math.ceil((until - Date.now()) / 1000)
+            if (remaining > 0) {
+                startCooldown(remaining)
+            } else {
+                clearCooldown()
             }
         }
 
-        function saveClinic() {
-            var raw = null
-            try {
-                raw = window.localStorage ? window.localStorage.getItem(storageKey) : null
-            } catch (_) {
-                raw = null
+        function restorePasswordTokenIfAny() {
+            var token = safeLocalGet(passwordTokenKey)
+            var expRaw = safeLocalGet(passwordTokenExpKey)
+            if (!token || !expRaw) {
+                clearPasswordToken()
+                return
             }
-            var config = {}
-            if (raw) {
-                try {
-                    config = JSON.parse(raw) || {}
-                } catch (_) {
-                    config = {}
-                }
+            var exp = parseInt(String(expRaw || ''), 10)
+            if (isNaN(exp) || exp <= Date.now()) {
+                clearPasswordToken()
+                return
             }
-            config.clinic_name = clinicName ? clinicName.value.trim() : ''
-            config.clinic_address = clinicAddress ? clinicAddress.value.trim() : ''
-            config.clinic_contact = clinicContact ? clinicContact.value.trim() : ''
-
-            try {
-                if (window.localStorage) {
-                    window.localStorage.setItem(storageKey, JSON.stringify(config))
-                }
-            } catch (_) {
-            }
+            passwordVerifyToken = String(token)
+            setAccountStep('change')
         }
 
-        function saveQueue() {
-            var raw = null
-            try {
-                raw = window.localStorage ? window.localStorage.getItem(storageKey) : null
-            } catch (_) {
-                raw = null
-            }
-            var config = {}
-            if (raw) {
-                try {
-                    config = JSON.parse(raw) || {}
-                } catch (_) {
-                    config = {}
-                }
-            }
-            var maxVal = queueMax ? queueMax.value.trim() : ''
-            config.queue_max = maxVal ? parseInt(maxVal, 10) : null
-            config.queue_behavior = queueBehavior ? queueBehavior.value : 'strict'
-
-            try {
-                if (window.localStorage) {
-                    window.localStorage.setItem(storageKey, JSON.stringify(config))
-                }
-            } catch (_) {
-            }
+        function setNameSubmitting(isSubmitting) {
+            if (nameSave) nameSave.disabled = !!isSubmitting
+            if (nameSaveSpinner) nameSaveSpinner.classList.toggle('hidden', !isSubmitting)
         }
 
-        function savePayments() {
-            var raw = null
-            try {
-                raw = window.localStorage ? window.localStorage.getItem(storageKey) : null
-            } catch (_) {
-                raw = null
+        function stopConfirmCountdown() {
+            if (confirmCountdownTimer) {
+                clearInterval(confirmCountdownTimer)
+                confirmCountdownTimer = null
             }
-            var config = {}
-            if (raw) {
-                try {
-                    config = JSON.parse(raw) || {}
-                } catch (_) {
-                    config = {}
+            if (confirmOk) {
+                confirmOk.disabled = false
+                confirmOk.classList.remove('opacity-60', 'cursor-not-allowed')
+                if (confirmOkOriginalText != null) {
+                    confirmOk.textContent = confirmOkOriginalText
                 }
             }
-            config.payment_cash = paymentCash ? paymentCash.checked : false
-            config.payment_gcash = paymentGcash ? paymentGcash.checked : false
-            config.payment_card = paymentCard ? paymentCard.checked : false
+            confirmOkOriginalText = null
+        }
 
-            try {
-                if (window.localStorage) {
-                    window.localStorage.setItem(storageKey, JSON.stringify(config))
-                }
-            } catch (_) {
+        function closeConfirm(result) {
+            if (confirmOverlay) {
+                confirmOverlay.classList.add('hidden')
+                confirmOverlay.classList.remove('flex')
             }
+            stopConfirmCountdown()
+            var resolver = confirmResolver
+            confirmResolver = null
+            if (typeof resolver === 'function') resolver(!!result)
+        }
+
+        function confirmAction(message, options) {
+            return new Promise(function (resolve) {
+                if (!confirmOverlay || !confirmMessage || !confirmOk || !confirmCancel) {
+                    resolve(window.confirm(message || 'Are you sure?'))
+                    return
+                }
+                stopConfirmCountdown()
+                confirmMessage.textContent = message || 'Are you sure?'
+                var confirmText = options && options.confirmText ? String(options.confirmText) : 'Confirm'
+                confirmOk.textContent = confirmText
+                confirmOkOriginalText = confirmText
+
+                confirmResolver = resolve
+                confirmOverlay.classList.remove('hidden')
+                confirmOverlay.classList.add('flex')
+
+                var countdownSeconds = options && options.countdownSeconds ? parseInt(String(options.countdownSeconds), 10) : 0
+                if (!countdownSeconds || isNaN(countdownSeconds) || countdownSeconds < 1) {
+                    return
+                }
+
+                confirmOk.disabled = true
+                confirmOk.classList.add('opacity-60', 'cursor-not-allowed')
+
+                var remaining = countdownSeconds
+                confirmOk.textContent = confirmText + ' (' + remaining + ')'
+
+                confirmCountdownTimer = setInterval(function () {
+                    remaining -= 1
+                    if (remaining <= 0) {
+                        stopConfirmCountdown()
+                        return
+                    }
+                    if (confirmOk) {
+                        confirmOk.textContent = confirmText + ' (' + remaining + ')'
+                    }
+                }, 1000)
+            })
+        }
+
+        if (confirmOk) confirmOk.addEventListener('click', function () { closeConfirm(true) })
+        if (confirmCancel) confirmCancel.addEventListener('click', function () { closeConfirm(false) })
+        if (confirmOverlay) {
+            confirmOverlay.addEventListener('click', function (e) {
+                if (e.target === confirmOverlay) closeConfirm(false)
+            })
+        }
+
+        function loadCurrentUser() {
+            if (typeof apiFetch !== 'function') return
+            apiFetch("{{ url('/api/user') }}", { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, status: response.status, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, status: response.status, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok || !result.data) return
+                    currentUserId = result.data.user_id ? String(result.data.user_id) : null
+                    if (firstName) firstName.value = result.data.firstname ? String(result.data.firstname) : ''
+                    if (lastName) lastName.value = result.data.lastname ? String(result.data.lastname) : ''
+                })
+                .catch(function () {})
+        }
+
+        function saveName() {
+            if (!currentUserId) {
+                showAccountError('Unable to identify the current user.')
+                return
+            }
+            if (typeof apiFetch !== 'function') {
+                showAccountError('API client is not available.')
+                return
+            }
+
+            var fn = firstName ? String(firstName.value || '').trim() : ''
+            var ln = lastName ? String(lastName.value || '').trim() : ''
+
+            if (!fn && !ln) {
+                showAccountError('Please enter a first name or last name.')
+                return
+            }
+
+            var body = {}
+            if (fn) body.firstname = fn
+            if (ln) body.lastname = ln
+
+            confirmAction('Are you sure you want to update these changes?', { confirmText: 'Update' })
+                .then(function (confirmed) {
+                    if (!confirmed) return
+
+                    showAccountError('')
+                    showAccountNotice('')
+                    setNameSubmitting(true)
+
+                    apiFetch("{{ url('/api/users') }}/" + encodeURIComponent(currentUserId), {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            firstname: body.firstname,
+                            lastname: body.lastname
+                        })
+                    })
+                        .then(function (response) {
+                            return response.json().then(function (data) {
+                                return { ok: response.ok, status: response.status, data: data }
+                            }).catch(function () {
+                                return { ok: response.ok, status: response.status, data: null }
+                            })
+                        })
+                        .then(function (result) {
+                            if (!result.ok) {
+                                if (result.status === 422 && result.data && result.data.errors) {
+                                    var firstKey = Object.keys(result.data.errors)[0]
+                                    var msg = firstKey && result.data.errors[firstKey] && result.data.errors[firstKey][0]
+                                        ? result.data.errors[firstKey][0]
+                                        : 'Validation error.'
+                                    showAccountError(String(msg))
+                                } else {
+                                    var msg2 = (result.data && result.data.message) ? String(result.data.message) : 'Unable to update name.'
+                                    showAccountError(msg2)
+                                }
+                                return
+                            }
+                            showAccountNotice('Name updated.')
+                        })
+                        .catch(function () {
+                            showAccountError('Network error while updating name.')
+                        })
+                        .finally(function () {
+                            setNameSubmitting(false)
+                        })
+                })
         }
 
         function saveAccount() {
-            var current = currentPassword ? currentPassword.value : ''
-            var next = newPassword ? newPassword.value : ''
-            var confirm = confirmPassword ? confirmPassword.value : ''
+            if (!passwordVerifyToken) {
+                showAccountError('Please verify your current password first.')
+                setAccountStep('verify')
+                return
+            }
 
-            if (!current || !next || !confirm) {
-                window.alert('Please complete all password fields.')
+            var next = newPassword ? String(newPassword.value || '') : ''
+            var confirm = confirmPassword ? String(confirmPassword.value || '') : ''
+
+            if (!next || !confirm) {
+                showAccountError('Please enter and confirm your new password.')
                 return
             }
             if (next !== confirm) {
-                window.alert('New password and confirmation do not match.')
+                showAccountError('New password and confirmation do not match.')
+                return
+            }
+            if (typeof apiFetch !== 'function') {
+                showAccountError('API client is not available.')
                 return
             }
 
-            window.alert('Password change wiring to API can be implemented here.')
+            showAccountError('')
+            showAccountNotice('')
+
+            confirmAction('Are you sure you want to change your password?', { confirmText: 'Change', countdownSeconds: 3 })
+                .then(function (confirmed) {
+                    if (!confirmed) return
+
+                    setSaveSubmitting(true)
+
+                    apiFetch("{{ url('/api/users/me/password/change') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            token: passwordVerifyToken,
+                            password: next,
+                            password_confirmation: confirm
+                        })
+                    })
+                        .then(function (response) {
+                            return response.json().then(function (data) {
+                                return { ok: response.ok, status: response.status, data: data }
+                            }).catch(function () {
+                                return { ok: response.ok, status: response.status, data: null }
+                            })
+                        })
+                        .then(function (result) {
+                            if (!result.ok) {
+                                var msg = (result.data && result.data.message) ? String(result.data.message) : 'Unable to update password.'
+                                showAccountError(msg)
+                                if (result.data && result.data.code === 'PASSWORD_VERIFY_REQUIRED') {
+                                    clearPasswordToken()
+                                    setAccountStep('verify')
+                                }
+                                return
+                            }
+
+                            clearPasswordToken()
+                            if (currentPassword) currentPassword.value = ''
+                            if (newPassword) newPassword.value = ''
+                            if (confirmPassword) confirmPassword.value = ''
+                            showAccountError('')
+                            showAccountNotice('Password updated.')
+                            setAccountStep('idle')
+                        })
+                        .catch(function () {
+                            showAccountError('Network error while updating password.')
+                        })
+                        .finally(function () {
+                            setSaveSubmitting(false)
+                        })
+                })
         }
 
-        if (clinicSave) {
-            clinicSave.addEventListener('click', function () {
-                saveClinic()
-                clinicSave.classList.add('bg-cyan-100')
-                setTimeout(function () {
-                    clinicSave.classList.remove('bg-cyan-100')
-                }, 600)
+        function verifyCurrentPassword() {
+            if (typeof apiFetch !== 'function') {
+                showAccountError('API client is not available.')
+                return
+            }
+            var current = currentPassword ? String(currentPassword.value || '') : ''
+            if (!current) {
+                showAccountError('Please enter your current password.')
+                return
+            }
+
+            showAccountError('')
+            showAccountNotice('')
+            setVerifySubmitting(true)
+
+            apiFetch("{{ url('/api/users/me/password/verify') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ current_password: current })
             })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, status: response.status, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, status: response.status, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        if (result.status === 429) {
+                            var retry = result.data && result.data.retry_after ? parseInt(String(result.data.retry_after), 10) : 300
+                            showAccountError('Too many attempts. Please try again later.')
+                            startCooldown(retry)
+                            return
+                        }
+                        var msg = (result.data && result.data.message) ? String(result.data.message) : 'Verification failed.'
+                        if (result.data && typeof result.data.tries_remaining === 'number') {
+                            msg += ' Tries remaining: ' + result.data.tries_remaining
+                        }
+                        showAccountError(msg)
+                        return
+                    }
+
+                    passwordVerifyToken = result.data && result.data.token ? String(result.data.token) : null
+                    if (!passwordVerifyToken) {
+                        showAccountError('Verification token missing. Please try again.')
+                        return
+                    }
+                    var expiresIn = result.data && result.data.expires_in ? parseInt(String(result.data.expires_in), 10) : 600
+                    persistPasswordToken(passwordVerifyToken, expiresIn)
+                    if (currentPassword) currentPassword.value = ''
+                    stopCooldown()
+                    clearCooldown()
+                    if (accountVerify) {
+                        accountVerify.disabled = false
+                        accountVerify.classList.remove('opacity-60', 'cursor-not-allowed')
+                        if (verifyLabel) verifyLabel.textContent = 'Verify'
+                    }
+                    setAccountStep('change')
+                })
+                .catch(function () {
+                    showAccountError('Network error while verifying password.')
+                })
+                .finally(function () {
+                    setVerifySubmitting(false)
+                })
         }
 
-        if (queueSave) {
-            queueSave.addEventListener('click', function () {
-                saveQueue()
-                queueSave.classList.add('bg-cyan-100')
-                setTimeout(function () {
-                    queueSave.classList.remove('bg-cyan-100')
-                }, 600)
-            })
-        }
-
-        if (paymentSave) {
-            paymentSave.addEventListener('click', function () {
-                savePayments()
-                paymentSave.classList.add('bg-cyan-100')
-                setTimeout(function () {
-                    paymentSave.classList.remove('bg-cyan-100')
-                }, 600)
+        if (nameSave) {
+            nameSave.addEventListener('click', function () {
+                saveName()
             })
         }
 
@@ -320,6 +624,44 @@
             })
         }
 
-        loadSettings()
+        if (accountStart) {
+            accountStart.addEventListener('click', function () {
+                showAccountError('')
+                showAccountNotice('')
+                clearPasswordToken()
+                setAccountStep('verify')
+            })
+        }
+        if (accountCancel) {
+            accountCancel.addEventListener('click', function () {
+                showAccountError('')
+                showAccountNotice('')
+                clearPasswordToken()
+                stopCooldown()
+                clearCooldown()
+                if (currentPassword) currentPassword.value = ''
+                setAccountStep('idle')
+            })
+        }
+        if (accountBack) {
+            accountBack.addEventListener('click', function () {
+                showAccountError('')
+                showAccountNotice('')
+                clearPasswordToken()
+                if (newPassword) newPassword.value = ''
+                if (confirmPassword) confirmPassword.value = ''
+                setAccountStep('verify')
+            })
+        }
+        if (accountVerify) {
+            accountVerify.addEventListener('click', function () {
+                verifyCurrentPassword()
+            })
+        }
+
+        setAccountStep('idle')
+        restoreCooldownIfAny()
+        restorePasswordTokenIfAny()
+        loadCurrentUser()
     })
 </script>
