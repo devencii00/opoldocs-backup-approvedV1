@@ -63,6 +63,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/doctor-schedules/bulk-availability', [DoctorScheduleController::class, 'bulkAvailability']);
     Route::delete('/doctor-schedules/bulk-delete', [DoctorScheduleController::class, 'bulkDelete']);
     Route::apiResource('doctor-schedules', DoctorScheduleController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('/services-popular', [\App\Http\Controllers\ServiceController::class, 'popular']);
     Route::apiResource('services', \App\Http\Controllers\ServiceController::class);
     Route::apiResource('prescription-items', \App\Http\Controllers\PrescriptionItemController::class);
     Route::apiResource('medical-backgrounds', MedicalBackgroundController::class);

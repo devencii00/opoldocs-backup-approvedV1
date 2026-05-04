@@ -40,6 +40,51 @@ class ServiceController extends Controller
         return $query->paginate($perPage);
     }
 
+    public function popular(Request $request)
+    {
+        $currentUser = $request->user();
+
+        $request->validate([
+            'limit' => ['nullable', 'integer', 'min:1', 'max:20'],
+        ]);
+
+        $limit = (int) $request->query('limit', 10);
+        if ($limit < 1) {
+            $limit = 10;
+        }
+        if ($limit > 20) {
+            $limit = 20;
+        }
+
+        $query = Service::query()
+            ->leftJoin('appointment_services', 'services.service_id', '=', 'appointment_services.service_id')
+            ->select([
+                'services.service_id',
+                'services.service_name',
+                'services.description',
+                'services.price',
+                'services.duration_minutes',
+                'services.is_active',
+            ])
+            ->selectRaw('COUNT(appointment_services.appointment_id) as usage_count')
+            ->groupBy([
+                'services.service_id',
+                'services.service_name',
+                'services.description',
+                'services.price',
+                'services.duration_minutes',
+                'services.is_active',
+            ])
+            ->orderByDesc('usage_count')
+            ->orderBy('services.service_name');
+
+        if (! $currentUser || $currentUser->role !== 'admin') {
+            $query->where('services.is_active', true);
+        }
+
+        return response()->json($query->limit($limit)->get());
+    }
+
     public function store(Request $request)
     {
         $currentUser = $request->user();

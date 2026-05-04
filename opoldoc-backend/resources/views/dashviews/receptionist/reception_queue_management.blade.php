@@ -113,6 +113,7 @@
                         @endphp
                         <tr class="border-b border-slate-50 last:border-0 reception-queue-row"
                             data-queue-number="{{ $queue->queue_number }}"
+                            data-queue-code="{{ $queue->queue_code }}"
                             data-patient="{{ strtolower($patientName) }}"
                             data-doctor="{{ strtolower($doctorName) }}"
                             data-date="{{ $dateKey }}"
@@ -121,7 +122,7 @@
                             @if ($queueId)
                                 data-queue-id="{{ $queueId }}"
                             @endif>
-                            <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $queue->queue_number }}</td>
+                            <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $queue->queue_code ?? $queue->queue_number }}</td>
                             <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                                 @if ($patientName)
                                     {{ $patientName }}
@@ -252,7 +253,7 @@
                     @endphp
                     <div class="rounded-2xl bg-slate-800/60 border border-slate-600/70 px-4 py-3 flex items-center justify-between">
                         <div>
-                            <div class="text-[0.75rem] text-slate-400 mb-1">Queue #{{ $queue->queue_number }}</div>
+                                    <div class="text-[0.75rem] text-slate-400 mb-1">Queue #{{ $queue->queue_code ?? $queue->queue_number }}</div>
                             <div class="text-[0.9rem] text-slate-100 font-semibold">{{ $patientName }}</div>
                             <div class="text-[0.75rem] text-slate-400">
                                 @if ($doctorName)
@@ -358,7 +359,7 @@
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
 
             rows.forEach(function (row) {
-                var number = row.getAttribute('data-queue-number') || ''
+                var number = ((row.getAttribute('data-queue-code') || '') + ' ' + (row.getAttribute('data-queue-number') || '')).trim()
                 var patient = row.getAttribute('data-patient') || ''
                 var doctor = row.getAttribute('data-doctor') || ''
                 var date = row.getAttribute('data-date') || ''
@@ -753,8 +754,8 @@
                     var patientName = appt && appt.patient ? safeName(appt.patient, 'Patient') : 'Patient'
                     var doctorName = appt && appt.doctor ? safeName(appt.doctor, '') : ''
 
-                    var number = String(servingItem.queue_number || '')
-                    if (number.length < 3) {
+                    var number = servingItem.queue_code ? String(servingItem.queue_code) : String(servingItem.queue_number || '')
+                    if (!servingItem.queue_code && number.length < 3) {
                         number = ('000' + number).slice(-3)
                     }
 
@@ -781,11 +782,12 @@
                     var patientName = appt && appt.patient ? safeName(appt.patient, 'Patient') : 'Patient'
                     var doctorName = appt && appt.doctor ? safeName(appt.doctor, '') : ''
                     var statusName = queue.status ? String(queue.status) : ''
+                        var queueLabel = queue.queue_code ? String(queue.queue_code) : String(queue.queue_number || '')
 
                     nextHtml +=
                         '<div class="rounded-2xl bg-slate-800/60 border border-slate-600/70 px-4 py-3 flex items-center justify-between">' +
                         '<div>' +
-                        '<div class="text-[0.75rem] text-slate-400 mb-1">Queue #' + (queue.queue_number || '') + '</div>' +
+                        '<div class="text-[0.75rem] text-slate-400 mb-1">Queue #' + queueLabel + '</div>' +
                         '<div class="text-[0.9rem] text-slate-100 font-semibold">' + patientName + '</div>' +
                         '<div class="text-[0.75rem] text-slate-400">' +
                         (doctorName ? 'Doctor: ' + doctorName : 'Doctor not assigned') +

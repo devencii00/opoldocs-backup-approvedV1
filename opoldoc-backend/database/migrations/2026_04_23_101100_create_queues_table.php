@@ -18,6 +18,7 @@ return new class extends Migration
             $table->foreign('appointment_id')->references('appointment_id')->on('appointments')->cascadeOnDelete();
 
             $table->integer('queue_number')->nullable();
+            $table->string('queue_code', 20)->nullable()->unique();
             $table->dateTime('queue_datetime')->nullable();
             $table->enum('status', ['waiting', 'serving', 'done', 'cancelled'])->default('waiting');
 

@@ -75,7 +75,9 @@ class QueueDisplayController extends Controller
             'now_serving' => $serving ? [
                 'queue_id' => $serving->queue_id,
                 'queue_number' => $serving->queue_number,
+                'queue_code' => $serving->queue_code,
                 'status' => $serving->status,
+                'priority_level' => $serving->priority_level,
                 'patient' => [
                     'user_id' => $serving->appointment?->patient_id,
                     'name' => $formatPerson($serving->appointment?->patient, 'Patient'),
@@ -89,6 +91,7 @@ class QueueDisplayController extends Controller
                 return [
                     'queue_id' => $q->queue_id,
                     'queue_number' => $q->queue_number,
+                    'queue_code' => $q->queue_code,
                     'status' => $q->status,
                     'priority_level' => $q->priority_level,
                     'patient' => [

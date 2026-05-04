@@ -83,10 +83,11 @@
                     <tr class="border-b border-slate-50 last:border-0 doctor-queue-row"
                         data-queue-id="{{ $queue->queue_id }}"
                         data-queue-number="{{ $queue->queue_number }}"
+                        data-queue-code="{{ $queue->queue_code }}"
                         data-patient="{{ strtolower($patientName) }}"
                         data-date="{{ $dateKey }}"
                         data-status="{{ $statusValue }}">
-                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $queue->queue_number }}</td>
+                        <td class="py-2 pr-4 text-[0.78rem] text-slate-500">{{ $queue->queue_code ?? $queue->queue_number }}</td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-700">
                             @if ($patientName)
                                 {{ $patientName }}
@@ -98,8 +99,8 @@
                             {{ $dateKey }}
                         </td>
                         <td class="py-2 pr-4 text-[0.78rem] text-slate-500">
-                            @if ($priority)
-                                {{ ucfirst($priority) }}
+                            @if ($priority !== '')
+                                {{ $priority }}
                             @else
                                 <span class="text-[0.7rem] text-slate-400">Normal</span>
                             @endif
@@ -160,7 +161,7 @@
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
 
             rows.forEach(function (row) {
-                var number = row.getAttribute('data-queue-number') || ''
+                var number = ((row.getAttribute('data-queue-code') || '') + ' ' + (row.getAttribute('data-queue-number') || '')).trim()
                 var patient = row.getAttribute('data-patient') || ''
                 var date = row.getAttribute('data-date') || ''
 

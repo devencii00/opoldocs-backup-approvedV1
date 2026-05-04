@@ -157,7 +157,6 @@ class QueueController extends Controller
         $data = $request->validate([
             'doctor_id' => ['required', 'exists:users,user_id'],
             'reason_for_visit' => ['nullable', 'string'],
-            'priority_level' => ['nullable', 'integer'],
             'patient_id' => ['sometimes', 'exists:users,user_id'],
         ]);
 
@@ -199,9 +198,9 @@ class QueueController extends Controller
             ], 422);
         }
 
-        $priorityLevel = isset($data['priority_level']) ? (int) $data['priority_level'] : 5;
+        $priorityLevel = Queue::priorityLevelForPatientId($targetPatientId) ?? 5;
 
-        $result = DB::transaction(function () use ($currentUser, $data, $priorityLevel, $targetPatientId) {
+        $result = DB::transaction(function () use ($currentUser, $data, $targetPatientId, $priorityLevel) {
             $appointment = Appointment::create([
                 'patient_id' => $targetPatientId,
                 'doctor_id' => (int) $data['doctor_id'],

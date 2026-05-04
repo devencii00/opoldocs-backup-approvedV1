@@ -79,7 +79,7 @@ class WalkInController extends Controller
                 ? Carbon::parse($data['appointment_datetime'])
                 : now();
 
-            $priorityLevel = isset($data['priority_level']) ? (int) $data['priority_level'] : 5;
+            $priorityLevel = Queue::sanitizePriorityLevel($data['priority_level'] ?? null) ?? 5;
 
             $appointment = Appointment::create([
                 'patient_id' => $patient->user_id,

@@ -55,17 +55,7 @@
             <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
             <div id="reception_time_slots" class="flex flex-wrap gap-2"></div>
         </div>
-        <div>
-            <label for="reception_appointment_type" class="block text-[0.7rem] text-slate-600 mb-1">Appointment type</label>
-            <select id="reception_appointment_type" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                <option value="scheduled">Scheduled</option>
-                <option value="walk_in">Walk-in</option>
-            </select>
-        </div>
-        <div>
-            <label for="reception_appointment_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
-            <input id="reception_appointment_priority" type="number" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 1">
-        </div>
+        <input id="reception_appointment_type" type="hidden" value="scheduled">
         <div class="md:col-span-3">
             <label for="reception_appointment_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
             <input id="reception_appointment_reason" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Reason for visit">
@@ -182,6 +172,10 @@
         var timeSlotsEl = document.getElementById('reception_time_slots')
         var services = []
         var doctors = []
+        var servicesLoaded = false
+        var servicesLoading = false
+        var doctorsLoaded = false
+        var doctorsLoading = false
         var doctorSchedules = []
         var doctorAvailableDaySet = {}
         var doctorAppointments = []
@@ -307,7 +301,7 @@
                 var meta = [p.email, p.contact_number].filter(Boolean).join(' • ')
                 html += '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
                     '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml(name) + '</div>' +
-                    '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(p.user_id) + (meta ? ' • ' + escapeHtml(meta) : '') + '</div>' +
+                    '<div class="text-[0.72rem] text-slate-500">' + (meta ? escapeHtml(meta) : '—') + '</div>' +
                 '</button>'
             })
             patientResults.innerHTML = html
@@ -331,7 +325,7 @@
 
         function searchPatients(query) {
             if (typeof apiFetch !== 'function') return
-            apiFetch("{{ url('/api/patients') }}?per_page=30&sort=asc&search=" + encodeURIComponent(query), { method: 'GET' })
+            apiFetch("{{ url('/api/patients') }}?per_page=10&sort=desc&search=" + encodeURIComponent(query), { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data }
@@ -360,7 +354,7 @@
         function loadInitialPatients() {
             if (patientInitialLoaded || patientInitialLoading || typeof apiFetch !== 'function') return
             patientInitialLoading = true
-            apiFetch("{{ url('/api/patients') }}?per_page=30&sort=asc", { method: 'GET' })
+            apiFetch("{{ url('/api/patients') }}?per_page=10&sort=desc", { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data }
@@ -490,7 +484,12 @@
                     return name.indexOf(q) !== -1 || desc.indexOf(q) !== -1
                 })
             }
-            list = list.slice(0, 8)
+            list.sort(function (a, b) {
+                var ai = a && a.service_id != null ? parseInt(a.service_id, 10) : 0
+                var bi = b && b.service_id != null ? parseInt(b.service_id, 10) : 0
+                return (isNaN(bi) ? 0 : bi) - (isNaN(ai) ? 0 : ai)
+            })
+            list = list.slice(0, 10)
             if (!list.length) {
                 serviceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
                 serviceResults.classList.remove('hidden')
@@ -579,6 +578,11 @@
                 })
             }
 
+            list.sort(function (a, b) {
+                var ai = a && a.user_id != null ? parseInt(a.user_id, 10) : 0
+                var bi = b && b.user_id != null ? parseInt(b.user_id, 10) : 0
+                return (isNaN(bi) ? 0 : bi) - (isNaN(ai) ? 0 : ai)
+            })
             list = list.slice(0, 8)
 
             if (!category) {
@@ -748,13 +752,6 @@
         function renderTimeSlots() {
             if (!timeSlotsEl) return
             timeSlotsEl.innerHTML = ''
-
-            var typeInput = document.getElementById('reception_appointment_type')
-            var apptType = typeInput && typeInput.value ? typeInput.value : 'scheduled'
-            if (apptType === 'walk_in') {
-                timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Walk-in appointments do not require a time slot.</div>'
-                return
-            }
 
             if (!doctorSelect || !doctorSelect.value) {
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Select a doctor to load time slots.</div>'
@@ -932,6 +929,7 @@
         function loadServicesAndDoctors() {
             if (typeof apiFetch !== 'function') return
 
+            servicesLoading = true
             apiFetch("{{ url('/api/services') }}?per_page=100", { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
@@ -942,13 +940,26 @@
                 })
                 .then(function (result) {
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
-                    services = raw || []
+                    var allowedServiceNames = [
+                        'obsterician - gynecologist',
+                        'obstetrician - gynecologist',
+                        'general surgeon'
+                    ]
+                    services = (raw || []).filter(function (s) {
+                        var name = normalizeText(s && s.service_name ? s.service_name : '')
+                        return allowedServiceNames.indexOf(name) !== -1
+                    })
+                    servicesLoaded = true
                     if (serviceSearch && serviceSearch.value) {
                         renderServiceResults()
                     }
                 })
                 .catch(function () {})
+                .finally(function () {
+                    servicesLoading = false
+                })
 
+            doctorsLoading = true
             apiFetch("{{ url('/api/doctors') }}?per_page=200", { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
@@ -960,11 +971,15 @@
                 .then(function (result) {
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
                     doctors = raw || []
+                    doctorsLoaded = true
                     if (doctorSearch && doctorSearch.value) {
                         renderDoctorResults()
                     }
                 })
                 .catch(function () {})
+                .finally(function () {
+                    doctorsLoading = false
+                })
         }
 
         if (patientSearch) {
@@ -1014,25 +1029,66 @@
         }
 
         if (serviceSearch) {
+            serviceSearch.addEventListener('focus', function () {
+                showBookAppointmentError('')
+                showBookAppointmentSuccess('')
+
+                if (!servicesLoaded && servicesLoading) {
+                    if (serviceResults) {
+                        serviceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">Loading services…</div>'
+                        serviceResults.classList.remove('hidden')
+                    }
+                    return
+                }
+
+                renderServiceResults()
+            })
+
             serviceSearch.addEventListener('input', function () {
                 showBookAppointmentError('')
                 showBookAppointmentSuccess('')
-                if (!String(serviceSearch.value || '').trim()) {
-                    setServiceSelection(null)
-                    if (serviceResults) serviceResults.classList.add('hidden')
-                    return
+
+                var q = String(serviceSearch.value || '').trim()
+                if (selectedService) {
+                    var currentName = String(selectedService.service_name || ('Service #' + selectedService.service_id)).trim()
+                    if (normalizeText(q) !== normalizeText(currentName)) {
+                        setServiceSelection(null)
+                    }
                 }
                 renderServiceResults()
             })
         }
         if (doctorSearch) {
+            doctorSearch.addEventListener('focus', function () {
+                showBookAppointmentError('')
+                showBookAppointmentSuccess('')
+
+                if (doctorSearch.disabled) {
+                    if (doctorResults) doctorResults.classList.add('hidden')
+                    return
+                }
+
+                if (!doctorsLoaded && doctorsLoading) {
+                    if (doctorResults) {
+                        doctorResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">Loading doctors…</div>'
+                        doctorResults.classList.remove('hidden')
+                    }
+                    return
+                }
+
+                renderDoctorResults()
+            })
+
             doctorSearch.addEventListener('input', function () {
                 showBookAppointmentError('')
                 showBookAppointmentSuccess('')
-                if (!String(doctorSearch.value || '').trim()) {
-                    setDoctorSelection(null)
-                    if (doctorResults) doctorResults.classList.add('hidden')
-                    return
+
+                var q = String(doctorSearch.value || '').trim()
+                if (selectedDoctor) {
+                    var currentName = [selectedDoctor.firstname, selectedDoctor.middlename, selectedDoctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() || ('Doctor #' + selectedDoctor.user_id)
+                    if (normalizeText(q) !== normalizeText(currentName)) {
+                        setDoctorSelection(null)
+                    }
                 }
                 renderDoctorResults()
             })
@@ -1085,9 +1141,40 @@
         }
 
         var typeInput = document.getElementById('reception_appointment_type')
-        function applyAppointmentTypeUI() {
+        var typeScheduledBtn = document.getElementById('receptionApptTypeScheduledBtn')
+        var typeWalkInBtn = document.getElementById('receptionApptTypeWalkInBtn')
+
+        function setTypeButtonState(btn, isActive) {
+            if (!btn) return
+            btn.classList.toggle('bg-white', isActive)
+            btn.classList.toggle('text-slate-900', isActive)
+            btn.classList.toggle('shadow-sm', isActive)
+            btn.classList.toggle('border', isActive)
+            btn.classList.toggle('border-slate-200', isActive)
+            btn.classList.toggle('bg-transparent', !isActive)
+            btn.classList.toggle('text-slate-600', !isActive)
+        }
+
+        function syncTypeToggleUI() {
+            if (typeScheduledBtn) typeScheduledBtn.textContent = 'Scheduled'
+            if (typeWalkInBtn) typeWalkInBtn.textContent = 'Walk-in'
             var type = typeInput && typeInput.value ? typeInput.value : 'scheduled'
-            var isWalkIn = type === 'walk_in'
+            setTypeButtonState(typeScheduledBtn, type === 'scheduled')
+            setTypeButtonState(typeWalkInBtn, type === 'walk_in')
+        }
+
+        function setAppointmentType(nextType) {
+            var type = nextType === 'walk_in' ? 'walk_in' : 'scheduled'
+            if (typeInput) typeInput.value = type
+            showBookAppointmentError('')
+            showBookAppointmentSuccess('')
+            applyAppointmentTypeUI()
+            syncTypeToggleUI()
+        }
+
+        function applyAppointmentTypeUI() {
+            if (typeInput) typeInput.value = 'scheduled'
+            var isWalkIn = false
             if (dateWrap) dateWrap.classList.toggle('hidden', isWalkIn)
             if (timeWrap) timeWrap.classList.toggle('hidden', isWalkIn)
             if (dateSelect) {
@@ -1112,12 +1199,11 @@
                 renderTimeSlots()
             }
         }
-        if (typeInput) {
-            typeInput.addEventListener('change', function () {
-                showBookAppointmentError('')
-                showBookAppointmentSuccess('')
-                applyAppointmentTypeUI()
-            })
+        if (typeScheduledBtn) {
+            typeScheduledBtn.addEventListener('click', function () { setAppointmentType('scheduled') })
+        }
+        if (typeWalkInBtn) {
+            typeWalkInBtn.addEventListener('click', function () { setAppointmentType('walk_in') })
         }
 
         document.addEventListener('click', function (e) {
@@ -1148,7 +1234,9 @@
             var dd = String(today.getDate()).padStart(2, '0')
             dateInput.min = yyyy + '-' + mm + '-' + dd
         }
+        if (typeInput && !typeInput.value) typeInput.value = 'scheduled'
         applyAppointmentTypeUI()
+        syncTypeToggleUI()
         renderTimeSlots()
 
         if (form) {
@@ -1166,7 +1254,6 @@
                 var dateInput = document.getElementById('reception_appointment_date')
                 var timeInput = document.getElementById('reception_appointment_time')
                 var typeInput = document.getElementById('reception_appointment_type')
-                var priorityInput = document.getElementById('reception_appointment_priority')
                 var reasonInput = document.getElementById('reception_appointment_reason')
 
                 var patientId = patientInput ? parseInt(patientInput.value, 10) : 0
@@ -1174,8 +1261,7 @@
                 var serviceId = serviceInput ? parseInt(serviceInput.value, 10) : 0
                 var date = dateSelect && dateSelect.value ? dateSelect.value : (dateInput ? dateInput.value : '')
                 var time = timeInput ? timeInput.value : ''
-                var type = typeInput && typeInput.value ? typeInput.value : 'scheduled'
-                var priority = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
+                var type = 'scheduled'
                 var reason = reasonInput ? reasonInput.value : ''
 
                 if (!patientId || !serviceId || !doctorId) {
@@ -1212,9 +1298,6 @@
                 if (reason) {
                     body.reason_for_visit = reason
                 }
-                if (priority !== null && !isNaN(priority)) {
-                    body.priority_level = priority
-                }
 
                 apiFetch("{{ url('/api/appointments') }}", {
                     method: 'POST',
@@ -1250,9 +1333,9 @@
                         if (dateInput) dateInput.value = ''
                         if (timeInput) timeInput.value = ''
                         if (typeInput) typeInput.value = 'scheduled'
-                        if (priorityInput) priorityInput.value = ''
                         if (reasonInput) reasonInput.value = ''
                         applyAppointmentTypeUI()
+                        syncTypeToggleUI()
                     })
                     .catch(function () {
                         showBookAppointmentError('Network error while booking appointment.')

@@ -341,7 +341,7 @@ class AppointmentController extends Controller
             }
         }
 
-        if ($data['appointment_type'] === 'scheduled') {
+        if ($data['appointment_type'] === 'scheduled' && $isPatient) {
             $patientId = (int) ($data['patient_id'] ?? 0);
             $hasMedicalBackground = $patientId > 0
                 ? MedicalBackground::query()->where('patient_id', $patientId)->exists()

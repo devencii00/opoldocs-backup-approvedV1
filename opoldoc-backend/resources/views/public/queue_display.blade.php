@@ -104,14 +104,24 @@
             return s;
         }
 
+        function displayQueueLabel(item) {
+            if (item && item.queue_code) {
+                return String(item.queue_code);
+            }
+            if (item && item.queue_number != null) {
+                return pad3(item.queue_number);
+            }
+            return '---';
+        }
+
         function render(payload) {
             if (dateLabel) dateLabel.textContent = 'Date: ' + (payload && payload.date ? payload.date : date);
 
             var serving = payload ? payload.now_serving : null;
-            if (serving && serving.queue_number != null) {
+            if (serving && (serving.queue_code || serving.queue_number != null)) {
                 if (nowCard) nowCard.classList.remove('hidden');
                 if (nowEmpty) nowEmpty.classList.add('hidden');
-                if (nowNumber) nowNumber.textContent = pad3(serving.queue_number);
+                if (nowNumber) nowNumber.textContent = displayQueueLabel(serving);
                 if (nowPatient) nowPatient.textContent = (serving.patient && serving.patient.name) ? serving.patient.name : 'Patient';
                 if (nowDoctor) nowDoctor.textContent = (serving.doctor && serving.doctor.name) ? ('Doctor: ' + serving.doctor.name) : 'Doctor: —';
             } else {
@@ -133,7 +143,7 @@
             }
 
             nextList.innerHTML = next.map(function (q) {
-                var qn = q && q.queue_number != null ? pad3(q.queue_number) : '---';
+                var qn = displayQueueLabel(q);
                 var patient = q && q.patient && q.patient.name ? q.patient.name : 'Patient';
                 var doctor = q && q.doctor && q.doctor.name ? q.doctor.name : 'Doctor';
                 return '' +
