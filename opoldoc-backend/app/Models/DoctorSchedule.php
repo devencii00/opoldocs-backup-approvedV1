@@ -18,12 +18,15 @@ class DoctorSchedule extends Model
         'day_of_week',
         'start_time',
         'end_time',
+        'room_number',
         'max_patients',
         'is_available',
     ];
 
     protected $casts = [
         'is_available' => 'boolean',
+        'room_number' => 'integer',
+        'max_patients' => 'integer',
     ];
 
     public function doctor()

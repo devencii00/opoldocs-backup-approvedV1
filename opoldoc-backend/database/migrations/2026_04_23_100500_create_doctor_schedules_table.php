@@ -19,7 +19,9 @@ return new class extends Migration
             $table->enum('day_of_week', ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
             $table->time('start_time');
             $table->time('end_time');
+            $table->integer('room_number')->nullable();
             $table->integer('max_patients')->nullable();
+            
 
             $table->boolean('is_available')->default(true);
 

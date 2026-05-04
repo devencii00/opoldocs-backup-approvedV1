@@ -9,7 +9,7 @@
 
     <div id="adminServiceError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
 
-    <form id="adminAddServiceForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-4 items-end">
+    <form id="adminAddServiceForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-5 items-end">
         <div>
             <label for="admin_service_name" class="block text-[0.7rem] text-slate-600 mb-1">Service name</label>
             <input id="admin_service_name" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
@@ -17,6 +17,10 @@
         <div class="md:col-span-2">
             <label for="admin_service_description" class="block text-[0.7rem] text-slate-600 mb-1">Description (optional)</label>
             <input id="admin_service_description" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+        </div>
+        <div>
+            <label for="admin_service_duration" class="block text-[0.7rem] text-slate-600 mb-1">Duration (minutes)</label>
+            <input id="admin_service_duration" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 30">
         </div>
         <div class="flex items-end gap-2">
             <div class="flex-1">
@@ -60,6 +64,7 @@
                     <th class="py-2 pr-4 font-semibold">ID</th>
                     <th class="py-2 pr-4 font-semibold">Service</th>
                     <th class="py-2 pr-4 font-semibold">Description</th>
+                    <th class="py-2 pr-4 font-semibold">Duration</th>
                     <th class="py-2 pr-4 font-semibold">Price</th>
                     <th class="py-2 pr-4 font-semibold">Status</th>
                     <th class="py-2 pr-4 font-semibold">Actions</th>
@@ -67,7 +72,7 @@
             </thead>
             <tbody id="admin_service_table_body">
                 <tr>
-                    <td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">
+                    <td colspan="7" class="py-4 text-center text-[0.78rem] text-slate-400">
                         Loading services…
                     </td>
                 </tr>
@@ -117,6 +122,10 @@
                     <input id="adminServiceEditDescription" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                 </div>
                 <div>
+                    <label for="adminServiceEditDuration" class="block text-[0.7rem] text-slate-600 mb-1">Duration (minutes)</label>
+                    <input id="adminServiceEditDuration" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                </div>
+                <div>
                     <label for="adminServiceEditPrice" class="block text-[0.7rem] text-slate-600 mb-1">Price (optional)</label>
                     <input id="adminServiceEditPrice" type="number" step="0.01" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
                 </div>
@@ -138,6 +147,7 @@
         var addForm = document.getElementById('adminAddServiceForm')
         var nameInput = document.getElementById('admin_service_name')
         var descInput = document.getElementById('admin_service_description')
+        var durationInput = document.getElementById('admin_service_duration')
         var priceInput = document.getElementById('admin_service_price')
         var searchInput = document.getElementById('admin_service_search')
         var statusFilter = document.getElementById('admin_service_status_filter')
@@ -155,6 +165,7 @@
         var serviceEditError = document.getElementById('adminServiceEditError')
         var serviceEditName = document.getElementById('adminServiceEditName')
         var serviceEditDescription = document.getElementById('adminServiceEditDescription')
+        var serviceEditDuration = document.getElementById('adminServiceEditDuration')
         var serviceEditPrice = document.getElementById('adminServiceEditPrice')
         var serviceEditSave = document.getElementById('adminServiceEditSave')
         var serviceEditSpinner = document.getElementById('adminServiceEditSpinner')
@@ -274,6 +285,7 @@
             }
             if (serviceEditName) serviceEditName.value = service.service_name || ''
             if (serviceEditDescription) serviceEditDescription.value = service.description || ''
+            if (serviceEditDuration) serviceEditDuration.value = service.duration_minutes != null ? String(service.duration_minutes) : ''
             if (serviceEditPrice) serviceEditPrice.value = service.price != null ? String(service.price) : ''
 
             serviceEditOverlay.classList.remove('hidden')
@@ -299,7 +311,7 @@
 
         function loadServices() {
             if (!tableBody) return
-            tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">Loading services…</td></tr>'
+            tableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[0.78rem] text-slate-400">Loading services…</td></tr>'
 
             apiFetch("{{ url('/api/services') }}?per_page=100", {
                 method: 'GET'
@@ -311,7 +323,7 @@
                 })
                 .then(function (result) {
                     if (!result.ok) {
-                        tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-red-500">Failed to load services.</td></tr>'
+                        tableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[0.78rem] text-red-500">Failed to load services.</td></tr>'
                         return
                     }
                     var payload = result.data
@@ -319,7 +331,7 @@
                     renderServices()
                 })
                 .catch(function () {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-red-500">Network error while loading services.</td></tr>'
+                    tableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[0.78rem] text-red-500">Network error while loading services.</td></tr>'
                 })
         }
 
@@ -360,7 +372,7 @@
             })
 
             if (!filtered.length) {
-                tableBody.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-[0.78rem] text-slate-400">No services found.</td></tr>'
+                tableBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[0.78rem] text-slate-400">No services found.</td></tr>'
                 return
             }
 
@@ -371,6 +383,7 @@
                 tr.className = 'border-b border-slate-50 last:border-0'
 
                 var price = service.price != null ? '₱' + parseFloat(service.price).toFixed(2) : '—'
+                var duration = service.duration_minutes != null ? String(service.duration_minutes) + ' min' : '—'
                 var isActive = service && service.is_active !== false
                 var statusText = isActive ? 'Active' : 'Inactive'
                 var statusClass = isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'
@@ -379,6 +392,7 @@
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">#' + service.service_id + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-700">' + (service.service_name || '') + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-500">' + (service.description || '') + '</td>' +
+                    '<td class="py-2 pr-4 text-[0.78rem] text-slate-700">' + duration + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem] text-slate-700">' + price + '</td>' +
                     '<td class="py-2 pr-4 text-[0.78rem]">' +
                         '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.68rem] font-medium border ' + statusClass + '">' + statusText + '</span>' +
@@ -517,6 +531,7 @@
 
                 var name = serviceEditName ? String(serviceEditName.value || '').trim() : ''
                 var description = serviceEditDescription ? String(serviceEditDescription.value || '').trim() : ''
+                var durationRaw = serviceEditDuration ? String(serviceEditDuration.value || '').trim() : ''
                 var priceRaw = serviceEditPrice ? String(serviceEditPrice.value || '').trim() : ''
 
                 if (!name) {
@@ -533,6 +548,15 @@
                     }
                 }
 
+                var durationMinutes = null
+                if (durationRaw !== '') {
+                    durationMinutes = parseInt(durationRaw, 10)
+                    if (isNaN(durationMinutes) || durationMinutes < 1) {
+                        showInlineBox(serviceEditError, 'Duration must be a valid number (1 minute or higher).')
+                        return
+                    }
+                }
+
                 confirmAction('Are you sure you want to save these changes?')
                     .then(function (confirmed) {
                         if (!confirmed) return
@@ -542,6 +566,7 @@
                         var body = {
                             service_name: name,
                             description: description || null,
+                            duration_minutes: durationRaw === '' ? null : durationMinutes,
                             price: priceRaw === '' ? null : price
                         }
 
@@ -592,6 +617,7 @@
 
                 var name = nameInput ? nameInput.value.trim() : ''
                 var description = descInput ? descInput.value.trim() : ''
+                var durationRaw = durationInput ? durationInput.value.trim() : ''
                 var priceRaw = priceInput ? priceInput.value.trim() : ''
 
                 if (!name) {
@@ -604,6 +630,14 @@
                 }
                 if (description) {
                     body.description = description
+                }
+                if (durationRaw !== '') {
+                    var durationMinutes = parseInt(durationRaw, 10)
+                    if (isNaN(durationMinutes) || durationMinutes < 1) {
+                        showServiceError('Duration must be a valid number (1 minute or higher).')
+                        return
+                    }
+                    body.duration_minutes = durationMinutes
                 }
                 if (priceRaw !== '') {
                     body.price = parseFloat(priceRaw)
@@ -632,6 +666,7 @@
                                 }
                                 if (nameInput) nameInput.value = ''
                                 if (descInput) descInput.value = ''
+                                if (durationInput) durationInput.value = ''
                                 if (priceInput) priceInput.value = ''
                                 loadServices()
                             })

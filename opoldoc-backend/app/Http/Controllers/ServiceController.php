@@ -51,6 +51,7 @@ class ServiceController extends Controller
             'service_name' => ['required', 'string'],
             'description' => ['nullable', 'string'],
             'price' => ['nullable', 'numeric'],
+            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:480'],
         ]);
 
         $service = Service::create($data);
@@ -79,6 +80,7 @@ class ServiceController extends Controller
             'service_name' => ['sometimes', 'string'],
             'description' => ['sometimes', 'nullable', 'string'],
             'price' => ['sometimes', 'nullable', 'numeric'],
+            'duration_minutes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:480'],
             'is_active' => ['sometimes', 'boolean'],
         ]);
 

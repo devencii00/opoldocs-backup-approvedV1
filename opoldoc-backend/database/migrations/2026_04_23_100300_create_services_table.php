@@ -16,7 +16,9 @@ return new class extends Migration
             $table->string('service_name')->nullable();
             $table->text('description')->nullable();   
             $table->decimal('price', 10, 2)->nullable();
+            $table->integer('duration_minutes')->default(30);
             $table->boolean('is_active')->default(true);
+            
         });
     }
 

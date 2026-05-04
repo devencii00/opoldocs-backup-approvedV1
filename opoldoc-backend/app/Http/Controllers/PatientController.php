@@ -31,6 +31,7 @@ class PatientController extends Controller
             'search' => ['nullable', 'string'],
             'parents_only' => ['nullable', 'boolean'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'sort' => ['nullable', 'in:asc,desc'],
         ]);
 
         $search = trim((string) $request->query('search', ''));
@@ -57,7 +58,10 @@ class PatientController extends Controller
             });
         }
 
-        return $query->orderByDesc('user_id')->paginate($perPage);
+        $sort = strtolower((string) $request->query('sort', 'desc'));
+        $direction = $sort === 'asc' ? 'asc' : 'desc';
+
+        return $query->orderBy('user_id', $direction)->paginate($perPage);
     }
 
     public function store(Request $request)

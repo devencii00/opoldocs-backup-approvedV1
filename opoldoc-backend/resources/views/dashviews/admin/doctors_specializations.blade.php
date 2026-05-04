@@ -59,7 +59,7 @@
             </button>
         </div>
 
-        <form id="adminDoctorScheduleForm" class="mb-3 grid gap-2 grid-cols-1 md:grid-cols-6 items-end">
+        <form id="adminDoctorScheduleForm" class="mb-3 grid gap-2 grid-cols-1 md:grid-cols-7 items-end">
             <div>
                 <label for="admin_schedule_from_day" class="block text-[0.7rem] text-slate-600 mb-1">From day</label>
                 <select id="admin_schedule_from_day" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
@@ -136,6 +136,10 @@
                 <label for="admin_schedule_max" class="block text-[0.7rem] text-slate-600 mb-1">Max patients</label>
                 <input id="admin_schedule_max" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Optional">
             </div>
+            <div>
+                <label for="admin_schedule_room" class="block text-[0.7rem] text-slate-600 mb-1">Room # (optional)</label>
+                <input id="admin_schedule_room" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 101">
+            </div>
             <input type="hidden" id="admin_schedule_slot_minutes" value="60">
             <div class="flex items-center gap-2">
                 <button type="submit" id="adminDoctorScheduleSubmit" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors w-full disabled:opacity-60 disabled:hover:bg-cyan-600">
@@ -158,13 +162,43 @@
                 </div>
                 <div class="mt-4 flex items-center justify-end gap-2">
                     <button type="button" id="adminConfirmCancel" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.78rem] font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
-                    <button type="button" id="adminConfirmOk" class="px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">Confirm</button>
+                    <button type="button" id="adminConfirmOk" class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">
+                        <span id="adminConfirmOkSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                        <span id="adminConfirmOkLabel">Confirm</span>
+                    </button>
                 </div>
             </div>
         </div>
 
         <div class="text-[0.78rem] text-slate-700">
             <h4 class="text-xs font-semibold text-slate-900 mb-2">Existing schedules</h4>
+            <div class="mb-2 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div class="flex items-center gap-2">
+                    <button type="button" id="adminScheduleSelectAll" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.72rem] font-semibold text-slate-700 hover:bg-slate-50">Select all</button>
+                    <button type="button" id="adminScheduleClearAll" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-[0.72rem] font-semibold text-slate-700 hover:bg-slate-50">Clear</button>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-end">
+                    <div class="w-full sm:w-40">
+                        <label for="adminScheduleBulkDay" class="block text-[0.7rem] text-slate-600 mb-1">Day</label>
+                        <select id="adminScheduleBulkDay" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                            <option value="">Select day</option>
+                            <option value="mon">Mon</option>
+                            <option value="tue">Tue</option>
+                            <option value="wed">Wed</option>
+                            <option value="thu">Thu</option>
+                            <option value="fri">Fri</option>
+                            <option value="sat">Sat</option>
+                            <option value="sun">Sun</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                         <button type="button" id="adminScheduleDeleteDay" class="px-3 py-2 rounded-xl bg-rose-600 text-white text-[0.72rem] font-semibold hover:bg-rose-700">Delete day</button>
+                      
+                        <button type="button" id="adminScheduleDeleteSelected" class="px-3 py-2 rounded-xl bg-rose-600 text-white text-[0.72rem] font-semibold hover:bg-rose-700">Delete selected</button>
+                       
+                    </div>
+                </div>
+            </div>
             <div id="adminDoctorScheduleList" class="space-y-2 text-[0.78rem] text-slate-700">
             </div>
             <div class="mt-4">
@@ -321,12 +355,19 @@
         var scheduleEndMin = document.getElementById('admin_schedule_end_min')
         var scheduleEndAmPm = document.getElementById('admin_schedule_end_ampm')
         var scheduleMax = document.getElementById('admin_schedule_max')
+        var scheduleRoom = document.getElementById('admin_schedule_room')
         var scheduleSlotMinutes = document.getElementById('admin_schedule_slot_minutes')
         var scheduleList = document.getElementById('adminDoctorScheduleList')
         var scheduleGrid = document.getElementById('adminDoctorScheduleGrid')
         var scheduleSubmit = document.getElementById('adminDoctorScheduleSubmit')
         var scheduleSpinner = document.getElementById('adminDoctorScheduleSpinner')
         var scheduleSubmitLabel = document.getElementById('adminDoctorScheduleSubmitLabel')
+        var scheduleSelectAll = document.getElementById('adminScheduleSelectAll')
+        var scheduleClearAll = document.getElementById('adminScheduleClearAll')
+        var scheduleBulkDay = document.getElementById('adminScheduleBulkDay')
+        var scheduleDeleteSelected = document.getElementById('adminScheduleDeleteSelected')
+        var scheduleDeleteDay = document.getElementById('adminScheduleDeleteDay')
+        var scheduleDeleteAll = document.getElementById('adminScheduleDeleteAll')
 
         var availabilityOverlay = document.getElementById('adminDoctorAvailabilityOverlay')
         var availabilityTitle = document.getElementById('adminDoctorAvailabilityTitle')
@@ -341,8 +382,12 @@
         var confirmOverlay = document.getElementById('adminConfirmOverlay')
         var confirmMessage = document.getElementById('adminConfirmMessage')
         var confirmOk = document.getElementById('adminConfirmOk')
+        var confirmOkSpinner = document.getElementById('adminConfirmOkSpinner')
+        var confirmOkLabel = document.getElementById('adminConfirmOkLabel')
         var confirmCancel = document.getElementById('adminConfirmCancel')
         var confirmResolver = null
+        var confirmCountdownTimer = null
+        var confirmOkOriginalText = null
 
         var currentDoctorIdForSchedule = null
         var currentScheduleId = null
@@ -710,16 +755,61 @@
             if (availabilitySpinner) availabilitySpinner.classList.toggle('hidden', !isSubmitting)
         }
 
-        function confirmAction(message) {
+        function stopConfirmCountdown() {
+            if (confirmCountdownTimer) {
+                clearInterval(confirmCountdownTimer)
+                confirmCountdownTimer = null
+            }
+            if (confirmOk) {
+                confirmOk.disabled = false
+                confirmOk.classList.remove('opacity-60', 'cursor-not-allowed')
+            }
+            if (confirmOkSpinner) {
+                confirmOkSpinner.classList.add('hidden')
+            }
+            if (confirmOkLabel && confirmOkOriginalText != null) {
+                confirmOkLabel.textContent = confirmOkOriginalText
+            }
+            confirmOkOriginalText = null
+        }
+
+        function confirmAction(message, options) {
             return new Promise(function (resolve) {
                 if (!confirmOverlay || !confirmMessage || !confirmOk || !confirmCancel) {
                     resolve(window.confirm(message || 'Are you sure?'))
                     return
                 }
+                stopConfirmCountdown()
                 confirmMessage.textContent = message || 'Are you sure?'
+                var confirmText = options && options.confirmText ? String(options.confirmText) : 'Confirm'
+                if (confirmOkLabel) confirmOkLabel.textContent = confirmText
+                confirmOkOriginalText = confirmText
                 confirmResolver = resolve
                 confirmOverlay.classList.remove('hidden')
                 confirmOverlay.classList.add('flex')
+
+                var countdownSeconds = options && options.countdownSeconds ? parseInt(String(options.countdownSeconds), 10) : 0
+                if (!countdownSeconds || isNaN(countdownSeconds) || countdownSeconds < 1) {
+                    return
+                }
+
+                confirmOk.disabled = true
+                confirmOk.classList.add('opacity-60', 'cursor-not-allowed')
+                if (confirmOkSpinner) confirmOkSpinner.classList.remove('hidden')
+
+                var remaining = countdownSeconds
+                if (confirmOkLabel) confirmOkLabel.textContent = confirmText + ' (' + remaining + ')'
+
+                confirmCountdownTimer = setInterval(function () {
+                    remaining -= 1
+                    if (remaining <= 0) {
+                        stopConfirmCountdown()
+                        return
+                    }
+                    if (confirmOkLabel) {
+                        confirmOkLabel.textContent = confirmText + ' (' + remaining + ')'
+                    }
+                }, 1000)
             })
         }
 
@@ -728,6 +818,7 @@
                 confirmOverlay.classList.add('hidden')
                 confirmOverlay.classList.remove('flex')
             }
+            stopConfirmCountdown()
             var resolver = confirmResolver
             confirmResolver = null
             if (typeof resolver === 'function') {
@@ -1044,6 +1135,7 @@
                         var endLabel = formatTimeLabel(s.end_time || '')
                         var avail = s && s.is_available === false ? 'Unavailable' : 'Available'
                         var availClass = s && s.is_available === false ? 'text-rose-700 bg-rose-50 border-rose-100' : 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                        var roomLabel = (s.room_number != null && String(s.room_number) !== '') ? String(s.room_number) : '—'
                         html += '<div class="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">' +
                             '<div class="text-[0.78rem] text-slate-700">' +
                             '<div class="flex items-center gap-2 flex-wrap">' +
@@ -1052,8 +1144,10 @@
                             '</div>' +
                             '<div><span class="font-semibold">Time:</span> ' + (startLabel || (s.start_time || '')) + '–' + (endLabel || (s.end_time || '')) + '</div>' +
                             '<div><span class="font-semibold">Max patients:</span> ' + (s.max_patients || '—') + '</div>' +
+                            '<div><span class="font-semibold">Room:</span> ' + roomLabel + '</div>' +
                             '</div>' +
                             '<div class="flex items-center gap-2">' +
+                                '<input type="checkbox" class="admin-schedule-check w-4 h-4 accent-cyan-600" data-schedule-id="' + s.schedule_id + '">' +
                                 '<button type="button" class="text-[0.72rem] text-cyan-700 hover:text-cyan-800 font-semibold admin-schedule-edit" data-schedule-id="' + s.schedule_id + '">Edit</button>' +
                                 '<button type="button" class="text-[0.72rem] text-rose-600 hover:text-rose-700 font-semibold admin-schedule-delete" data-schedule-id="' + s.schedule_id + '">Delete</button>' +
                             '</div>' +
@@ -1062,6 +1156,7 @@
                     scheduleList.innerHTML = html
 
                     renderScheduleGrid(loadedSchedules)
+                    wireScheduleBulkActions(doctorId)
 
                     var editButtons = scheduleList.querySelectorAll('.admin-schedule-edit')
                     editButtons.forEach(function (button) {
@@ -1073,6 +1168,7 @@
                             set12HourSelects('start', schedule.start_time || '')
                             set12HourSelects('end', schedule.end_time || '')
                             if (scheduleMax) scheduleMax.value = schedule.max_patients || ''
+                            if (scheduleRoom) scheduleRoom.value = schedule.room_number != null ? String(schedule.room_number) : ''
                             if (scheduleFromDay) scheduleFromDay.value = schedule.day_of_week || ''
                             if (scheduleToDay) scheduleToDay.value = schedule.day_of_week || ''
                             setScheduleSubmitting(false)
@@ -1087,7 +1183,7 @@
                             showDoctorError('')
                             showDoctorSuccess('')
 
-                            confirmAction('Delete this schedule?')
+                            confirmAction('Delete this schedule?', { countdownSeconds: 3, confirmText: 'Delete' })
                                 .then(function (confirmed) {
                                     if (!confirmed) return
                                     apiFetch(apiUrl('/api/doctor-schedules') + "/" + scheduleId, {
@@ -1117,6 +1213,137 @@
             }, function (message) {
                 scheduleList.textContent = message || 'Failed to load schedules.'
             })
+        }
+
+        function setBulkDeleting(isDeleting) {
+            var buttons = [scheduleSelectAll, scheduleClearAll, scheduleDeleteSelected, scheduleDeleteDay, scheduleDeleteAll]
+            buttons.forEach(function (btn) {
+                if (!btn) return
+                btn.disabled = !!isDeleting
+                btn.classList.toggle('opacity-60', !!isDeleting)
+                btn.classList.toggle('cursor-not-allowed', !!isDeleting)
+            })
+            if (scheduleBulkDay) {
+                scheduleBulkDay.disabled = !!isDeleting
+                scheduleBulkDay.classList.toggle('opacity-60', !!isDeleting)
+                scheduleBulkDay.classList.toggle('cursor-not-allowed', !!isDeleting)
+            }
+        }
+
+        function getCheckedScheduleIds() {
+            if (!scheduleList) return []
+            var checks = scheduleList.querySelectorAll('.admin-schedule-check')
+            var ids = []
+            checks.forEach(function (c) {
+                if (!c || !c.checked) return
+                var id = c.getAttribute('data-schedule-id')
+                if (id) ids.push(parseInt(id, 10))
+            })
+            return ids.filter(function (v) { return !isNaN(v) })
+        }
+
+        function bulkDeleteSchedules(payload, successMessage) {
+            if (!payload || !payload.doctor_id) return
+            setBulkDeleting(true)
+            apiFetch(apiUrl('/api/doctor-schedules/bulk-delete'), {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+                .then(function (response) { return readResponse(response) })
+                .then(function (result) {
+                    if (!result.ok) {
+                        var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to delete schedules.'
+                        if (result.status === 401) msg = 'Session expired. Please log in again.'
+                        if (result.status === 403) msg = 'You do not have permission to delete schedules.'
+                        if (result.status === 422 && result.data && result.data.errors) {
+                            var all = []
+                            Object.keys(result.data.errors).forEach(function (key) {
+                                var v = result.data.errors[key]
+                                if (Array.isArray(v)) v.forEach(function (x) { all.push(String(x)) })
+                            })
+                            if (all.length) msg = all.join(' ')
+                        }
+                        showDoctorError(msg)
+                        return
+                    }
+                    var deleted = result.data && result.data.deleted != null ? parseInt(result.data.deleted, 10) : null
+                    var finalMsg = successMessage || 'Schedules deleted.'
+                    if (deleted != null && !isNaN(deleted)) {
+                        finalMsg = finalMsg + ' Deleted ' + deleted + '.'
+                    }
+                    showDoctorSuccess(finalMsg)
+                    loadSchedulesForDoctor(String(payload.doctor_id))
+                    loadDoctors()
+                })
+                .catch(function () {
+                    showDoctorError('Network error while deleting schedules.')
+                })
+                .finally(function () {
+                    setBulkDeleting(false)
+                })
+        }
+
+        function wireScheduleBulkActions(doctorId) {
+            if (!scheduleList) return
+
+            if (scheduleSelectAll) {
+                scheduleSelectAll.onclick = function () {
+                    var checks = scheduleList.querySelectorAll('.admin-schedule-check')
+                    checks.forEach(function (c) { c.checked = true })
+                }
+            }
+            if (scheduleClearAll) {
+                scheduleClearAll.onclick = function () {
+                    var checks = scheduleList.querySelectorAll('.admin-schedule-check')
+                    checks.forEach(function (c) { c.checked = false })
+                }
+            }
+            if (scheduleDeleteSelected) {
+                scheduleDeleteSelected.onclick = function () {
+                    showDoctorError('')
+                    showDoctorSuccess('')
+                    var ids = getCheckedScheduleIds()
+                    if (!ids.length) {
+                        showDoctorError('Select at least one schedule.')
+                        return
+                    }
+                    confirmAction('Delete ' + ids.length + ' selected schedule(s)?', { countdownSeconds: 3, confirmText: 'Delete' })
+                        .then(function (confirmed) {
+                            if (!confirmed) return
+                            bulkDeleteSchedules({ doctor_id: parseInt(doctorId, 10), schedule_ids: ids }, 'Selected schedules deleted.')
+                        })
+                }
+            }
+            if (scheduleDeleteDay) {
+                scheduleDeleteDay.onclick = function () {
+                    showDoctorError('')
+                    showDoctorSuccess('')
+                    var day = scheduleBulkDay ? String(scheduleBulkDay.value || '') : ''
+                    if (!day) {
+                        showDoctorError('Select a day first.')
+                        return
+                    }
+                    var countForDay = loadedSchedules.filter(function (s) { return String(s.day_of_week || '') === day }).length
+                    confirmAction('Delete all schedules for ' + day.toUpperCase() + '? (' + countForDay + ' slot(s))', { countdownSeconds: 3, confirmText: 'Delete' })
+                        .then(function (confirmed) {
+                            if (!confirmed) return
+                            bulkDeleteSchedules({ doctor_id: parseInt(doctorId, 10), day_of_week: day }, 'Day schedules deleted.')
+                        })
+                }
+            }
+            if (scheduleDeleteAll) {
+                scheduleDeleteAll.onclick = function () {
+                    showDoctorError('')
+                    showDoctorSuccess('')
+                    var countAll = Array.isArray(loadedSchedules) ? loadedSchedules.length : 0
+                    confirmAction('Delete ALL schedules for this doctor? (' + countAll + ' slot(s))', { countdownSeconds: 3, confirmText: 'Delete all' })
+                        .then(function (confirmed) {
+                            if (!confirmed) return
+                            bulkDeleteSchedules({ doctor_id: parseInt(doctorId, 10) }, 'All schedules deleted.')
+                        })
+                }
+            }
         }
 
         function openAvailabilityModal(doctorId, doctorName) {
@@ -1344,6 +1571,7 @@
                 if (scheduleEndMin) scheduleEndMin.value = ''
                 if (scheduleEndAmPm) scheduleEndAmPm.value = ''
                 if (scheduleMax) scheduleMax.value = ''
+                if (scheduleRoom) scheduleRoom.value = ''
                 if (scheduleFromDay) scheduleFromDay.value = ''
                 if (scheduleToDay) scheduleToDay.value = ''
                 showDoctorError('')
@@ -1372,6 +1600,7 @@
                     scheduleEndAmPm ? scheduleEndAmPm.value : ''
                 )
                 var maxPatients = scheduleMax ? scheduleMax.value : ''
+                var roomNumberRaw = scheduleRoom ? String(scheduleRoom.value || '').trim() : ''
                 var fromDay = scheduleFromDay ? String(scheduleFromDay.value || '') : ''
                 var toDay = scheduleToDay ? String(scheduleToDay.value || '') : ''
                 var slotMinutes = scheduleSlotMinutes && scheduleSlotMinutes.value ? parseInt(String(scheduleSlotMinutes.value), 10) : 60
@@ -1402,6 +1631,16 @@
                 var body = {}
                 if (maxPatients) {
                     body.max_patients = parseInt(maxPatients, 10)
+                }
+                if (roomNumberRaw !== '') {
+                    var roomNumber = parseInt(roomNumberRaw, 10)
+                    if (isNaN(roomNumber) || roomNumber < 1) {
+                        showDoctorError('Room number must be a valid number (1 or higher).')
+                        return
+                    }
+                    body.room_number = roomNumber
+                } else {
+                    body.room_number = null
                 }
 
                 var url = apiUrl('/api/doctor-schedules')
@@ -1476,6 +1715,7 @@
                         if (scheduleEndMin) scheduleEndMin.value = ''
                         if (scheduleEndAmPm) scheduleEndAmPm.value = ''
                         if (scheduleMax) scheduleMax.value = ''
+                        if (scheduleRoom) scheduleRoom.value = ''
                         if (scheduleFromDay) scheduleFromDay.value = ''
                         if (scheduleToDay) scheduleToDay.value = ''
                         currentScheduleId = null

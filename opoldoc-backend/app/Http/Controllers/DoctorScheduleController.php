@@ -81,6 +81,7 @@ class DoctorScheduleController extends Controller
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i'],
             'slot_minutes' => ['sometimes', 'integer', 'min:15', 'max:240'],
+            'room_number' => ['nullable', 'integer', 'min:1'],
             'max_patients' => ['nullable', 'integer', 'min:1'],
         ]);
 
@@ -122,6 +123,7 @@ class DoctorScheduleController extends Controller
 
                     if ($existing) {
                         $existing->max_patients = $data['max_patients'] ?? null;
+                        $existing->room_number = array_key_exists('room_number', $data) ? $data['room_number'] : $existing->room_number;
                         $existing->save();
                         $updated++;
                         $slotIds[] = (int) $existing->schedule_id;
@@ -133,6 +135,7 @@ class DoctorScheduleController extends Controller
                         'day_of_week' => $dayKey,
                         'start_time' => $slotStart,
                         'end_time' => $slotEnd,
+                        'room_number' => $data['room_number'] ?? null,
                         'max_patients' => $data['max_patients'] ?? null,
                         'is_available' => true,
                     ]);
@@ -171,6 +174,7 @@ class DoctorScheduleController extends Controller
                 'start_time' => (string) ($data['start_time'] ?? ''),
                 'end_time' => (string) ($data['end_time'] ?? ''),
                 'slot_minutes' => (int) $slotMinutes,
+                'room_number' => array_key_exists('room_number', $data) ? $data['room_number'] : null,
                 'max_patients' => array_key_exists('max_patients', $data) ? $data['max_patients'] : null,
             ]
         );
@@ -193,6 +197,7 @@ class DoctorScheduleController extends Controller
             'day_of_week' => (string) $doctorSchedule->day_of_week,
             'start_time' => (string) $doctorSchedule->start_time,
             'end_time' => (string) $doctorSchedule->end_time,
+            'room_number' => $doctorSchedule->room_number,
             'max_patients' => $doctorSchedule->max_patients,
             'is_available' => (bool) $doctorSchedule->is_available,
         ];
@@ -201,6 +206,7 @@ class DoctorScheduleController extends Controller
             'day_of_week' => ['sometimes', 'in:mon,tue,wed,thu,fri,sat,sun'],
             'start_time' => ['sometimes', 'date_format:H:i'],
             'end_time' => ['sometimes', 'date_format:H:i'],
+            'room_number' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'max_patients' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'is_available' => ['sometimes', 'boolean'],
         ]);
@@ -218,6 +224,7 @@ class DoctorScheduleController extends Controller
             'day_of_week' => $data['day_of_week'] ?? $doctorSchedule->day_of_week,
             'start_time' => $data['start_time'] ?? $doctorSchedule->start_time,
             'end_time' => $data['end_time'] ?? $doctorSchedule->end_time,
+            'room_number' => array_key_exists('room_number', $data) ? $data['room_number'] : $doctorSchedule->room_number,
             'max_patients' => array_key_exists('max_patients', $data) ? $data['max_patients'] : $doctorSchedule->max_patients,
             'is_available' => array_key_exists('is_available', $data) ? (bool) $data['is_available'] : $doctorSchedule->is_available,
         ]);
@@ -234,6 +241,7 @@ class DoctorScheduleController extends Controller
                     'day_of_week' => (string) $doctorSchedule->day_of_week,
                     'start_time' => (string) $doctorSchedule->start_time,
                     'end_time' => (string) $doctorSchedule->end_time,
+                    'room_number' => $doctorSchedule->room_number,
                     'max_patients' => $doctorSchedule->max_patients,
                     'is_available' => (bool) $doctorSchedule->is_available,
                 ],
@@ -256,6 +264,7 @@ class DoctorScheduleController extends Controller
             'day_of_week' => (string) $doctorSchedule->day_of_week,
             'start_time' => (string) $doctorSchedule->start_time,
             'end_time' => (string) $doctorSchedule->end_time,
+            'room_number' => $doctorSchedule->room_number,
         ];
 
         $doctorSchedule->delete();
@@ -270,6 +279,59 @@ class DoctorScheduleController extends Controller
 
         return response()->json([
             'message' => 'Schedule deleted',
+        ]);
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser || $currentUser->role !== 'admin') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'doctor_id' => ['required', 'integer', 'exists:users,user_id'],
+            'day_of_week' => ['nullable', 'in:mon,tue,wed,thu,fri,sat,sun'],
+            'schedule_ids' => ['nullable', 'array'],
+            'schedule_ids.*' => ['integer', 'exists:doctor_schedules,schedule_id'],
+        ]);
+
+        $doctorId = (int) $data['doctor_id'];
+        $day = array_key_exists('day_of_week', $data) ? $data['day_of_week'] : null;
+        $ids = array_key_exists('schedule_ids', $data) && is_array($data['schedule_ids'])
+            ? array_values(array_unique(array_map('intval', $data['schedule_ids'])))
+            : [];
+
+        $query = DoctorSchedule::query()->where('doctor_id', $doctorId);
+
+        $mode = 'all';
+        if (! empty($ids)) {
+            $query->whereIn('schedule_id', $ids);
+            $mode = 'selected';
+        } elseif ($day) {
+            $query->where('day_of_week', $day);
+            $mode = 'day';
+        }
+
+        $deleted = DB::transaction(function () use ($query) {
+            return (int) $query->delete();
+        });
+
+        LogEntry::write(
+            (int) $currentUser->user_id,
+            'doctor_schedule_bulk_deleted',
+            'users',
+            $doctorId,
+            [
+                'mode' => $mode,
+                'day_of_week' => $day ? (string) $day : null,
+                'schedule_ids_count' => count($ids),
+                'deleted' => $deleted,
+            ]
+        );
+
+        return response()->json([
+            'deleted' => $deleted,
         ]);
     }
 

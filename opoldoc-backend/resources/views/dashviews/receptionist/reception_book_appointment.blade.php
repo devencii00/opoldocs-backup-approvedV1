@@ -10,39 +10,46 @@
     <div id="receptionBookAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
     <div id="receptionBookAppointmentSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
-    <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-end mb-4">
-        <div>
+    <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-start mb-4">
+        <div class="min-w-0">
             <label for="reception_appointment_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient</label>
             <div class="relative">
                 <input id="reception_patient_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search patient">
                 <input id="reception_appointment_patient_id" type="hidden" required>
-                <div id="receptionPatientResults" class="hidden absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden"></div>
+                <div id="receptionPatientResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
             </div>
-            <div id="receptionPatientPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700"></div>
+            <div id="receptionPatientPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
         </div>
-        <div>
+        <div class="min-w-0">
             <label for="reception_appointment_service_id" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
             <div class="relative">
                 <input id="reception_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
                 <input id="reception_appointment_service_id" type="hidden" required>
-                <div id="receptionServiceResults" class="hidden absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden"></div>
+                <div id="receptionServiceResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
             </div>
-            <div id="receptionServicePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700"></div>
+            <div id="receptionServicePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
         </div>
-        <div>
+        <div class="min-w-0">
             <label for="reception_appointment_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
             <div class="relative">
                 <input id="reception_doctor_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search doctor" disabled>
                 <input id="reception_appointment_doctor_id" type="hidden" required>
-                <div id="receptionDoctorResults" class="hidden absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden"></div>
+                <div id="receptionDoctorResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
             </div>
-            <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700"></div>
+            <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
         </div>
-        <div id="receptionAppointmentDateWrap">
+        <div id="receptionAppointmentDateWrap" class="self-start">
             <label for="reception_appointment_date" class="block text-[0.7rem] text-slate-600 mb-1">Date</label>
-            <input id="reception_appointment_date" type="date" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
+            <select id="reception_appointment_date_select" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required disabled>
+                <option value="">Select a doctor first</option>
+            </select>
+            <div class="mt-1 flex items-center justify-between">
+                <button type="button" id="reception_appointment_date_load_more" class="hidden text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800">Load more dates</button>
+                <div id="reception_appointment_date_range_hint" class="hidden text-[0.7rem] text-slate-400"></div>
+            </div>
+            <input id="reception_appointment_date" type="date" class="hidden" tabindex="-1">
         </div>
-        <div id="receptionAppointmentTimeWrap">
+        <div id="receptionAppointmentTimeWrap" class="self-start">
             <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
             <input id="reception_appointment_time" type="hidden" required>
             <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
@@ -86,7 +93,7 @@
         <div id="receptionManageAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
         <div id="receptionManageAppointmentSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
-        <form id="receptionManageAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-end mb-3">
+        <form id="receptionManageAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-start mb-3">
             <div>
                 <label for="reception_manage_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment</label>
                 <input id="reception_manage_appointment_search" type="text" class="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search appointment">
@@ -164,7 +171,10 @@
         var doctorSelect = document.getElementById('reception_appointment_doctor_id')
         var doctorResults = document.getElementById('receptionDoctorResults')
         var doctorPreview = document.getElementById('receptionDoctorPreview')
+        var dateSelect = document.getElementById('reception_appointment_date_select')
         var dateInput = document.getElementById('reception_appointment_date')
+        var dateLoadMore = document.getElementById('reception_appointment_date_load_more')
+        var dateRangeHint = document.getElementById('reception_appointment_date_range_hint')
         var dateWrap = document.getElementById('receptionAppointmentDateWrap')
         var timeInput = document.getElementById('reception_appointment_time')
         var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
@@ -244,6 +254,16 @@
             return '#' + id + ' — ' + name
         }
 
+        function patientDisplayName(patient) {
+            if (!patient) return ''
+            var name = [patient.firstname, patient.middlename, patient.lastname]
+                .filter(function (v) { return String(v || '').trim() !== '' })
+                .join(' ')
+                .trim()
+            if (!name) name = 'User #' + (patient.user_id != null ? patient.user_id : '')
+            return name
+        }
+
         function setPatientSelection(patient) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
@@ -299,17 +319,19 @@
                     var chosen = list[idx]
                     setPatientSelection(chosen)
                     if (patientSearch) {
-                        var chosenName = [chosen.firstname, chosen.middlename, chosen.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
-                        if (!chosenName) chosenName = 'User #' + chosen.user_id
-                        patientSearch.value = chosenName
+                        patientSearch.value = patientDisplayName(chosen)
                     }
                 })
             })
         }
 
+        var patientInitialList = []
+        var patientInitialLoaded = false
+        var patientInitialLoading = false
+
         function searchPatients(query) {
             if (typeof apiFetch !== 'function') return
-            apiFetch("{{ url('/api/patients') }}?per_page=8&search=" + encodeURIComponent(query), { method: 'GET' })
+            apiFetch("{{ url('/api/patients') }}?per_page=30&sort=asc&search=" + encodeURIComponent(query), { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data }
@@ -332,6 +354,34 @@
                 })
                 .catch(function () {
                     renderPatientResults([])
+                })
+        }
+
+        function loadInitialPatients() {
+            if (patientInitialLoaded || patientInitialLoading || typeof apiFetch !== 'function') return
+            patientInitialLoading = true
+            apiFetch("{{ url('/api/patients') }}?per_page=30&sort=asc", { method: 'GET' })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data }
+                    }).catch(function () {
+                        return { ok: response.ok, data: null }
+                    })
+                })
+                .then(function (result) {
+                    if (!result.ok) return
+                    var list = []
+                    if (result.data && Array.isArray(result.data.data)) {
+                        list = result.data.data
+                    } else if (Array.isArray(result.data)) {
+                        list = result.data
+                    }
+                    patientInitialList = Array.isArray(list) ? list : []
+                    patientInitialLoaded = true
+                })
+                .catch(function () {})
+                .finally(function () {
+                    patientInitialLoading = false
                 })
         }
 
@@ -380,6 +430,21 @@
             doctorAppointments = []
             selectedSlotStart = null
             if (timeInput) timeInput.value = ''
+            if (dateSelect) {
+                if (selectedDoctor && selectedDoctor.user_id) {
+                    dateSelect.innerHTML = '<option value="">Loading available dates…</option>'
+                    dateSelect.disabled = false
+                } else {
+                    dateSelect.innerHTML = '<option value="">Select a doctor first</option>'
+                    dateSelect.disabled = true
+                }
+            }
+            if (dateLoadMore) dateLoadMore.classList.add('hidden')
+            if (dateRangeHint) {
+                dateRangeHint.textContent = ''
+                dateRangeHint.classList.add('hidden')
+            }
+            if (dateInput) dateInput.value = ''
             if (availableDaysEl) availableDaysEl.textContent = ''
             if (timeSlotsEl) timeSlotsEl.innerHTML = ''
         }
@@ -484,7 +549,15 @@
             clearAvailability()
 
             if (doctor && doctor.user_id) {
+                var embedded = doctor.doctor_schedules
+                if (Array.isArray(embedded) && embedded.length) {
+                    doctorSchedules = embedded.slice()
+                    renderAvailableDays()
+                    populateAllowedDates()
+                    if (dateSelect) dateSelect.disabled = false
+                }
                 loadDoctorSchedulesAndAvailability(doctor.user_id, dateInput ? dateInput.value : '')
+                applyAppointmentTypeUI()
             }
         }
 
@@ -555,6 +628,111 @@
             var order = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
             var keys = Object.keys(doctorAvailableDaySet).sort(function (a, b) { return order.indexOf(a) - order.indexOf(b) })
             availableDaysEl.textContent = keys.length ? ('Available days: ' + keys.join(', ')) : ''
+        }
+
+        function formatDateIso(d) {
+            var yyyy = String(d.getFullYear())
+            var mm = String(d.getMonth() + 1).padStart(2, '0')
+            var dd = String(d.getDate()).padStart(2, '0')
+            return yyyy + '-' + mm + '-' + dd
+        }
+
+        function formatDateLabel(d) {
+            var keys = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+            return formatDateIso(d) + ' (' + (keys[d.getDay()] || '') + ')'
+        }
+
+        var dateCursor = null
+        var dateCursorFirstIso = null
+        var dateCursorLastIso = null
+
+        function resetDateCursor() {
+            var today = new Date()
+            today.setHours(0, 0, 0, 0)
+            dateCursor = today
+            dateCursorFirstIso = null
+            dateCursorLastIso = null
+        }
+
+        function appendAllowedDates(batchSize) {
+            if (!dateSelect) return
+            var allowedKeys = doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length ? doctorAvailableDaySet : null
+            if (!allowedKeys) return
+            if (!dateCursor) resetDateCursor()
+
+            var added = 0
+            var scanned = 0
+            var maxScan = 365
+            while (added < batchSize && scanned < maxScan) {
+                var iso = formatDateIso(dateCursor)
+                var dayKey = dayKeyFromDate(iso)
+                if (dayKey && allowedKeys[dayKey]) {
+                    var option = document.createElement('option')
+                    option.value = iso
+                    option.textContent = formatDateLabel(dateCursor)
+                    dateSelect.appendChild(option)
+                    added++
+                    if (!dateCursorFirstIso) dateCursorFirstIso = iso
+                    dateCursorLastIso = iso
+                }
+                dateCursor = new Date(dateCursor.getTime())
+                dateCursor.setDate(dateCursor.getDate() + 1)
+                scanned++
+            }
+
+            if (dateRangeHint) {
+                if (dateCursorFirstIso && dateCursorLastIso) {
+                    dateRangeHint.textContent = 'Loaded: ' + dateCursorFirstIso + ' → ' + dateCursorLastIso
+                    dateRangeHint.classList.remove('hidden')
+                } else {
+                    dateRangeHint.textContent = ''
+                    dateRangeHint.classList.add('hidden')
+                }
+            }
+
+            if (dateLoadMore) {
+                dateLoadMore.classList.toggle('hidden', !allowedKeys)
+                dateLoadMore.disabled = scanned >= maxScan
+                dateLoadMore.classList.toggle('opacity-60', dateLoadMore.disabled)
+                dateLoadMore.classList.toggle('cursor-not-allowed', dateLoadMore.disabled)
+            }
+        }
+
+        function populateAllowedDates() {
+            if (!dateSelect) return
+            dateSelect.innerHTML = ''
+
+            var placeholder = document.createElement('option')
+            placeholder.value = ''
+            placeholder.textContent = 'Select a date'
+            dateSelect.appendChild(placeholder)
+
+            resetDateCursor()
+
+            var allowedKeys = doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length ? doctorAvailableDaySet : null
+            if (!allowedKeys) {
+                var opt = document.createElement('option')
+                opt.value = ''
+                opt.textContent = 'No available schedule days'
+                dateSelect.appendChild(opt)
+                dateSelect.disabled = false
+                if (dateLoadMore) dateLoadMore.classList.add('hidden')
+                if (dateRangeHint) {
+                    dateRangeHint.textContent = ''
+                    dateRangeHint.classList.add('hidden')
+                }
+                return
+            }
+
+            appendAllowedDates(60)
+
+            if (dateSelect) dateSelect.disabled = false
+            if (dateSelect && dateSelect.options && dateSelect.options.length <= 1) {
+                var none = document.createElement('option')
+                none.value = ''
+                none.textContent = 'No available dates in range'
+                dateSelect.appendChild(none)
+            }
         }
 
         function hhmmFromMinutes(mins) {
@@ -695,19 +873,45 @@
         function loadDoctorSchedulesAndAvailability(doctorId, dateStr) {
             if (!doctorId || typeof apiFetch !== 'function') return
             clearAvailability()
-            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId) + "&per_page=500", { method: 'GET' })
+            apiFetch("{{ url('/api/doctor-schedules') }}?doctor_id=" + encodeURIComponent(doctorId) + "&per_page=100", { method: 'GET' })
                 .then(function (response) { return readResponse(response) })
                 .then(function (result) {
+                    if (!result.ok) {
+                        var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to load doctor schedules.'
+                        if (result.status === 401) msg = 'Session expired. Please log in again.'
+                        if (result.status === 403) msg = 'Forbidden (403). Your account does not have permission to view this doctor’s schedules.'
+                        showBookAppointmentError(msg)
+                        if ((!doctorSchedules || !doctorSchedules.length) && dateSelect) {
+                            dateSelect.innerHTML = '<option value=\"\">Failed to load schedules</option>'
+                            dateSelect.disabled = false
+                        }
+                        renderAvailableDays()
+                        populateAllowedDates()
+                        renderTimeSlots()
+                        return
+                    }
+
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
                     doctorSchedules = raw || []
                     renderAvailableDays()
+                    populateAllowedDates()
+                    if (dateSelect) dateSelect.disabled = false
                     if (dateStr) {
                         loadDoctorAppointments(doctorId, dateStr)
                     } else {
                         renderTimeSlots()
                     }
                 })
-                .catch(function () {})
+                .catch(function () {
+                    showBookAppointmentError('Network error while loading doctor schedules.')
+                    if ((!doctorSchedules || !doctorSchedules.length) && dateSelect) {
+                        dateSelect.innerHTML = '<option value=\"\">Network error loading schedules</option>'
+                        dateSelect.disabled = false
+                    }
+                    renderAvailableDays()
+                    populateAllowedDates()
+                    renderTimeSlots()
+                })
         }
 
         function loadDoctorAppointments(doctorId, dateStr) {
@@ -764,12 +968,43 @@
         }
 
         if (patientSearch) {
+            loadInitialPatients()
+
+            patientSearch.addEventListener('focus', function () {
+                showBookAppointmentError('')
+                showBookAppointmentSuccess('')
+                var q = String(patientSearch.value || '').trim()
+                if (!q) {
+                    if (!patientInitialLoaded && !patientInitialLoading) {
+                        loadInitialPatients()
+                    }
+                    if (!patientInitialLoaded && patientInitialLoading) {
+                        renderPatientResults([])
+                        if (patientResults) {
+                            patientResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">Loading patients…</div>'
+                            patientResults.classList.remove('hidden')
+                        }
+                        return
+                    }
+                    renderPatientResults(patientInitialList)
+                    return
+                }
+                searchPatients(q)
+            })
+
             patientSearch.addEventListener('input', function () {
                 var q = String(patientSearch.value || '').trim()
+
+                if (selectedPatient) {
+                    var currentName = patientDisplayName(selectedPatient)
+                    if (normalizeText(q) !== normalizeText(currentName)) {
+                        setPatientSelection(null)
+                    }
+                }
+
                 if (patientSearchTimer) clearTimeout(patientSearchTimer)
-                if (q.length < 2) {
-                    if (patientResults) patientResults.classList.add('hidden')
-                    if (q.length === 0) setPatientSelection(null)
+                if (!q) {
+                    renderPatientResults(patientInitialList)
                     return
                 }
                 patientSearchTimer = setTimeout(function () {
@@ -803,7 +1038,30 @@
             })
         }
 
-        if (dateInput) {
+        function onDateChanged() {
+            showBookAppointmentError('')
+            showBookAppointmentSuccess('')
+            selectedSlotStart = null
+            if (timeInput) timeInput.value = ''
+            var doctorId = doctorSelect ? doctorSelect.value : ''
+            var dateStr = dateSelect ? dateSelect.value : (dateInput ? dateInput.value : '')
+            if (dateInput) dateInput.value = dateStr || ''
+            if (!doctorId || !dateStr) {
+                renderTimeSlots()
+                return
+            }
+            loadDoctorAppointments(doctorId, dateStr)
+        }
+
+        if (dateSelect) {
+            dateSelect.addEventListener('change', onDateChanged)
+            if (dateLoadMore) {
+                dateLoadMore.addEventListener('click', function () {
+                    if (dateLoadMore.disabled) return
+                    appendAllowedDates(60)
+                })
+            }
+        } else if (dateInput) {
             dateInput.addEventListener('change', function () {
                 showBookAppointmentError('')
                 showBookAppointmentSuccess('')
@@ -832,9 +1090,22 @@
             var isWalkIn = type === 'walk_in'
             if (dateWrap) dateWrap.classList.toggle('hidden', isWalkIn)
             if (timeWrap) timeWrap.classList.toggle('hidden', isWalkIn)
-            if (dateInput) dateInput.required = !isWalkIn
+            if (dateSelect) {
+                dateSelect.required = !isWalkIn
+                dateSelect.disabled = isWalkIn || !doctorSelect || !doctorSelect.value
+            }
+            if (dateLoadMore) {
+                var canShowMore = !isWalkIn && !!(doctorSelect && doctorSelect.value) && !!(doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length)
+                dateLoadMore.classList.toggle('hidden', !canShowMore)
+            }
+            if (dateRangeHint) {
+                var canShowHint = !isWalkIn && !!(doctorSelect && doctorSelect.value) && !!(dateCursorFirstIso && dateCursorLastIso)
+                dateRangeHint.classList.toggle('hidden', !canShowHint)
+            }
+            if (dateInput) dateInput.required = false
             if (timeInput) timeInput.required = !isWalkIn
             if (isWalkIn) {
+                if (dateSelect) dateSelect.value = ''
                 if (dateInput) dateInput.value = ''
                 if (timeInput) timeInput.value = ''
                 selectedSlotStart = null
@@ -891,6 +1162,7 @@
                 var patientInput = document.getElementById('reception_appointment_patient_id')
                 var doctorInput = document.getElementById('reception_appointment_doctor_id')
                 var serviceInput = document.getElementById('reception_appointment_service_id')
+                var dateSelect = document.getElementById('reception_appointment_date_select')
                 var dateInput = document.getElementById('reception_appointment_date')
                 var timeInput = document.getElementById('reception_appointment_time')
                 var typeInput = document.getElementById('reception_appointment_type')
@@ -900,7 +1172,7 @@
                 var patientId = patientInput ? parseInt(patientInput.value, 10) : 0
                 var doctorId = doctorInput ? parseInt(doctorInput.value, 10) : 0
                 var serviceId = serviceInput ? parseInt(serviceInput.value, 10) : 0
-                var date = dateInput ? dateInput.value : ''
+                var date = dateSelect && dateSelect.value ? dateSelect.value : (dateInput ? dateInput.value : '')
                 var time = timeInput ? timeInput.value : ''
                 var type = typeInput && typeInput.value ? typeInput.value : 'scheduled'
                 var priority = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
