@@ -38,6 +38,8 @@ class WalkInController extends Controller
 
         $data = $request->validate([
             'doctor_id' => ['required', 'exists:users,user_id'],
+            'service_ids' => ['nullable', 'array'],
+            'service_ids.*' => ['integer', 'exists:services,service_id'],
             'appointment_datetime' => ['nullable', 'date'],
             'reason_for_visit' => ['nullable', 'string'],
             'priority_level' => ['nullable', 'integer'],
@@ -53,6 +55,8 @@ class WalkInController extends Controller
         $plainPassword = Str::random(12);
 
         $result = DB::transaction(function () use ($currentUser, $data, $plainPassword) {
+            $serviceIds = array_values(array_unique(array_map('intval', $data['service_ids'] ?? [])));
+
             $patient = User::create([
                 'email' => null,
                 'password_hash' => Hash::make($plainPassword),
@@ -91,6 +95,10 @@ class WalkInController extends Controller
                 'reason_for_visit' => $data['reason_for_visit'] ?? null,
                 'priority_level' => $priorityLevel,
             ]);
+
+            if (count($serviceIds)) {
+                $appointment->services()->sync($serviceIds);
+            }
 
             $queueAt = now();
             $date = $queueAt->toDateString();

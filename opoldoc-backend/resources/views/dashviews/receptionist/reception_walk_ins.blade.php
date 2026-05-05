@@ -32,7 +32,7 @@
         <div id="receptionGuestWalkInSuccess" class="hidden mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
         <div id="receptionGuestWalkInCreds" class="hidden mb-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.75rem] text-slate-700"></div>
 
-        <form id="receptionGuestWalkInForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-end">
+       <form id="receptionGuestWalkInForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-start">
             <div>
                 <label for="reception_guest_firstname" class="block text-[0.7rem] text-slate-600 mb-1">First name (optional)</label>
                 <input id="reception_guest_firstname" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="First name">
@@ -45,9 +45,27 @@
                 <label for="reception_guest_contact" class="block text-[0.7rem] text-slate-600 mb-1">Contact number (optional)</label>
                 <input id="reception_guest_contact" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Mobile number">
             </div>
-            <div>
-                <label for="reception_guest_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor ID</label>
-                <input id="reception_guest_doctor_id" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Doctor ID" required>
+            <div class="min-w-0 md:col-span-2">
+                <label for="reception_guest_service_ids" class="block text-[0.7rem] text-slate-600 mb-1">Services</label>
+                <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
+                <div class="relative">
+                    <input id="reception_guest_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
+                    <input id="reception_guest_service_ids" type="hidden">
+                    <div id="receptionGuestServiceResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                </div>
+                <div id="receptionGuestSelectedServices" class="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.78rem] text-slate-700 max-h-24 overflow-y-auto overscroll-contain"></div>
+            </div>
+            <div class="min-w-0 md:col-span-2">
+                <label for="reception_guest_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
+                <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
+                <div class="relative">
+                    <input id="reception_guest_doctor_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search doctor" disabled>
+                    <input id="reception_guest_doctor_id" type="hidden" required>
+                    <div id="receptionGuestDoctorResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                <div id="receptionGuestDoctorResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                </div>
+                
+                <div id="receptionGuestDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
             <div class="md:col-span-2">
                 <label for="reception_guest_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
@@ -55,13 +73,20 @@
             </div>
             <div>
                 <label for="reception_guest_priority_level" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
-                <input id="reception_guest_priority_level" type="number" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 1">
+                <select id="reception_guest_priority_level" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <option value="">Select priority</option>
+                    <option value="1">1 : Emergency</option>
+                    <option value="2">2 : PWD</option>
+                    <option value="3">3 : Pregnant</option>
+                    <option value="4">4 : Senior</option>
+                    <option value="5">5 : General</option>
+                </select>
             </div>
-            <div class="flex items-end">
-                <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800 transition-colors">
-                    Create guest walk-in
-                </button>
-            </div>
+       <div class="flex items-end self-end">
+    <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-slate-800 transition-colors">
+        Create guest walk-in
+    </button>
+</div>
         </form>
 
         <p class="mt-2 text-[0.7rem] text-slate-400">
@@ -111,48 +136,16 @@
                 </div>
                 <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
-            <div id="receptionAppointmentDateWrap" class="self-start relative">
-                <label for="reception_appointment_date" class="block text-[0.7rem] text-slate-600 mb-1">Date</label>
-                <button id="receptionAppointmentDateTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
-                    Select a doctor first
-                </button>
-                <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                    <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100">
-                        <button id="receptionDatePrev" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">‹</button>
-                        <div id="receptionDateMonthLabel" class="text-[0.78rem] font-semibold text-slate-800"></div>
-                        <button id="receptionDateNext" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">›</button>
-                    </div>
-                    <div class="p-3">
-                        <div class="grid grid-cols-7 gap-1 text-[0.68rem] text-slate-400 mb-2">
-                            <div class="text-center">Sun</div><div class="text-center">Mon</div><div class="text-center">Tue</div><div class="text-center">Wed</div><div class="text-center">Thu</div><div class="text-center">Fri</div><div class="text-center">Sat</div>
-                        </div>
-                        <div id="receptionAppointmentDateGrid" class="grid grid-cols-7 gap-1"></div>
-                    </div>
-                </div>
-                <select id="reception_appointment_date_select" class="hidden" required disabled>
-                    <option value="">Select a doctor first</option>
-                </select>
-                <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
-                <div class="mt-1 flex items-center justify-between">
-                    <button type="button" id="reception_appointment_date_load_more" class="hidden text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800">Load more dates</button>
-                    <div id="reception_appointment_date_range_hint" class="hidden text-[0.7rem] text-slate-400"></div>
-                </div>
-                <input id="reception_appointment_date" type="date" class="hidden" tabindex="-1">
-            </div>
-            <div id="receptionAppointmentTimeWrap" class="self-start relative">
-                <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
-                <input id="reception_appointment_time" type="hidden" required>
-                <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
-                <button id="receptionTimeSlotTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
-                    Select a date first
-                </button>
-                <div id="receptionTimeSlotOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                    <div id="reception_time_slots" class="max-h-44 overflow-y-auto overscroll-contain flex flex-col gap-2 p-2"></div>
-                </div>
-            </div>
             <div>
                 <label for="reception_appointment_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
-                <input id="reception_appointment_priority" type="number" min="0" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="e.g. 1">
+                <select id="reception_appointment_priority" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <option value="">Select priority</option>
+                    <option value="1">1 : Emergency</option>
+                    <option value="2">2 : PWD</option>
+                    <option value="3">3 : Pregnant</option>
+                    <option value="4">4 : Senior</option>
+                    <option value="5">5 : General</option>
+                </select>
             </div>
             <div class="md:col-span-3">
                 <label for="reception_appointment_reason" class="block text-[0.7rem] text-slate-600 mb-1">Reason (optional)</label>
@@ -224,6 +217,22 @@ function setWalkInTab(tab) {
         var guestErrorBox = document.getElementById('receptionGuestWalkInError')
         var guestSuccessBox = document.getElementById('receptionGuestWalkInSuccess')
         var guestCredsBox = document.getElementById('receptionGuestWalkInCreds')
+        var guestServiceSearch = document.getElementById('reception_guest_service_search')
+        var guestServiceIdsInput = document.getElementById('reception_guest_service_ids')
+        var guestServiceResults = document.getElementById('receptionGuestServiceResults')
+        var guestSelectedServicesEl = document.getElementById('receptionGuestSelectedServices')
+        var guestDoctorSearch = document.getElementById('reception_guest_doctor_search')
+        var guestDoctorIdInput = document.getElementById('reception_guest_doctor_id')
+        var guestDoctorResults = document.getElementById('receptionGuestDoctorResults')
+        var guestDoctorPreview = document.getElementById('receptionGuestDoctorPreview')
+
+        var guestServices = []
+        var guestPopularServices = []
+        var guestDoctors = []
+        var guestSelectedServices = []
+        var guestSelectedDoctor = null
+        var guestLoadingServices = false
+        var guestLoadingDoctors = false
 
         function showGuestError(message) {
             if (!guestErrorBox) return
@@ -255,6 +264,333 @@ function setWalkInTab(tab) {
             }
         }
 
+        function escapeHtml(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;')
+        }
+
+        function normalizeText(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/\s+/g, ' ')
+                .trim()
+        }
+
+        function wordPrefixMatch(text, query) {
+            var t = normalizeText(text)
+            var q = normalizeText(query)
+            if (!q) return true
+            var words = t.split(' ')
+            return words.some(function (w) { return w.indexOf(q) === 0 })
+        }
+
+        function serviceGroup(service) {
+            if (!service) return ''
+            var name = String(service.service_name || '').trim()
+            if (!name) return ''
+            var parts = name.split(':')
+            var group = String(parts[0] || name).trim().toLowerCase()
+            return group
+        }
+
+        function extractServiceCategory(serviceName) {
+            var raw = String(serviceName || '').trim()
+            if (!raw) return ''
+            var parts = raw.split(':')
+            var category = String(parts[0] || raw).trim().toLowerCase()
+            return category
+        }
+
+        function specializationMatches(serviceCategory, doctorSpecialization) {
+            var a = normalizeText(serviceCategory)
+            var b = normalizeText(doctorSpecialization)
+            if (!a || !b) return false
+            return b.indexOf(a) !== -1 || a.indexOf(b) !== -1
+        }
+
+        function selectedGuestServiceIds() {
+            return (guestSelectedServices || [])
+                .map(function (s) { return parseInt(s && s.service_id != null ? s.service_id : 0, 10) })
+                .filter(function (id) { return !!id && !isNaN(id) })
+        }
+
+        function syncGuestServiceHiddenInput() {
+            if (!guestServiceIdsInput) return
+            guestServiceIdsInput.value = selectedGuestServiceIds().join(',')
+        }
+
+        function syncGuestDoctorEnabled() {
+            if (!guestDoctorSearch) return
+            guestDoctorSearch.disabled = !(guestSelectedServices && guestSelectedServices.length)
+            if (guestDoctorSearch.disabled) {
+                guestDoctorSearch.value = ''
+                setGuestDoctorSelection(null)
+            }
+        }
+
+        function renderGuestSelectedServices() {
+            if (!guestSelectedServicesEl) return
+            var list = Array.isArray(guestSelectedServices) ? guestSelectedServices : []
+            if (!list.length) {
+                guestSelectedServicesEl.innerHTML = '<div class="text-[0.75rem] text-slate-500">No services selected.</div>'
+                return
+            }
+
+            guestSelectedServicesEl.innerHTML = list.map(function (s) {
+                var id = parseInt(s && s.service_id != null ? s.service_id : 0, 10)
+                var name = String(s && s.service_name ? s.service_name : '').trim() || 'Service'
+                return '' +
+                    '<div class="flex items-center justify-between gap-2 py-1.5 border-b border-slate-200 last:border-0">' +
+                        '<div class="min-w-0">' +
+                            '<div class="text-[0.78rem] text-slate-800 font-semibold truncate">' + escapeHtml(name) + '</div>' +
+                            '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(id) + '</div>' +
+                        '</div>' +
+                        '<button type="button" class="reception-guest-remove-service inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50" data-service-id="' + escapeHtml(id) + '">' +
+                            '<span class="material-symbols-outlined text-[18px] leading-none">close</span>' +
+                        '</button>' +
+                    '</div>'
+            }).join('')
+
+            var buttons = guestSelectedServicesEl.querySelectorAll('.reception-guest-remove-service')
+            Array.prototype.forEach.call(buttons, function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = parseInt(btn.getAttribute('data-service-id') || '0', 10)
+                    if (!id) return
+                    guestSelectedServices = (guestSelectedServices || []).filter(function (s) {
+                        return parseInt(s && s.service_id != null ? s.service_id : 0, 10) !== id
+                    })
+                    syncGuestServiceHiddenInput()
+                    renderGuestSelectedServices()
+                    syncGuestDoctorEnabled()
+                    renderGuestServiceResults(guestServices.slice(0, 10))
+                })
+            })
+        }
+
+        function addGuestService(service) {
+            if (!service || service.service_id == null) return
+            var id = String(service.service_id)
+            var exists = (guestSelectedServices || []).some(function (s) { return String(s && s.service_id) === id })
+            if (exists) return
+            guestSelectedServices = (guestSelectedServices || []).concat([service])
+            syncGuestServiceHiddenInput()
+            renderGuestSelectedServices()
+            syncGuestDoctorEnabled()
+            if (guestServiceSearch) guestServiceSearch.value = ''
+            if (guestServiceResults) guestServiceResults.classList.add('hidden')
+        }
+
+        function renderGuestServiceResults(items) {
+            if (!guestServiceResults) return
+            var list = Array.isArray(items) ? items : []
+
+            if (guestSelectedServices && guestSelectedServices.length) {
+                var base = serviceGroup(guestSelectedServices[0])
+                if (base) {
+                    list = list.filter(function (s) { return serviceGroup(s) === base })
+                }
+            }
+
+            if (!list.length) {
+                guestServiceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
+                guestServiceResults.classList.remove('hidden')
+                return
+            }
+
+            guestServiceResults.innerHTML = list.slice(0, 12).map(function (s) {
+                var name = String(s.service_name || '').trim() || 'Service'
+                return '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0" data-service-id="' + escapeHtml(s.service_id) + '">' +
+                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml(name) + '</div>' +
+                    '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(s.service_id) + '</div>' +
+                '</button>'
+            }).join('')
+            guestServiceResults.classList.remove('hidden')
+
+            var buttons = guestServiceResults.querySelectorAll('button[data-service-id]')
+            Array.prototype.forEach.call(buttons, function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-service-id') || ''
+                    var chosen = (guestServices || []).find(function (s) { return String(s && s.service_id) === String(id) }) || null
+                    if (!chosen) return
+                    addGuestService(chosen)
+                })
+            })
+        }
+
+        function searchGuestServices(query) {
+            var q = normalizeText(query)
+            if (!q) {
+                renderGuestServiceResults((guestPopularServices && guestPopularServices.length) ? guestPopularServices.slice() : (guestServices || []).slice(0, 12))
+                return
+            }
+            var filtered = (guestServices || []).filter(function (s) {
+                return wordPrefixMatch(s && s.service_name ? s.service_name : '', q)
+            })
+            renderGuestServiceResults(filtered.slice(0, 20))
+        }
+
+        function doctorDisplayName(doctor) {
+            if (!doctor) return ''
+            var parts = [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' })
+            var name = parts.join(' ').trim()
+            if (!name) name = 'Doctor #' + (doctor.user_id != null ? doctor.user_id : '')
+            return name
+        }
+
+        function setGuestDoctorSelection(doctor) {
+            guestSelectedDoctor = doctor || null
+            if (guestDoctorIdInput) guestDoctorIdInput.value = doctor && doctor.user_id != null ? String(doctor.user_id) : ''
+            if (guestDoctorPreview) {
+                if (!doctor) {
+                    guestDoctorPreview.textContent = ''
+                    guestDoctorPreview.classList.add('hidden')
+                } else {
+                    var label = 'Doctor: ' + doctorDisplayName(doctor)
+                    if (doctor.specialization) label += ' • ' + String(doctor.specialization)
+                    guestDoctorPreview.textContent = label
+                    guestDoctorPreview.classList.remove('hidden')
+                }
+            }
+            if (guestDoctorResults) guestDoctorResults.classList.add('hidden')
+        }
+
+        function renderGuestDoctorResults(items) {
+            if (!guestDoctorResults) return
+            var list = Array.isArray(items) ? items : []
+            if (!guestSelectedServices || !guestSelectedServices.length) {
+                guestDoctorResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">Select a service first.</div>'
+                guestDoctorResults.classList.remove('hidden')
+                return
+            }
+            if (!list.length) {
+                guestDoctorResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No doctors found.</div>'
+                guestDoctorResults.classList.remove('hidden')
+                return
+            }
+
+            guestDoctorResults.innerHTML = list.slice(0, 12).map(function (d) {
+                var name = doctorDisplayName(d)
+                var spec = d && d.specialization ? String(d.specialization) : ''
+                return '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0" data-doctor-id="' + escapeHtml(d.user_id) + '">' +
+                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml('Dr. ' + name) + '</div>' +
+                    '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(spec || '—') + '</div>' +
+                '</button>'
+            }).join('')
+            guestDoctorResults.classList.remove('hidden')
+
+            var buttons = guestDoctorResults.querySelectorAll('button[data-doctor-id]')
+            Array.prototype.forEach.call(buttons, function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-doctor-id') || ''
+                    var chosen = (guestDoctors || []).find(function (d) { return String(d && d.user_id) === String(id) }) || null
+                    if (!chosen) return
+                    setGuestDoctorSelection(chosen)
+                    if (guestDoctorSearch) guestDoctorSearch.value = doctorDisplayName(chosen)
+                })
+            })
+        }
+
+        function searchGuestDoctors(query) {
+            var q = normalizeText(query)
+            var baseService = guestSelectedServices && guestSelectedServices.length ? guestSelectedServices[0] : null
+            var category = extractServiceCategory(baseService && baseService.service_name ? baseService.service_name : '')
+
+            var list = (guestDoctors || []).slice()
+            if (category) {
+                list = list.filter(function (d) {
+                    return specializationMatches(category, d && d.specialization ? d.specialization : '')
+                })
+            }
+            if (q) {
+                list = list.filter(function (d) {
+                    return wordPrefixMatch(doctorDisplayName(d) + ' ' + (d && d.specialization ? d.specialization : ''), q)
+                })
+            }
+            renderGuestDoctorResults(list.slice(0, 20))
+        }
+
+        function loadGuestServices() {
+            if (guestLoadingServices || typeof apiFetch !== 'function') return
+            guestLoadingServices = true
+            apiFetch("{{ url('/api/services') }}?per_page=100", { method: 'GET' })
+                .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
+                .then(function (res) {
+                    if (!res.ok) return
+                    var raw = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
+                    guestServices = raw || []
+                })
+                .catch(function () {})
+                .finally(function () { guestLoadingServices = false })
+
+            apiFetch("{{ url('/api/services-popular') }}?limit=10", { method: 'GET' })
+                .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
+                .then(function (res) {
+                    if (!res.ok) return
+                    var raw = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
+                    guestPopularServices = raw || []
+                })
+                .catch(function () {})
+        }
+
+        function loadGuestDoctors() {
+            if (guestLoadingDoctors || typeof apiFetch !== 'function') return
+            guestLoadingDoctors = true
+            apiFetch("{{ url('/api/doctors') }}?per_page=100", { method: 'GET' })
+                .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }).catch(function () { return { ok: r.ok, data: null } }) })
+                .then(function (res) {
+                    if (!res.ok) return
+                    var raw = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
+                    guestDoctors = raw || []
+                })
+                .catch(function () {})
+                .finally(function () { guestLoadingDoctors = false })
+        }
+
+        loadGuestServices()
+        loadGuestDoctors()
+        renderGuestSelectedServices()
+        syncGuestDoctorEnabled()
+
+        if (guestServiceSearch) {
+            guestServiceSearch.addEventListener('focus', function () {
+                loadGuestServices()
+                searchGuestServices(String(guestServiceSearch.value || ''))
+            })
+            guestServiceSearch.addEventListener('input', function () {
+                loadGuestServices()
+                searchGuestServices(String(guestServiceSearch.value || ''))
+            })
+        }
+
+        if (guestDoctorSearch) {
+            guestDoctorSearch.addEventListener('focus', function () {
+                loadGuestDoctors()
+                searchGuestDoctors(String(guestDoctorSearch.value || ''))
+            })
+            guestDoctorSearch.addEventListener('input', function () {
+                loadGuestDoctors()
+                searchGuestDoctors(String(guestDoctorSearch.value || ''))
+            })
+        }
+
+        document.addEventListener('click', function (e) {
+            var t = e && e.target ? e.target : null
+            if (guestServiceResults && !guestServiceResults.classList.contains('hidden')) {
+                if (!(guestServiceResults.contains(t) || (guestServiceSearch && guestServiceSearch.contains(t)))) {
+                    guestServiceResults.classList.add('hidden')
+                }
+            }
+            if (guestDoctorResults && !guestDoctorResults.classList.contains('hidden')) {
+                if (!(guestDoctorResults.contains(t) || (guestDoctorSearch && guestDoctorSearch.contains(t)))) {
+                    guestDoctorResults.classList.add('hidden')
+                }
+            }
+        })
+
         if (guestForm) {
             guestForm.addEventListener('submit', function (e) {
                 e.preventDefault()
@@ -267,10 +603,16 @@ function setWalkInTab(tab) {
                 var lastNameInput = document.getElementById('reception_guest_lastname')
                 var contactInput = document.getElementById('reception_guest_contact')
                 var doctorInput = document.getElementById('reception_guest_doctor_id')
+                var serviceIdsInput = document.getElementById('reception_guest_service_ids')
                 var reasonInput = document.getElementById('reception_guest_reason')
                 var priorityInput = document.getElementById('reception_guest_priority_level')
 
                 var doctorId = doctorInput ? parseInt(doctorInput.value, 10) : 0
+                var serviceIds = serviceIdsInput && serviceIdsInput.value ? String(serviceIdsInput.value).split(',').map(function (v) { return parseInt(v, 10) }).filter(function (v) { return !!v && !isNaN(v) }) : []
+                if (!serviceIds.length) {
+                    showGuestError('Services are required.')
+                    return
+                }
                 if (!doctorId) {
                     showGuestError('Doctor is required.')
                     return
@@ -282,7 +624,8 @@ function setWalkInTab(tab) {
                 }
 
                 var body = {
-                    doctor_id: doctorId
+                    doctor_id: doctorId,
+                    service_ids: serviceIds
                 }
 
                 var firstName = firstNameInput ? String(firstNameInput.value || '').trim() : ''
@@ -334,6 +677,14 @@ function setWalkInTab(tab) {
                         if (firstNameInput) firstNameInput.value = ''
                         if (lastNameInput) lastNameInput.value = ''
                         if (contactInput) contactInput.value = ''
+                        guestSelectedServices = []
+                        syncGuestServiceHiddenInput()
+                        renderGuestSelectedServices()
+                        syncGuestDoctorEnabled()
+
+                        if (guestServiceSearch) guestServiceSearch.value = ''
+                        if (guestDoctorSearch) guestDoctorSearch.value = ''
+                        setGuestDoctorSelection(null)
                         if (doctorInput) doctorInput.value = ''
                         if (reasonInput) reasonInput.value = ''
                         if (priorityInput) priorityInput.value = ''
@@ -384,6 +735,8 @@ function setWalkInTab(tab) {
         var availableDaysEl = document.getElementById('reception_available_days')
         var timeSlotsEl = document.getElementById('reception_time_slots')
         var previousDoctorId = 0
+        var previousServiceIds = []
+        var previousServiceIdSet = {}
         var services = []
         var doctors = []
         var servicesLoaded = false
@@ -475,6 +828,8 @@ function setWalkInTab(tab) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
             previousDoctorId = 0
+            previousServiceIds = []
+            previousServiceIdSet = {}
 
             if (patientPreview) {
                 if (!patient) {
@@ -512,10 +867,24 @@ function setWalkInTab(tab) {
                     var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
                     var last = list && list.length ? list[0] : null
                     var docId = last && last.doctor_id != null ? parseInt(last.doctor_id, 10) : 0
-                    if (!docId || isNaN(docId)) return
-                    previousDoctorId = docId
+                    previousDoctorId = (!docId || isNaN(docId)) ? 0 : docId
+
+                    previousServiceIds = []
+                    previousServiceIdSet = {}
+                    var lastServices = last && Array.isArray(last.services) ? last.services : []
+                    lastServices.forEach(function (s) {
+                        var sid = s && s.service_id != null ? parseInt(s.service_id, 10) : 0
+                        if (!sid || isNaN(sid)) return
+                        if (previousServiceIdSet[String(sid)]) return
+                        previousServiceIdSet[String(sid)] = true
+                        previousServiceIds.push(sid)
+                    })
+
                     if (doctorSearch && doctorResults && !doctorResults.classList.contains('hidden')) {
                         searchDoctors(String(doctorSearch.value || '').trim())
+                    }
+                    if (serviceSearch && serviceResults && !serviceResults.classList.contains('hidden')) {
+                        searchServices(String(serviceSearch.value || '').trim())
                     }
                 })
                 .catch(function () {})
@@ -684,6 +1053,25 @@ function setWalkInTab(tab) {
                     })
                 }
             }
+
+            if (previousServiceIds && previousServiceIds.length) {
+                var order = {}
+                previousServiceIds.forEach(function (id, idx) {
+                    order[String(id)] = idx
+                })
+                var pinned = []
+                var rest = []
+                list.forEach(function (s) {
+                    var sid = s && s.service_id != null ? String(s.service_id) : ''
+                    if (sid !== '' && order[sid] != null) pinned.push(s)
+                    else rest.push(s)
+                })
+                pinned.sort(function (a, b) {
+                    return (order[String(a.service_id)] || 0) - (order[String(b.service_id)] || 0)
+                })
+                list = pinned.concat(rest)
+            }
+
             if (!list.length) {
                 serviceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
                 serviceResults.classList.remove('hidden')
@@ -692,11 +1080,18 @@ function setWalkInTab(tab) {
             var html = ''
             list.forEach(function (s) {
                 var name = String(s.service_name || '').trim() || 'Service'
+                var isLast = !!(previousServiceIdSet && previousServiceIdSet[String(s.service_id)])
+                var tag = isLast
+                    ? '<span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold bg-amber-50 text-amber-800 border border-amber-200">Last inquired</span>'
+                    : ''
                 var meta = []
                 if (s.duration_minutes != null) meta.push(String(s.duration_minutes) + ' min')
                 if (s.price != null) meta.push('₱' + String(s.price))
                 html += '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
-                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml(name) + '</div>' +
+                    '<div class="text-[0.78rem] text-slate-800 font-semibold flex items-center justify-between gap-2">' +
+                        '<span class="min-w-0 truncate">' + escapeHtml(name) + '</span>' +
+                        tag +
+                    '</div>' +
                     '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(s.service_id) + (meta.length ? ' • ' + escapeHtml(meta.join(' • ')) : '') + '</div>' +
                 '</button>'
             })

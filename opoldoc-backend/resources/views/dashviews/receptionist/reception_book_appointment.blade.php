@@ -23,6 +23,7 @@
         <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-start mb-4">
         <div class="min-w-0">
             <label for="reception_appointment_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient</label>
+            <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
             <div class="relative">
                 <input id="reception_patient_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search patient">
                 <input id="reception_appointment_patient_id" type="hidden" required>
@@ -32,6 +33,7 @@
         </div>
         <div class="min-w-0">
             <label for="reception_appointment_service_id" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
+            <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div> 
             <div class="relative">
                 <input id="reception_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
                 <input id="reception_appointment_service_id" type="hidden">
@@ -41,6 +43,7 @@
         </div>
         <div class="min-w-0">
             <label for="reception_appointment_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
+            <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
             <div class="relative">
                 <input id="reception_doctor_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search doctor" disabled>
                 <input id="reception_appointment_doctor_id" type="hidden" required>
@@ -280,6 +283,8 @@ function setAppointmentTab(tab) {
         var selectedServices = []
         var selectedDoctor = null
         var previousDoctorId = 0
+        var previousServiceIds = []
+        var previousServiceIdSet = {}
 
         function setBookSubmitting(isSubmitting) {
             if (submitBtn) submitBtn.disabled = !!isSubmitting
@@ -357,6 +362,8 @@ function setAppointmentTab(tab) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
             previousDoctorId = 0
+            previousServiceIds = []
+            previousServiceIdSet = {}
 
             if (patientPreview) {
                 if (!patient) {
@@ -394,9 +401,23 @@ function setAppointmentTab(tab) {
                     var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
                     var last = list && list.length ? list[0] : null
                     var docId = last && last.doctor_id != null ? parseInt(last.doctor_id, 10) : 0
-                    if (!docId || isNaN(docId)) return
-                    previousDoctorId = docId
+                    previousDoctorId = (!docId || isNaN(docId)) ? 0 : docId
+
+                    previousServiceIds = []
+                    previousServiceIdSet = {}
+                    var lastServices = last && Array.isArray(last.services) ? last.services : []
+                    lastServices.forEach(function (s) {
+                        var sid = s && s.service_id != null ? parseInt(s.service_id, 10) : 0
+                        if (!sid || isNaN(sid)) return
+                        if (previousServiceIdSet[String(sid)]) return
+                        previousServiceIdSet[String(sid)] = true
+                        previousServiceIds.push(sid)
+                    })
+
                     renderDoctorResults()
+                    if (serviceSearch && (document.activeElement === serviceSearch || (serviceResults && !serviceResults.classList.contains('hidden')))) {
+                        renderServiceResults()
+                    }
                 })
                 .catch(function () {})
         }
@@ -712,6 +733,25 @@ function setAppointmentTab(tab) {
                 var bi = b && b.service_id != null ? parseInt(b.service_id, 10) : 0
                 return (isNaN(bi) ? 0 : bi) - (isNaN(ai) ? 0 : ai)
             })
+
+            if (previousServiceIds && previousServiceIds.length) {
+                var order = {}
+                previousServiceIds.forEach(function (id, idx) {
+                    order[String(id)] = idx
+                })
+                var pinned = []
+                var rest = []
+                list.forEach(function (s) {
+                    var sid = s && s.service_id != null ? String(s.service_id) : ''
+                    if (sid !== '' && order[sid] != null) pinned.push(s)
+                    else rest.push(s)
+                })
+                pinned.sort(function (a, b) {
+                    return (order[String(a.service_id)] || 0) - (order[String(b.service_id)] || 0)
+                })
+                list = pinned.concat(rest)
+            }
+
             list = list.slice(0, 10)
             if (!list.length) {
                 serviceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
@@ -722,8 +762,15 @@ function setAppointmentTab(tab) {
             list.forEach(function (s) {
                 var title = s.service_name || ('Service #' + s.service_id)
                 var sub = s.description ? String(s.description) : ''
+                var isLast = !!(previousServiceIdSet && previousServiceIdSet[String(s.service_id)])
+                var tag = isLast
+                    ? '<span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold bg-amber-50 text-amber-800 border border-amber-200">Last inquired</span>'
+                    : ''
                 html += '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
-                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml(title) + '</div>' +
+                    '<div class="text-[0.78rem] text-slate-800 font-semibold flex items-center justify-between gap-2">' +
+                        '<span class="min-w-0 truncate">' + escapeHtml(title) + '</span>' +
+                        tag +
+                    '</div>' +
                     '<div class="text-[0.72rem] text-slate-500">' + (sub ? escapeHtml(sub) : '—') + '</div>' +
                 '</button>'
             })
