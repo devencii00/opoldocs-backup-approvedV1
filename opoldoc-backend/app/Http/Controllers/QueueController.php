@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Conversation;
+use App\Models\DoctorSchedule;
 use App\Models\Message;
 use App\Models\Queue;
 use App\Models\User;
@@ -24,7 +25,7 @@ class QueueController extends Controller
             $perPage = 100;
         }
 
-        $query = Queue::with(['appointment.patient', 'appointment.doctor']);
+        $query = Queue::with(['appointment.patient', 'appointment.doctor', 'appointment.services']);
 
         $currentUser = $request->user();
         $isPatient = $currentUser && $currentUser->role === 'patient';
@@ -55,16 +56,65 @@ class QueueController extends Controller
             ->orderByDesc('queue_datetime')
             ->paginate($perPage);
 
-        $minutesPerPatient = (int) env('QUEUE_MINUTES_PER_PATIENT', 10);
-        if ($minutesPerPatient < 1) {
-            $minutesPerPatient = 10;
+        $defaultMinutesPerPatient = (int) env('QUEUE_MINUTES_PER_PATIENT', 10);
+        if ($defaultMinutesPerPatient < 1) {
+            $defaultMinutesPerPatient = 10;
         }
-        if ($minutesPerPatient > 120) {
-            $minutesPerPatient = 120;
+        if ($defaultMinutesPerPatient > 120) {
+            $defaultMinutesPerPatient = 120;
         }
 
-        $paginator->getCollection()->transform(function (Queue $queue) use ($minutesPerPatient) {
-            $queue->loadMissing('appointment');
+        $avgMinutesCache = [];
+        $avgMinutesForDoctorDate = function (int $doctorId, string $date) use (&$avgMinutesCache, $defaultMinutesPerPatient): int {
+            $key = $doctorId.'|'.$date;
+            if (array_key_exists($key, $avgMinutesCache)) {
+                return (int) $avgMinutesCache[$key];
+            }
+
+            $items = Queue::query()
+                ->with(['appointment.services'])
+                ->whereHas('appointment', function ($q) use ($doctorId) {
+                    $q->where('doctor_id', $doctorId);
+                })
+                ->whereDate('queue_datetime', $date)
+                ->whereIn('status', ['waiting', 'serving'])
+                ->get();
+
+            $durations = [];
+            foreach ($items as $row) {
+                $row->loadMissing('appointment.services');
+                $total = 0;
+                foreach (($row->appointment?->services ?? []) as $service) {
+                    $minutes = (int) ($service->duration_minutes ?? 0);
+                    if ($minutes > 0) {
+                        $total += $minutes;
+                    }
+                }
+                if ($total < 1) {
+                    $total = $defaultMinutesPerPatient;
+                }
+                $durations[] = $total;
+            }
+
+            if (! count($durations)) {
+                $avgMinutesCache[$key] = $defaultMinutesPerPatient;
+                return $defaultMinutesPerPatient;
+            }
+
+            $avg = (int) round(array_sum($durations) / count($durations));
+            if ($avg < 1) {
+                $avg = $defaultMinutesPerPatient;
+            }
+            if ($avg > 120) {
+                $avg = 120;
+            }
+
+            $avgMinutesCache[$key] = $avg;
+            return $avg;
+        };
+
+        $paginator->getCollection()->transform(function (Queue $queue) use ($avgMinutesForDoctorDate, $defaultMinutesPerPatient) {
+            $queue->loadMissing('appointment.services');
 
             $doctorId = $queue->appointment ? $queue->appointment->doctor_id : null;
             $date = $queue->queue_datetime ? $queue->queue_datetime->toDateString() : now()->toDateString();
@@ -75,6 +125,7 @@ class QueueController extends Controller
             if (! $doctorId) {
                 $queue->position = null;
                 $queue->estimated_wait_minutes = null;
+                $queue->avg_service_minutes = null;
 
                 return $queue;
             }
@@ -95,10 +146,16 @@ class QueueController extends Controller
                 ->count();
 
             $position = $aheadCount + 1;
-            $estimatedWait = $queue->status === 'serving' ? 0 : max(0, $aheadCount * $minutesPerPatient);
+            $avgMinutes = $avgMinutesForDoctorDate((int) $doctorId, $date);
+            if ($avgMinutes < 1) {
+                $avgMinutes = $defaultMinutesPerPatient;
+            }
+
+            $estimatedWait = $queue->status === 'serving' ? 0 : max(0, $aheadCount * $avgMinutes);
 
             $queue->position = $position;
             $queue->estimated_wait_minutes = $estimatedWait;
+            $queue->avg_service_minutes = $avgMinutes;
 
             return $queue;
         });
@@ -117,10 +174,6 @@ class QueueController extends Controller
 
         $data = $request->validate([
             'appointment_id' => ['required', 'exists:appointments,appointment_id'],
-            'queue_number' => ['nullable', 'integer'],
-            'queue_datetime' => ['nullable', 'date'],
-            'status' => ['nullable', 'in:waiting,serving,done,cancelled'],
-            'priority_level' => ['nullable', 'integer'],
         ]);
 
         if (Queue::where('appointment_id', $data['appointment_id'])->exists()) {
@@ -129,22 +182,133 @@ class QueueController extends Controller
             ], 422);
         }
 
-        if (! isset($data['status'])) {
-            $data['status'] = 'waiting';
-        }
+        $queueAt = now();
+        $date = $queueAt->toDateString();
+        $max = Queue::whereDate('queue_datetime', $date)->max('queue_number');
+        $queueNumber = ((int) $max) + 1;
 
-        $queueAt = isset($data['queue_datetime']) ? Carbon::parse($data['queue_datetime']) : now();
-        $data['queue_datetime'] = $queueAt;
-
-        if (! isset($data['queue_number']) || $data['queue_number'] === null) {
-            $date = $queueAt->toDateString();
-            $max = Queue::whereDate('queue_datetime', $date)->max('queue_number');
-            $data['queue_number'] = ((int) $max) + 1;
-        }
-
-        $queue = Queue::create($data);
+        $queue = Queue::create([
+            'appointment_id' => (int) $data['appointment_id'],
+            'queue_number' => $queueNumber,
+            'queue_datetime' => $queueAt,
+            'status' => 'waiting',
+        ]);
 
         return response()->json($queue->load(['appointment.patient', 'appointment.doctor']), 201);
+    }
+
+    public function callNext(Request $request)
+    {
+        $currentUser = $request->user();
+        if (! $currentUser || ! in_array((string) $currentUser->role, ['admin', 'receptionist'], true)) {
+            abort(403);
+        }
+
+        $now = now();
+        $date = $now->toDateString();
+        $dayKey = strtolower($now->format('D'));
+        $time = $now->format('H:i:s');
+
+        $activeDoctorIds = DoctorSchedule::query()
+            ->where('day_of_week', $dayKey)
+            ->where('is_available', true)
+            ->where('start_time', '<=', $time)
+            ->where('end_time', '>=', $time)
+            ->pluck('doctor_id')
+            ->unique()
+            ->values()
+            ->all();
+
+        if (! count($activeDoctorIds)) {
+            $activeDoctorIds = DoctorSchedule::query()
+                ->where('day_of_week', $dayKey)
+                ->where('is_available', true)
+                ->pluck('doctor_id')
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $activeDoctorIds = array_slice(array_map(fn ($v) => (int) $v, $activeDoctorIds), 0, 4);
+        $capacity = count($activeDoctorIds);
+
+        if ($capacity < 1) {
+            return response()->json([
+                'message' => 'No active doctors are available right now.',
+                'code' => 'NO_ACTIVE_DOCTORS',
+            ], 422);
+        }
+
+        $servingDoctorIds = Queue::query()
+            ->with('appointment')
+            ->whereDate('queue_datetime', $date)
+            ->where('status', 'serving')
+            ->whereHas('appointment', function ($q) use ($activeDoctorIds) {
+                $q->whereIn('doctor_id', $activeDoctorIds);
+            })
+            ->get()
+            ->map(function (Queue $q) {
+                return (int) ($q->appointment?->doctor_id ?? 0);
+            })
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $occupied = count($servingDoctorIds);
+        if ($occupied >= $capacity) {
+            return response()->json([
+                'message' => 'There are still '.$occupied.'/'.$capacity.' patients currently being served. Please wait until one slot is available.',
+                'code' => 'SERVING_SLOTS_FULL',
+                'meta' => [
+                    'capacity' => $capacity,
+                    'occupied' => $occupied,
+                ],
+            ], 422);
+        }
+
+        $availableDoctorIds = array_values(array_diff($activeDoctorIds, $servingDoctorIds));
+        if (! count($availableDoctorIds)) {
+            return response()->json([
+                'message' => 'No serving slots are currently available.',
+                'code' => 'NO_AVAILABLE_SLOTS',
+            ], 422);
+        }
+
+        $next = DB::transaction(function () use ($date, $availableDoctorIds) {
+            $candidate = Queue::query()
+                ->with(['appointment.patient', 'appointment.doctor'])
+                ->whereDate('queue_datetime', $date)
+                ->where('status', 'waiting')
+                ->whereHas('appointment', function ($q) use ($availableDoctorIds) {
+                    $q->whereIn('doctor_id', $availableDoctorIds);
+                })
+                ->orderByRaw('COALESCE(priority_level, 5) ASC')
+                ->orderByRaw('COALESCE(queue_number, 999999) ASC')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $candidate) {
+                return null;
+            }
+
+            $candidate->update(['status' => 'serving']);
+            return $candidate->refresh()->load(['appointment.patient', 'appointment.doctor']);
+        });
+
+        if (! $next) {
+            return response()->json([
+                'message' => 'No waiting patients are eligible to be called right now.',
+                'code' => 'NO_ELIGIBLE_WAITING',
+            ], 422);
+        }
+
+        return response()->json([
+            'queue' => $next,
+            'meta' => [
+                'capacity' => $capacity,
+            ],
+        ]);
     }
 
     public function join(Request $request)

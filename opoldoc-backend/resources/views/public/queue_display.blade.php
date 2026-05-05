@@ -41,12 +41,7 @@
         <div class="lg:col-span-2 p-6 md:p-10 flex items-center justify-center">
             <div class="w-full max-w-2xl">
                 <div class="text-[0.85rem] text-cyan-300 uppercase tracking-[0.3em] mb-3">Now serving</div>
-                <div id="queueNowServingCard" class="rounded-3xl bg-slate-900/60 border border-slate-700 px-6 md:px-8 py-8 shadow-[0_0_40px_rgba(8,47,73,0.7)]">
-                    <div class="text-[0.9rem] text-slate-300 mb-2">Queue number</div>
-                    <div id="queueNowServingNumber" class="text-6xl md:text-7xl font-serif font-bold text-white tracking-[0.25em]">---</div>
-                    <div id="queueNowServingPatient" class="mt-5 text-[1rem] md:text-[1.1rem] text-white font-semibold">—</div>
-                    <div id="queueNowServingDoctor" class="mt-1 text-[0.8rem] text-slate-400">—</div>
-                </div>
+                <div id="queueNowServingGrid" class="grid grid-cols-1 gap-4"></div>
                 <div id="queueNowServingEmpty" class="hidden rounded-3xl bg-slate-900/60 border border-slate-700 px-6 md:px-8 py-8 text-center text-slate-300">
                     No queue is currently being served.
                 </div>
@@ -74,11 +69,8 @@
         var btnFullscreen = document.getElementById('queueDisplayFullscreen');
 
         var errorBox = document.getElementById('queueDisplayError');
-        var nowCard = document.getElementById('queueNowServingCard');
         var nowEmpty = document.getElementById('queueNowServingEmpty');
-        var nowNumber = document.getElementById('queueNowServingNumber');
-        var nowPatient = document.getElementById('queueNowServingPatient');
-        var nowDoctor = document.getElementById('queueNowServingDoctor');
+        var nowGrid = document.getElementById('queueNowServingGrid');
         var nextList = document.getElementById('queueNextList');
         var nextMeta = document.getElementById('queueNextMeta');
 
@@ -114,19 +106,51 @@
             return '---';
         }
 
+        function roomLabel(roomNumber) {
+            if (roomNumber == null) return '';
+            var n = parseInt(roomNumber, 10);
+            if (isNaN(n) || n < 1) return '';
+            return '[ROOM ' + n + ']';
+        }
+
+        function waitLabel(minutes) {
+            if (minutes == null) return '';
+            var n = parseInt(minutes, 10);
+            if (isNaN(n) || n < 1) return '';
+            return 'Est. wait ' + n + ' mins';
+        }
+
         function render(payload) {
             if (dateLabel) dateLabel.textContent = 'Date: ' + (payload && payload.date ? payload.date : date);
 
-            var serving = payload ? payload.now_serving : null;
-            if (serving && (serving.queue_code || serving.queue_number != null)) {
-                if (nowCard) nowCard.classList.remove('hidden');
-                if (nowEmpty) nowEmpty.classList.add('hidden');
-                if (nowNumber) nowNumber.textContent = displayQueueLabel(serving);
-                if (nowPatient) nowPatient.textContent = (serving.patient && serving.patient.name) ? serving.patient.name : 'Patient';
-                if (nowDoctor) nowDoctor.textContent = (serving.doctor && serving.doctor.name) ? ('Doctor: ' + serving.doctor.name) : 'Doctor: —';
-            } else {
-                if (nowCard) nowCard.classList.add('hidden');
-                if (nowEmpty) nowEmpty.classList.remove('hidden');
+            var serving = payload && Array.isArray(payload.now_serving) ? payload.now_serving : [];
+            if (nowGrid) {
+                if (!serving.length) {
+                    nowGrid.innerHTML = '';
+                } else {
+                    nowGrid.innerHTML = serving.map(function (item) {
+                        var qn = displayQueueLabel(item);
+                        var patient = item && item.patient && item.patient.name ? item.patient.name : 'Patient';
+                        var doctor = item && item.doctor && item.doctor.name ? item.doctor.name : '—';
+                        var room = roomLabel(item && item.room_number != null ? item.room_number : null);
+
+                      return '' +
+    '<div class="rounded-3xl bg-slate-900/60 border border-slate-700 px-8 py-6 shadow-[0_0_40px_rgba(8,47,73,0.7)] flex items-center justify-between gap-6">' +
+        '<div>' +
+            '<div class="text-[0.75rem] text-slate-400 uppercase tracking-widest mb-1">Queue</div>' +
+            '<div class="text-6xl md:text-7xl font-serif font-bold text-white tracking-[0.12em] whitespace-nowrap">' + escapeHtml(qn) + '</div>' +
+        '</div>' +
+        '<div class="text-right shrink-0">' +
+            '<div class="text-[0.75rem] text-slate-500 uppercase tracking-widest mb-1">Room</div>' +
+            '<div class="text-4xl md:text-5xl font-serif font-bold text-cyan-300">' + (item && item.room_number != null ? escapeHtml(String(item.room_number)) : '—') + '</div>' +
+        '</div>' +
+    '</div>';
+                    }).join('');
+                }
+            }
+
+            if (nowEmpty) {
+                nowEmpty.classList.toggle('hidden', serving.length > 0);
             }
 
             var next = payload && Array.isArray(payload.next) ? payload.next : [];
@@ -146,14 +170,18 @@
                 var qn = displayQueueLabel(q);
                 var patient = q && q.patient && q.patient.name ? q.patient.name : 'Patient';
                 var doctor = q && q.doctor && q.doctor.name ? q.doctor.name : 'Doctor';
+                var wait = waitLabel(q && q.estimated_wait_minutes != null ? q.estimated_wait_minutes : null);
                 return '' +
                     '<div class="rounded-2xl border border-slate-800 bg-slate-900/40 px-4 py-3 flex items-center justify-between gap-4">' +
                         '<div>' +
                             '<div class="text-[0.75rem] text-slate-400 mb-1">Queue #' + escapeHtml(qn) + '</div>' +
                             '<div class="text-[0.95rem] text-white font-semibold">' + escapeHtml(patient) + '</div>' +
-                            '<div class="text-[0.75rem] text-slate-400 mt-0.5">Doctor: ' + escapeHtml(doctor) + '</div>' +
+                            '<div class="text-[0.75rem] text-slate-400 mt-0.5">' + escapeHtml(doctor) + '</div>' +
                         '</div>' +
-                        '<div class="text-right text-[0.7rem] text-slate-400">' + (q && q.priority_level != null ? ('Priority ' + escapeHtml(q.priority_level)) : '') + '</div>' +
+                        '<div class="text-right text-[0.7rem] text-slate-400">' +
+                            (wait ? ('<div>' + escapeHtml(wait) + '</div>') : '') +
+                            (q && q.priority_level != null ? ('<div>Priority ' + escapeHtml(q.priority_level) + '</div>') : '') +
+                        '</div>' +
                     '</div>';
             }).join('');
         }

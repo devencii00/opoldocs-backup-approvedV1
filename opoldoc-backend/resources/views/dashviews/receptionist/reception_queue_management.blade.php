@@ -1,6 +1,6 @@
 @php
     $queueItems = collect($receptionQueue ?? []);
-    $serving = $queueItems->firstWhere('status', 'serving');
+    $servingItems = $queueItems->where('status', 'serving')->values()->take(4)->values();
     $waitingItems = $queueItems
         ->filter(function ($row) {
             return ($row->status ?? null) === 'waiting';
@@ -18,7 +18,7 @@
     <div class="flex items-center justify-between">
         <div>
             <h2 class="text-sm font-semibold text-slate-900">Queue management</h2>
-            <p class="text-xs text-slate-500">Add patients to the queue, assign numbers, and monitor today&apos;s flow.</p>
+            <p class="text-xs text-slate-500">Add patients to the queue and monitor today&apos;s flow.</p>
         </div>
         <div class="flex items-center gap-2">
             <button id="receptionCallNextButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.8rem] font-semibold hover:bg-slate-800 transition-colors">
@@ -33,10 +33,7 @@
                 <span class="material-symbols-outlined text-[18px] leading-none">link</span>
                 Public link
             </button>
-            <button id="receptionDisplayQueueButton" type="button" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.8rem] font-semibold hover:bg-cyan-700 transition-colors">
-                <span class="material-symbols-outlined text-[18px] leading-none">tv</span>
-                Display queue
-            </button>
+            
         </div>
     </div>
 
@@ -46,21 +43,15 @@
             <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Front desk</span>
         </div>
 
-        <form id="receptionAddQueueForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-4 items-end">
+        <form id="receptionAddQueueForm" class="mb-4 grid gap-2 grid-cols-1 md:grid-cols-2 items-end">
             <div>
                 <label for="reception_add_queue_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment</label>
-                <input id="reception_queue_appointment_search" type="text" class="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search appointment">
-                <select id="reception_add_queue_appointment_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
-                    <option value="">Select an appointment</option>
-                </select>
-            </div>
-            <div>
-                <label for="reception_add_queue_number" class="block text-[0.7rem] text-slate-600 mb-1">Queue number (optional)</label>
-                <input id="reception_add_queue_number" type="number" min="1" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Auto-generate if empty">
-            </div>
-            <div>
-                <label for="reception_add_queue_datetime" class="block text-[0.7rem] text-slate-600 mb-1">Queue date &amp; time (optional)</label>
-                <input id="reception_add_queue_datetime" type="datetime-local" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                <div class="relative">
+                    <input id="reception_queue_appointment_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Click to select walk-in appointment">
+                    <input id="reception_add_queue_appointment_id" type="hidden" required>
+                    <div id="receptionQueueAppointmentResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                </div>
+                <div id="receptionQueueAppointmentPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
             <div class="flex items-end">
                 <button type="submit" class="w-full inline-flex items-center justify-center px-4 py-2 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors">
@@ -210,26 +201,31 @@
         <div class="flex-1 flex items-center justify-center p-6">
             <div class="w-full max-w-xl" id="queueDisplayNowServing">
                 <div class="text-[0.85rem] text-cyan-300 uppercase tracking-[0.3em] mb-3">Now serving</div>
-                @if ($serving)
-                    <div class="rounded-3xl bg-slate-800/80 border border-slate-600/80 px-6 py-6 shadow-[0_0_40px_rgba(8,47,73,0.9)]">
-                        <div class="text-[0.9rem] text-slate-300 mb-2">Queue number</div>
-                        <div class="text-6xl md:text-7xl font-serif font-bold text-white tracking-[0.25em]">
-                            {{ str_pad($serving->queue_number, 3, '0', STR_PAD_LEFT) }}
-                        </div>
-                        @php
-                            $servingPatient = optional(optional($serving->appointment)->patient)->personalInformation->full_name ?? 'Patient';
-                            $servingDoctor = optional(optional($serving->appointment)->doctor)->personalInformation->full_name ?? null;
-                        @endphp
-                        <div class="mt-4 text-[0.95rem] text-slate-100 font-semibold">
-                            {{ $servingPatient }}
-                        </div>
-                        <div class="mt-1 text-[0.8rem] text-slate-400">
-                            @if ($servingDoctor)
-                                Doctor: {{ $servingDoctor }}
-                            @else
-                                Waiting for doctor assignment
-                            @endif
-                        </div>
+                @if ($servingItems->count())
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        @foreach ($servingItems as $serving)
+                            @php
+                                $servingPatient = optional(optional($serving->appointment)->patient)->personalInformation->full_name ?? 'Patient';
+                                $servingDoctor = optional(optional($serving->appointment)->doctor)->personalInformation->full_name ?? null;
+                                $servingLabel = $serving->queue_code ?? $serving->queue_number;
+                            @endphp
+                            <div class="rounded-3xl bg-slate-800/80 border border-slate-600/80 px-6 py-6 shadow-[0_0_40px_rgba(8,47,73,0.9)]">
+                                <div class="text-[0.9rem] text-slate-300 mb-2">Queue</div>
+                                <div class="text-5xl md:text-6xl font-serif font-bold text-white tracking-[0.18em]">
+                                    {{ $servingLabel }}
+                                </div>
+                                <div class="mt-4 text-[0.95rem] text-slate-100 font-semibold">
+                                    {{ $servingPatient }}
+                                </div>
+                                <div class="mt-1 text-[0.8rem] text-slate-400">
+                                    @if ($servingDoctor)
+                                        {{ $servingDoctor }}
+                                    @else
+                                        Waiting for doctor assignment
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                 @else
                     <div class="rounded-3xl bg-slate-800/80 border border-slate-600/80 px-6 py-8 text-center text-slate-300">
@@ -281,6 +277,23 @@
     </div>
 </div>
 
+<div id="receptionConfirmOverlay" class="hidden fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-[0_20px_80px_rgba(15,23,42,0.35)]">
+        <div class="px-5 py-4 border-b border-slate-100">
+            <div id="receptionConfirmTitle" class="text-sm font-semibold text-slate-900">Confirm</div>
+            <div id="receptionConfirmMessage" class="mt-1 text-[0.78rem] text-slate-600"></div>
+        </div>
+        <div class="px-5 py-4 flex items-center justify-end gap-2">
+            <button id="receptionConfirmCancel" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-slate-100 text-slate-800 text-[0.78rem] font-semibold hover:bg-slate-200 border border-slate-200">
+                Cancel
+            </button>
+            <button id="receptionConfirmOk" type="button" class="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800">
+                Confirm
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         var searchInput = document.getElementById('reception_queue_search')
@@ -290,8 +303,48 @@
         var queueErrorBox = document.getElementById('receptionQueueError')
         var queueSuccessBox = document.getElementById('receptionQueueSuccess')
         var appointmentSearch = document.getElementById('reception_queue_appointment_search')
-        var appointmentSelect = document.getElementById('reception_add_queue_appointment_id')
+        var appointmentIdInput = document.getElementById('reception_add_queue_appointment_id')
+        var appointmentResults = document.getElementById('receptionQueueAppointmentResults')
+        var appointmentPreview = document.getElementById('receptionQueueAppointmentPreview')
+        var selectedAppointmentLabel = ''
         var appointmentSearchTimer = null
+
+        var confirmOverlay = document.getElementById('receptionConfirmOverlay')
+        var confirmTitle = document.getElementById('receptionConfirmTitle')
+        var confirmMessage = document.getElementById('receptionConfirmMessage')
+        var confirmCancel = document.getElementById('receptionConfirmCancel')
+        var confirmOk = document.getElementById('receptionConfirmOk')
+        var confirmResolver = null
+
+        function confirmAction(title, message) {
+            return new Promise(function (resolve) {
+                confirmResolver = resolve
+                if (confirmTitle) confirmTitle.textContent = title || 'Confirm'
+                if (confirmMessage) confirmMessage.textContent = message || ''
+                if (confirmOverlay) confirmOverlay.classList.remove('hidden')
+            })
+        }
+
+        function closeConfirm(result) {
+            if (confirmOverlay) confirmOverlay.classList.add('hidden')
+            if (typeof confirmResolver === 'function') {
+                var fn = confirmResolver
+                confirmResolver = null
+                fn(!!result)
+            }
+        }
+
+        if (confirmCancel) {
+            confirmCancel.addEventListener('click', function () { closeConfirm(false) })
+        }
+        if (confirmOk) {
+            confirmOk.addEventListener('click', function () { closeConfirm(true) })
+        }
+        if (confirmOverlay) {
+            confirmOverlay.addEventListener('click', function (e) {
+                if (e.target === confirmOverlay) closeConfirm(false)
+            })
+        }
 
         function escapeHtml(input) {
             return String(input == null ? '' : input)
@@ -300,6 +353,10 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;')
+        }
+
+        function normalizeText(value) {
+            return String(value == null ? '' : value).toLowerCase().replace(/\s+/g, ' ').trim()
         }
 
         function appointmentLabel(appt) {
@@ -313,18 +370,67 @@
             return '#' + id + ' — ' + (pName || 'Patient') + ' · ' + (dName || 'Doctor') + ' · ' + when
         }
 
+        function setAppointmentSelection(appt) {
+            if (!appointmentIdInput) return
+            var id = appt && appt.appointment_id != null ? parseInt(appt.appointment_id, 10) : 0
+            if (!id) {
+                appointmentIdInput.value = ''
+                selectedAppointmentLabel = ''
+                if (appointmentPreview) {
+                    appointmentPreview.textContent = ''
+                    appointmentPreview.classList.add('hidden')
+                }
+                return
+            }
+
+            appointmentIdInput.value = String(id)
+            selectedAppointmentLabel = appointmentLabel(appt)
+            if (appointmentSearch) appointmentSearch.value = selectedAppointmentLabel
+
+            if (appointmentPreview) {
+                appointmentPreview.textContent = selectedAppointmentLabel
+                appointmentPreview.classList.remove('hidden')
+            }
+
+            if (appointmentResults) {
+                appointmentResults.innerHTML = ''
+                appointmentResults.classList.add('hidden')
+            }
+        }
+
         function renderAppointmentOptions(list) {
-            if (!appointmentSelect) return
-            var current = appointmentSelect.value
-            appointmentSelect.innerHTML = '<option value="">Select an appointment</option>' + (list || []).slice(0, 50).map(function (a) {
-                return '<option value="' + escapeHtml(a.appointment_id) + '">' + escapeHtml(appointmentLabel(a)) + '</option>'
+            if (!appointmentResults) return
+            var items = (list || []).filter(function (a) {
+                if (!a) return false
+                var t = String(a.appointment_type || '').toLowerCase().trim()
+                if (!t) return true
+                return t === 'walk_in'
+            }).slice(0, 20)
+            if (!items.length) {
+                appointmentResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No walk-in appointments found.</div>'
+                appointmentResults.classList.remove('hidden')
+                return
+            }
+
+            appointmentResults.innerHTML = items.map(function (a) {
+                return '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
+                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml(appointmentLabel(a)) + '</div>' +
+                '</button>'
             }).join('')
-            if (current) appointmentSelect.value = current
+            appointmentResults.classList.remove('hidden')
+
+            var buttons = appointmentResults.querySelectorAll('button')
+            Array.prototype.forEach.call(buttons, function (btn, idx) {
+                btn.addEventListener('click', function () {
+                    setAppointmentSelection(items[idx])
+                })
+            })
         }
 
         function loadAppointmentOptions(search) {
             if (typeof apiFetch !== 'function') return
-            var url = "{{ url('/api/appointments') }}" + '?per_page=50'
+            var today = new Date().toISOString().slice(0, 10)
+            var url = "{{ url('/api/appointments') }}" + '?per_page=10&start_date=' + encodeURIComponent(today) + '&end_date=' + encodeURIComponent(today) + '&order=latest&appointment_type=walk_in'
             if (search) {
                 url += '&search=' + encodeURIComponent(search)
             }
@@ -348,12 +454,29 @@
             appointmentSearch.addEventListener('input', function () {
                 if (appointmentSearchTimer) clearTimeout(appointmentSearchTimer)
                 appointmentSearchTimer = setTimeout(function () {
-                    loadAppointmentOptions((appointmentSearch.value || '').trim())
+                    var q = (appointmentSearch.value || '').trim()
+                    if (appointmentIdInput && appointmentIdInput.value && selectedAppointmentLabel) {
+                        if (normalizeText(q) !== normalizeText(selectedAppointmentLabel)) {
+                            setAppointmentSelection(null)
+                        }
+                    }
+                    loadAppointmentOptions(q)
                 }, 250)
+            })
+            appointmentSearch.addEventListener('focus', function () {
+                var q = String(appointmentSearch.value || '').trim()
+                loadAppointmentOptions(q)
             })
         }
 
-        loadAppointmentOptions('')
+        document.addEventListener('click', function (e) {
+            var target = e.target
+            if (appointmentResults && !appointmentResults.classList.contains('hidden')) {
+                if (!(appointmentResults.contains(target) || (appointmentSearch && appointmentSearch.contains(target)))) {
+                    appointmentResults.classList.add('hidden')
+                }
+            }
+        })
 
         function applyReceptionQueueFilters() {
             var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
@@ -452,12 +575,8 @@
                 showQueueSuccess('')
 
                 var appointmentInput = document.getElementById('reception_add_queue_appointment_id')
-                var numberInput = document.getElementById('reception_add_queue_number')
-                var datetimeInput = document.getElementById('reception_add_queue_datetime')
 
                 var appointmentId = appointmentInput ? parseInt(appointmentInput.value, 10) : 0
-                var queueNumber = numberInput && numberInput.value ? parseInt(numberInput.value, 10) : null
-                var queueDatetime = datetimeInput ? datetimeInput.value : ''
 
                 if (!appointmentId) {
                     showQueueError('Appointment ID is required to add to queue.')
@@ -469,48 +588,40 @@
                     return
                 }
 
-                var body = {
-                    appointment_id: appointmentId
-                }
+                confirmAction('Add to queue', 'Are you sure you want to add this appointment to the queue?')
+                    .then(function (confirmed) {
+                        if (!confirmed) return
 
-                if (queueNumber !== null && !isNaN(queueNumber)) {
-                    body.queue_number = queueNumber
-                }
-                if (queueDatetime) {
-                    body.queue_datetime = queueDatetime
-                }
-
-                apiFetch("{{ url('/api/queues') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(body)
-                })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, status: response.status, data: data }
-                        }).catch(function () {
-                            return { ok: response.ok, status: response.status, data: null }
+                        apiFetch("{{ url('/api/queues') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ appointment_id: appointmentId })
                         })
-                    })
-                    .then(function (result) {
-                        if (!result.ok) {
-                            var message = 'Failed to add appointment to queue.'
-                            if (result.data && result.data.message) {
-                                message = result.data.message
-                            }
-                            showQueueError(message)
-                            return
-                        }
+                            .then(function (response) {
+                                return response.json().then(function (data) {
+                                    return { ok: response.ok, status: response.status, data: data }
+                                }).catch(function () {
+                                    return { ok: response.ok, status: response.status, data: null }
+                                })
+                            })
+                            .then(function (result) {
+                                if (!result.ok) {
+                                    var message = 'Failed to add appointment to queue.'
+                                    if (result.data && result.data.message) {
+                                        message = result.data.message
+                                    }
+                                    showQueueError(message)
+                                    return
+                                }
 
-                        showQueueSuccess('Appointment added to queue.')
-                        if (appointmentInput) appointmentInput.value = ''
-                        if (numberInput) numberInput.value = ''
-                        if (datetimeInput) datetimeInput.value = ''
-                    })
-                    .catch(function () {
-                        showQueueError('Network error while adding to queue.')
+                                showQueueSuccess('Appointment added to queue.')
+                                window.location.reload()
+                            })
+                            .catch(function () {
+                                showQueueError('Network error while adding to queue.')
+                            })
                     })
             })
         }
@@ -532,37 +643,37 @@
 
                 var url = "{{ url('/api/queues') }}/" + encodeURIComponent(queueId)
 
-                apiFetch(url, { method: 'DELETE' })
-                    .then(function (response) {
-                        if (!response.ok) {
-                            return response.json().then(function (data) {
-                                return { ok: false, data: data }
-                            }).catch(function () {
-                                return { ok: false, data: null }
+                confirmAction('Remove queue entry', 'Are you sure you want to remove this queue entry?')
+                    .then(function (confirmed) {
+                        if (!confirmed) return
+
+                        apiFetch(url, { method: 'DELETE' })
+                            .then(function (response) {
+                                if (!response.ok) {
+                                    return response.json().then(function (data) {
+                                        return { ok: false, data: data }
+                                    }).catch(function () {
+                                        return { ok: false, data: null }
+                                    })
+                                }
+                                return { ok: true, data: null }
                             })
-                        }
-                        return { ok: true, data: null }
-                    })
-                    .then(function (result) {
-                        if (!result.ok) {
-                            var message = 'Failed to remove queue entry.'
-                            if (result.data && result.data.message) {
-                                message = result.data.message
-                            }
-                            showQueueError(message)
-                            return
-                        }
+                            .then(function (result) {
+                                if (!result.ok) {
+                                    var message = 'Failed to remove queue entry.'
+                                    if (result.data && result.data.message) {
+                                        message = result.data.message
+                                    }
+                                    showQueueError(message)
+                                    return
+                                }
 
-                        var row = button.closest('tr')
-                        if (row) {
-                            row.parentNode.removeChild(row)
-                            rows = Array.prototype.slice.call(document.querySelectorAll('.reception-queue-row'))
-                        }
-
-                        showQueueSuccess('Queue entry removed.')
-                    })
-                    .catch(function () {
-                        showQueueError('Network error while removing queue entry.')
+                                showQueueSuccess('Queue entry removed.')
+                                window.location.reload()
+                            })
+                            .catch(function () {
+                                showQueueError('Network error while removing queue entry.')
+                            })
                     })
             })
         })
@@ -621,6 +732,42 @@
                 if (!queueId || !status) {
                     return
                 }
+                if (String(status).toLowerCase() === 'done') {
+                    var url = "{{ url('/api/queues') }}/" + encodeURIComponent(queueId)
+                    confirmAction('Mark as done', 'Are you sure you want to remove this queue entry?')
+                        .then(function (confirmed) {
+                            if (!confirmed) return
+
+                            apiFetch(url, { method: 'DELETE' })
+                                .then(function (response) {
+                                    if (!response.ok) {
+                                        return response.json().then(function (data) {
+                                            return { ok: false, data: data }
+                                        }).catch(function () {
+                                            return { ok: false, data: null }
+                                        })
+                                    }
+                                    return { ok: true, data: null }
+                                })
+                                .then(function (result) {
+                                    if (!result.ok) {
+                                        var message = 'Failed to remove queue entry.'
+                                        if (result.data && result.data.message) {
+                                            message = result.data.message
+                                        }
+                                        showQueueError(message)
+                                        return
+                                    }
+                                    showQueueSuccess('Queue entry removed.')
+                                    window.location.reload()
+                                })
+                                .catch(function () {
+                                    showQueueError('Network error while updating queue.')
+                                })
+                        })
+                    return
+                }
+
                 updateQueueStatus(queueId, status, 'Queue status updated.')
             })
         })
@@ -638,36 +785,35 @@
                 showQueueError('')
                 showQueueSuccess('')
 
-                rows = Array.prototype.slice.call(document.querySelectorAll('.reception-queue-row'))
-                var candidates = rows
-                    .filter(function (row) {
-                        return (row.getAttribute('data-status') || '').toLowerCase() === 'waiting'
-                    })
-                    .map(function (row) {
-                        return {
-                            row: row,
-                            queueId: row.getAttribute('data-queue-id') || '',
-                            priority: parseInt(row.getAttribute('data-priority') || '5', 10),
-                            number: parseInt(row.getAttribute('data-queue-number') || '0', 10)
-                        }
-                    })
-                    .filter(function (item) {
-                        return !!item.queueId
-                    })
-
-                if (!candidates.length) {
-                    showQueueError('No waiting patients to call.')
+                if (typeof apiFetch !== 'function') {
+                    showQueueError('API client is not available.')
                     return
                 }
 
-                candidates.sort(function (a, b) {
-                    if (a.priority !== b.priority) {
-                        return a.priority - b.priority
-                    }
-                    return a.number - b.number
-                })
+                apiFetch("{{ url('/api/queues/call-next') }}", { method: 'POST' })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, status: response.status, data: data }
+                        }).catch(function () {
+                            return { ok: response.ok, status: response.status, data: null }
+                        })
+                    })
+                    .then(function (result) {
+                        if (!result.ok) {
+                            var message = 'Failed to call next.'
+                            if (result.data && result.data.message) {
+                                message = result.data.message
+                            }
+                            showQueueError(message)
+                            return
+                        }
 
-                updateQueueStatus(candidates[0].queueId, 'serving', 'Next patient is now serving.')
+                        showQueueSuccess('Next patient is now serving.')
+                        window.location.reload()
+                    })
+                    .catch(function () {
+                        showQueueError('Network error while calling next.')
+                    })
             })
         }
 
@@ -692,122 +838,97 @@
             })
         }
 
-        function buildQueueDisplay(items) {
-            var today = new Date().toISOString().slice(0, 10)
-
-            function safeName(user, fallback) {
-                if (user && user.personal_information && user.personal_information.full_name) {
-                    return String(user.personal_information.full_name)
-                }
-                var first = user && user.firstname ? String(user.firstname) : ''
-                var last = user && user.lastname ? String(user.lastname) : ''
-                var name = (first + ' ' + last).trim()
-                return name || (fallback || 'Patient')
+        function displayQueueLabel(item) {
+            if (item && item.queue_code) return String(item.queue_code)
+            if (item && item.queue_number != null) {
+                var n = String(item.queue_number)
+                while (n.length < 3) n = '0' + n
+                return n
             }
+            return '---'
+        }
 
-            var todays = items.filter(function (item) {
-                var dt = item && item.queue_datetime ? String(item.queue_datetime) : ''
-                return dt.slice(0, 10) === today
-            })
+        function roomLabel(roomNumber) {
+            if (roomNumber == null) return ''
+            var n = parseInt(roomNumber, 10)
+            if (isNaN(n) || n < 1) return ''
+            return '[ROOM ' + n + ']'
+        }
 
-            todays = todays.filter(function (item) {
-                var status = item && item.status ? String(item.status).toLowerCase() : ''
-                return status === 'waiting' || status === 'serving'
-            })
+        function waitLabel(minutes) {
+            if (minutes == null) return ''
+            var n = parseInt(minutes, 10)
+            if (isNaN(n) || n < 1) return ''
+            return 'Est. wait ' + n + ' mins'
+        }
 
-            function sortKey(item) {
-                var priority = parseInt(item && item.priority_level != null ? item.priority_level : 5, 10)
-                var number = parseInt(item && item.queue_number != null ? item.queue_number : 0, 10)
-                return { priority: isNaN(priority) ? 5 : priority, number: isNaN(number) ? 0 : number }
-            }
-
-            var servingItem = todays.find(function (item) {
-                return String(item.status || '').toLowerCase() === 'serving'
-            }) || null
-
-            var waiting = todays.filter(function (item) {
-                return String(item.status || '').toLowerCase() === 'waiting'
-            })
-
-            waiting.sort(function (a, b) {
-                var ka = sortKey(a)
-                var kb = sortKey(b)
-                if (ka.priority !== kb.priority) return ka.priority - kb.priority
-                return ka.number - kb.number
-            })
-
-            var nextItems = waiting.slice(0, 5)
-
+        function buildQueueDisplay(payload) {
             var servingContainer = document.getElementById('queueDisplayNowServing')
             var nextList = document.getElementById('queueDisplayNextList')
             var nextCount = document.getElementById('queueDisplayNextCount')
 
+            var serving = payload && Array.isArray(payload.now_serving) ? payload.now_serving : []
+            var next = payload && Array.isArray(payload.next) ? payload.next : []
+            var nextItems = next.slice(0, 5)
+
             if (servingContainer) {
-                if (!servingItem) {
+                if (!serving.length) {
                     servingContainer.innerHTML =
                         '<div class="text-[0.85rem] text-cyan-300 uppercase tracking-[0.3em] mb-3">Now serving</div>' +
                         '<div class="rounded-3xl bg-slate-800/80 border border-slate-600/80 px-6 py-8 text-center text-slate-300">' +
                         'No queue is currently being served.' +
                         '</div>'
                 } else {
-                    var appt = servingItem.appointment || null
-                    var patientName = appt && appt.patient ? safeName(appt.patient, 'Patient') : 'Patient'
-                    var doctorName = appt && appt.doctor ? safeName(appt.doctor, '') : ''
+                    var cards = serving.map(function (item) {
+                        var qn = displayQueueLabel(item)
+                        var patient = item && item.patient && item.patient.name ? item.patient.name : 'Patient'
+                        var doctor = item && item.doctor && item.doctor.name ? item.doctor.name : '—'
+                        var room = roomLabel(item && item.room_number != null ? item.room_number : null)
 
-                    var number = servingItem.queue_code ? String(servingItem.queue_code) : String(servingItem.queue_number || '')
-                    if (!servingItem.queue_code && number.length < 3) {
-                        number = ('000' + number).slice(-3)
-                    }
+                        return '' +
+                            '<div class="rounded-3xl bg-slate-800/80 border border-slate-600/80 px-6 py-6 shadow-[0_0_40px_rgba(8,47,73,0.9)]">' +
+                                '<div class="text-[0.9rem] text-slate-300 mb-2">Queue</div>' +
+                                '<div class="text-5xl md:text-6xl font-serif font-bold text-white tracking-[0.18em]">' + escapeHtml(qn) + '</div>' +
+                                '<div class="mt-4 text-[0.95rem] text-slate-100 font-semibold">' + escapeHtml(patient) + '</div>' +
+                                '<div class="mt-1 text-[0.8rem] text-slate-400">' + (room ? (escapeHtml(room) + ' ') : '') + escapeHtml(doctor) + '</div>' +
+                            '</div>'
+                    }).join('')
 
-                    var html =
+                    servingContainer.innerHTML =
                         '<div class="text-[0.85rem] text-cyan-300 uppercase tracking-[0.3em] mb-3">Now serving</div>' +
-                        '<div class="rounded-3xl bg-slate-800/80 border border-slate-600/80 px-6 py-6 shadow-[0_0_40px_rgba(8,47,73,0.9)]">' +
-                        '<div class="text-[0.9rem] text-slate-300 mb-2">Queue number</div>' +
-                        '<div class="text-6xl md:text-7xl font-serif font-bold text-white tracking-[0.25em]">' + number + '</div>' +
-                        '<div class="mt-4 text-[0.95rem] text-slate-100 font-semibold">' + patientName + '</div>' +
-                        '<div class="mt-1 text-[0.8rem] text-slate-400">' +
-                        (doctorName ? 'Doctor: ' + doctorName : 'Waiting for doctor assignment') +
-                        '</div>' +
-                        '</div>'
-
-                    servingContainer.innerHTML = html
+                        '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">' + cards + '</div>'
                 }
             }
 
             if (nextList) {
-                var nextHtml = ''
+                if (!nextItems.length) {
+                    nextList.innerHTML = '<div class="text-[0.8rem] text-slate-400">No additional queue entries.</div>'
+                } else {
+                    nextList.innerHTML = nextItems.map(function (q) {
+                        var qn = displayQueueLabel(q)
+                        var patient = q && q.patient && q.patient.name ? q.patient.name : 'Patient'
+                        var doctor = q && q.doctor && q.doctor.name ? q.doctor.name : 'Doctor'
+                        var statusName = q && q.status ? String(q.status) : ''
+                        var wait = waitLabel(q && q.estimated_wait_minutes != null ? q.estimated_wait_minutes : null)
 
-                nextItems.forEach(function (queue) {
-                    var appt = queue.appointment || null
-                    var patientName = appt && appt.patient ? safeName(appt.patient, 'Patient') : 'Patient'
-                    var doctorName = appt && appt.doctor ? safeName(appt.doctor, '') : ''
-                    var statusName = queue.status ? String(queue.status) : ''
-                        var queueLabel = queue.queue_code ? String(queue.queue_code) : String(queue.queue_number || '')
-
-                    nextHtml +=
-                        '<div class="rounded-2xl bg-slate-800/60 border border-slate-600/70 px-4 py-3 flex items-center justify-between">' +
-                        '<div>' +
-                        '<div class="text-[0.75rem] text-slate-400 mb-1">Queue #' + queueLabel + '</div>' +
-                        '<div class="text-[0.9rem] text-slate-100 font-semibold">' + patientName + '</div>' +
-                        '<div class="text-[0.75rem] text-slate-400">' +
-                        (doctorName ? 'Doctor: ' + doctorName : 'Doctor not assigned') +
-                        '</div>' +
-                        '</div>' +
-                        '<div class="text-right">' +
-                        (statusName
-                            ? '<div class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/40">' +
-                                statusName.toUpperCase() +
-                              '</div>'
-                            : '') +
-                        '</div>' +
-                        '</div>'
-                })
-
-                if (!nextHtml) {
-                    nextHtml = '<div class="text-[0.8rem] text-slate-400">No additional queue entries.</div>'
+                        return '' +
+                            '<div class="rounded-2xl bg-slate-800/60 border border-slate-600/70 px-4 py-3 flex items-center justify-between gap-4">' +
+                                '<div>' +
+                                    '<div class="text-[0.75rem] text-slate-400 mb-1">Queue #' + escapeHtml(qn) + '</div>' +
+                                    '<div class="text-[0.9rem] text-slate-100 font-semibold">' + escapeHtml(patient) + '</div>' +
+                                    '<div class="text-[0.75rem] text-slate-400">' + escapeHtml(doctor) + '</div>' +
+                                '</div>' +
+                                '<div class="text-right">' +
+                                    (wait ? ('<div class="text-[0.72rem] text-slate-400 mb-1">' + escapeHtml(wait) + '</div>') : '') +
+                                    (statusName
+                                        ? '<div class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold bg-cyan-500/10 text-cyan-300 border border-cyan-500/40">' +
+                                            escapeHtml(statusName.toUpperCase()) +
+                                          '</div>'
+                                        : '') +
+                                '</div>' +
+                            '</div>'
+                    }).join('')
                 }
-
-                nextList.innerHTML = nextHtml
             }
 
             if (nextCount) {
@@ -821,11 +942,9 @@
             }
 
             var today = new Date().toISOString().slice(0, 10)
-            var url = "{{ url('/api/queues') }}" + '?per_page=100&date=' + encodeURIComponent(today)
+            var url = "{{ route('queue.display.data') }}" + '?date=' + encodeURIComponent(today)
 
-            apiFetch(url, {
-                method: 'GET'
-            })
+            apiFetch(url, { method: 'GET' })
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, status: response.status, data: data }
@@ -837,20 +956,7 @@
                     if (!result.ok || !result.data) {
                         return
                     }
-
-                    var payload = result.data
-                    var items = []
-                    if (Array.isArray(payload)) {
-                        items = payload
-                    } else if (Array.isArray(payload.data)) {
-                        items = payload.data
-                    }
-
-                    if (!items.length) {
-                        return
-                    }
-
-                    buildQueueDisplay(items)
+                    buildQueueDisplay(result.data)
                 })
                 .catch(function () {
                 })

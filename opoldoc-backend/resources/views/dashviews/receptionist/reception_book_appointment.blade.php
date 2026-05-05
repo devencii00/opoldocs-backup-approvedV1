@@ -1,16 +1,26 @@
-<div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-    <div class="flex items-center justify-between mb-3">
-        <div>
-            <h2 class="text-sm font-semibold text-slate-900">Book appointment</h2>
-            <p class="text-xs text-slate-500">Create a new appointment for a patient and doctor.</p>
-        </div>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Appointments</span>
+<div class="bg-white border border-slate-200 rounded-[18px] shadow-[0_2px_10px_rgba(15,23,42,0.04)] overflow-hidden">
+    <div class="grid grid-cols-2 border-b border-slate-200">
+      <button id="receptionAppointmentTabBook" type="button" class="px-4 py-3 text-xs font-semibold text-white bg-cyan-500 border-b-2 border-cyan-600">
+    Book appointment
+</button>
+<button id="receptionAppointmentTabManage" type="button" class="px-4 py-3 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-50 border-l border-slate-200">
+    Manage appointment
+</button>
     </div>
 
-    <div id="receptionBookAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
-    <div id="receptionBookAppointmentSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
+    <div id="receptionAppointmentPanelBook" class="p-5">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900">Book appointment</h2>
+                <p class="text-xs text-slate-500">Create a new appointment for a patient and doctor.</p>
+            </div>
+            <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Appointments</span>
+        </div>
 
-    <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-start mb-4">
+        <div id="receptionBookAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
+        <div id="receptionBookAppointmentSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
+
+        <form id="receptionBookAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-3 items-start mb-4">
         <div class="min-w-0">
             <label for="reception_appointment_patient_id" class="block text-[0.7rem] text-slate-600 mb-1">Patient</label>
             <div class="relative">
@@ -24,10 +34,10 @@
             <label for="reception_appointment_service_id" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
             <div class="relative">
                 <input id="reception_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
-                <input id="reception_appointment_service_id" type="hidden" required>
+                <input id="reception_appointment_service_id" type="hidden">
                 <div id="receptionServiceResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
             </div>
-            <div id="receptionServicePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
+            <div id="receptionSelectedServices" class="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 max-h-24 overflow-y-auto overscroll-contain"></div>
         </div>
         <div class="min-w-0">
             <label for="reception_appointment_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
@@ -53,7 +63,7 @@
             <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
             <input id="reception_appointment_time" type="hidden" required>
             <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
-            <div id="reception_time_slots" class="flex flex-wrap gap-2"></div>
+            <div id="reception_time_slots" class="max-h-72 overflow-y-auto overscroll-contain flex flex-col gap-2 pr-1"></div>
         </div>
         <input id="reception_appointment_type" type="hidden" value="scheduled">
         <div class="md:col-span-3">
@@ -71,8 +81,9 @@
     <p class="text-[0.7rem] text-slate-400">
         Appointments booked by reception are confirmed by default.
     </p>
+    </div>
 
-    <div class="mt-6 border-t border-slate-100 pt-4">
+    <div id="receptionAppointmentPanelManage" class="hidden p-5">
         <div class="flex items-center justify-between mb-3">
             <div>
                 <h3 class="text-sm font-semibold text-slate-900">Manage appointment</h3>
@@ -143,6 +154,53 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        var tabBookBtn = document.getElementById('receptionAppointmentTabBook')
+        var tabManageBtn = document.getElementById('receptionAppointmentTabManage')
+        var panelBook = document.getElementById('receptionAppointmentPanelBook')
+        var panelManage = document.getElementById('receptionAppointmentPanelManage')
+function setAppointmentTab(tab) {
+    var isBook = tab === 'book'
+    if (panelBook) panelBook.classList.toggle('hidden', !isBook)
+    if (panelManage) panelManage.classList.toggle('hidden', isBook)
+
+    if (tabBookBtn) {
+        // Active tab (Book)
+        tabBookBtn.classList.toggle('bg-cyan-500', isBook)      // Cyan background
+        tabBookBtn.classList.toggle('text-white', isBook)       // White text
+        tabBookBtn.classList.toggle('border-b-2', isBook)       // Bottom border indicator
+        tabBookBtn.classList.toggle('border-cyan-600', isBook)  // Darker cyan border
+        // Inactive tab
+        tabBookBtn.classList.toggle('bg-white', !isBook)        // White background
+        tabBookBtn.classList.toggle('text-slate-900', !isBook)  // Black/dark text
+        tabBookBtn.classList.toggle('hover:bg-slate-50', !isBook) // Hover effect
+        tabBookBtn.classList.toggle('border-b-0', !isBook)      // No border when inactive
+        tabBookBtn.classList.toggle('border-l', !isBook)        // Left border separator
+        tabBookBtn.classList.toggle('border-slate-200', !isBook) // Border color
+    }
+    if (tabManageBtn) {
+        // Active tab (Manage)
+        tabManageBtn.classList.toggle('bg-cyan-500', !isBook)    // Cyan background
+        tabManageBtn.classList.toggle('text-white', !isBook)     // White text
+        tabManageBtn.classList.toggle('border-b-2', !isBook)     // Bottom border indicator
+        tabManageBtn.classList.toggle('border-cyan-600', !isBook)// Darker cyan border
+        // Inactive tab
+        tabManageBtn.classList.toggle('bg-white', isBook)        // White background
+        tabManageBtn.classList.toggle('text-slate-900', isBook)  // Black/dark text
+        tabManageBtn.classList.toggle('hover:bg-slate-50', isBook) // Hover effect
+        tabManageBtn.classList.toggle('border-b-0', isBook)      // No border when inactive
+        tabManageBtn.classList.toggle('border-l', isBook)        // Left border separator
+        tabManageBtn.classList.toggle('border-slate-200', isBook) // Border color
+    }
+}
+
+        if (tabBookBtn) {
+            tabBookBtn.addEventListener('click', function () { setAppointmentTab('book') })
+        }
+        if (tabManageBtn) {
+            tabManageBtn.addEventListener('click', function () { setAppointmentTab('manage') })
+        }
+        setAppointmentTab('book')
+
         var form = document.getElementById('receptionBookAppointmentForm')
         var errorBox = document.getElementById('receptionBookAppointmentError')
         var successBox = document.getElementById('receptionBookAppointmentSuccess')
@@ -156,7 +214,7 @@
         var serviceSearch = document.getElementById('reception_service_search')
         var serviceSelect = document.getElementById('reception_appointment_service_id')
         var serviceResults = document.getElementById('receptionServiceResults')
-        var servicePreview = document.getElementById('receptionServicePreview')
+        var selectedServicesEl = document.getElementById('receptionSelectedServices')
         var doctorSearch = document.getElementById('reception_doctor_search')
         var doctorSelect = document.getElementById('reception_appointment_doctor_id')
         var doctorResults = document.getElementById('receptionDoctorResults')
@@ -180,11 +238,12 @@
         var doctorAvailableDaySet = {}
         var doctorAppointments = []
         var selectedSlotStart = null
-        var slotMinutes = 90
+        var slotMinutes = 60
         var patientSearchTimer = null
         var selectedPatient = null
-        var selectedService = null
+        var selectedServices = []
         var selectedDoctor = null
+        var previousDoctorId = 0
 
         function setBookSubmitting(isSubmitting) {
             if (submitBtn) submitBtn.disabled = !!isSubmitting
@@ -261,6 +320,7 @@
         function setPatientSelection(patient) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
+            previousDoctorId = 0
 
             if (patientPreview) {
                 if (!patient) {
@@ -283,6 +343,26 @@
                 patientResults.innerHTML = ''
                 patientResults.classList.add('hidden')
             }
+
+            if (patient && patient.user_id) {
+                loadPreviousProvider(String(patient.user_id))
+            }
+        }
+
+        function loadPreviousProvider(patientId) {
+            if (!patientId || typeof apiFetch !== 'function') return
+            apiFetch("{{ url('/api/appointments') }}?patient_id=" + encodeURIComponent(patientId) + "&per_page=1&order=latest", { method: 'GET' })
+                .then(function (r) { return readResponse(r) })
+                .then(function (res) {
+                    if (!res.ok) return
+                    var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
+                    var last = list && list.length ? list[0] : null
+                    var docId = last && last.doctor_id != null ? parseInt(last.doctor_id, 10) : 0
+                    if (!docId || isNaN(docId)) return
+                    previousDoctorId = docId
+                    renderDoctorResults()
+                })
+                .catch(function () {})
         }
 
         function renderPatientResults(items) {
@@ -443,33 +523,97 @@
             if (timeSlotsEl) timeSlotsEl.innerHTML = ''
         }
 
-        function setServiceSelection(service) {
-            selectedService = service || null
-            if (serviceSelect) serviceSelect.value = service && service.service_id ? String(service.service_id) : ''
+        function serviceKey(service) {
+            var id = service && service.service_id != null ? parseInt(service.service_id, 10) : 0
+            return String(id || '')
+        }
 
-            if (servicePreview) {
-                if (!service) {
-                    servicePreview.textContent = ''
-                    servicePreview.classList.add('hidden')
-                } else {
-                    var parts = []
-                    parts.push('Service: ' + (service.service_name || ('Service #' + service.service_id)))
-                    if (service.description) parts.push('Description: ' + service.description)
-                    servicePreview.textContent = parts.join(' • ')
-                    servicePreview.classList.remove('hidden')
-                }
+        function serviceGroup(service) {
+            if (!service) return ''
+            var name = String(service.service_name || '').trim()
+            if (!name) return ''
+            var parts = name.split(':')
+            var group = String(parts[0] || name).trim().toLowerCase()
+            return group
+        }
+
+        function selectedServiceIds() {
+            return (selectedServices || [])
+                .map(function (s) { return s && s.service_id != null ? parseInt(s.service_id, 10) : 0 })
+                .filter(function (v) { return !!v && !isNaN(v) })
+        }
+
+        function syncServiceHiddenInput() {
+            if (!serviceSelect) return
+            var ids = selectedServiceIds()
+            serviceSelect.value = ids.length ? String(ids[0]) : ''
+        }
+
+        function renderSelectedServices() {
+            if (!selectedServicesEl) return
+            var list = Array.isArray(selectedServices) ? selectedServices : []
+            if (!list.length) {
+                selectedServicesEl.innerHTML = '<div class="text-[0.75rem] text-slate-500">No services selected.</div>'
+                return
             }
+
+            selectedServicesEl.innerHTML = list.map(function (s) {
+                var id = s && s.service_id != null ? parseInt(s.service_id, 10) : 0
+                var name = s && s.service_name ? String(s.service_name) : ('Service #' + id)
+                return (
+                    '<div class="flex items-center justify-between gap-2 py-1.5 border-b border-slate-200/60 last:border-0">' +
+                        '<div class="min-w-0 text-slate-700 text-[0.78rem] font-semibold truncate">' + escapeHtml(name) + '</div>' +
+                        '<button type="button" class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 reception-remove-service" data-service-id="' + escapeHtml(id) + '">' +
+                            '<span class="material-symbols-outlined text-[18px] leading-none">close</span>' +
+                        '</button>' +
+                    '</div>'
+                )
+            }).join('')
+
+            var buttons = selectedServicesEl.querySelectorAll('.reception-remove-service')
+            Array.prototype.forEach.call(buttons, function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = parseInt(btn.getAttribute('data-service-id') || '0', 10)
+                    if (!id) return
+                    selectedServices = (selectedServices || []).filter(function (s) {
+                        return parseInt(s && s.service_id ? s.service_id : 0, 10) !== id
+                    })
+                    syncServiceHiddenInput()
+                    renderSelectedServices()
+
+                    if (!selectedServices.length) {
+                        if (doctorSearch) doctorSearch.disabled = true
+                        if (doctorSearch) doctorSearch.value = ''
+                        setDoctorSelection(null)
+                        renderServiceResults()
+                    } else {
+                        if (doctorSearch) doctorSearch.disabled = false
+                        setDoctorSelection(null)
+                        renderDoctorResults()
+                        renderServiceResults()
+                    }
+                })
+            })
+        }
+
+        function addService(service) {
+            if (!service || service.service_id == null) return
+            var key = serviceKey(service)
+            if (!key) return
+            var exists = (selectedServices || []).some(function (s) { return serviceKey(s) === key })
+            if (exists) return
+
+            selectedServices = (selectedServices || []).concat([service])
+            syncServiceHiddenInput()
+            renderSelectedServices()
 
             if (serviceResults) {
                 serviceResults.innerHTML = ''
                 serviceResults.classList.add('hidden')
             }
+            if (serviceSearch) serviceSearch.value = ''
 
-            if (doctorSearch) {
-                doctorSearch.disabled = !service
-                if (!service) doctorSearch.value = ''
-            }
-
+            if (doctorSearch) doctorSearch.disabled = selectedServices.length === 0
             setDoctorSelection(null)
         }
 
@@ -477,6 +621,16 @@
             if (!serviceResults) return
             var q = serviceSearch ? normalizeText(serviceSearch.value) : ''
             var list = (services || []).slice()
+
+            if (selectedServices && selectedServices.length) {
+                var base = serviceGroup(selectedServices[0])
+                if (base) {
+                    list = list.filter(function (s) {
+                        return serviceGroup(s) === base
+                    })
+                }
+            }
+
             if (q) {
                 list = list.filter(function (s) {
                     var name = normalizeText(s && s.service_name ? s.service_name : '')
@@ -511,8 +665,7 @@
             Array.prototype.forEach.call(buttons, function (btn, idx) {
                 btn.addEventListener('click', function () {
                     var chosen = list[idx]
-                    setServiceSelection(chosen)
-                    if (serviceSearch) serviceSearch.value = chosen.service_name || ('Service #' + chosen.service_id)
+                    addService(chosen)
                 })
             })
         }
@@ -522,6 +675,34 @@
             var name = [d.firstname, d.middlename, d.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
             if (!name) name = 'Doctor #' + (d.user_id || '')
             return name + (d.specialization ? ' — ' + d.specialization : '')
+        }
+
+        function doctorSchedulesForDay(doctor, dayKey, dateStr) {
+            var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
+            var isToday = false
+            if (dateStr) {
+                var today = new Date().toISOString().slice(0, 10)
+                isToday = String(dateStr) === today
+            }
+            return list.filter(function (s) {
+                if (!s) return false
+                if (String(s.day_of_week || '').toLowerCase() !== String(dayKey || '').toLowerCase()) return false
+                if (isToday && s.is_available === false) return false
+                return true
+            })
+        }
+
+        function hasScheduleAtTime(doctor, dayKey, dateStr, hhmm) {
+            var slots = doctorSchedulesForDay(doctor, dayKey, dateStr)
+            if (!hhmm) return slots.length > 0
+            var t = minutesFromHHMM(String(hhmm || '').slice(0, 5))
+            if (isNaN(t)) return slots.length > 0
+            return slots.some(function (s) {
+                var st = minutesFromHHMM(String(s.start_time || '').slice(0, 5))
+                var en = minutesFromHHMM(String(s.end_time || '').slice(0, 5))
+                if (isNaN(st) || isNaN(en)) return false
+                return t >= st && t < en
+            })
         }
 
         function setDoctorSelection(doctor) {
@@ -535,6 +716,17 @@
                 } else {
                     var parts = []
                     parts.push('Doctor: ' + doctorLabel(doctor))
+                    if (previousDoctorId && parseInt(doctor.user_id, 10) === previousDoctorId) {
+                        parts.push('Previous Provider')
+                    }
+                    var dateStr = dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : new Date().toISOString().slice(0, 10)
+                    var dayKey = dayKeyFromDate(dateStr)
+                    var checkTime = selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : ''
+                    var hasSchedule = !!dayKey && hasScheduleAtTime(doctor, dayKey, dateStr, checkTime)
+                    parts.push('Availability: ' + ((doctor.is_available !== false && hasSchedule) ? 'Available' : 'Unavailable'))
+                    var primary = selectedServices && selectedServices.length ? selectedServices[0] : null
+                    var category = extractServiceCategory(primary ? primary.service_name : '')
+                    if (category) parts.push('Service match: ' + (specializationMatches(category, doctor.specialization) ? 'Yes' : 'No'))
                     doctorPreview.textContent = parts.join(' • ')
                     doctorPreview.classList.remove('hidden')
                 }
@@ -564,7 +756,8 @@
             if (!doctorResults) return
             var q = doctorSearch ? normalizeText(doctorSearch.value) : ''
 
-            var category = extractServiceCategory(selectedService ? selectedService.service_name : '')
+            var primary = selectedServices && selectedServices.length ? selectedServices[0] : null
+            var category = extractServiceCategory(primary ? primary.service_name : '')
             var list = []
             if (category) {
                 list = (doctors || []).filter(function (d) {
@@ -597,11 +790,44 @@
                 return
             }
 
+            var dateStr = (dateSelect && dateSelect.value) ? String(dateSelect.value).slice(0, 10) : (dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : new Date().toISOString().slice(0, 10))
+            var dayKey = dayKeyFromDate(dateStr)
+            var checkTime = selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : ''
+
+            var enriched = list.map(function (d) {
+                var name = [d.firstname, d.middlename, d.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
+                if (!name) name = 'Doctor #' + d.user_id
+                var isDoctorAvailable = d && d.is_available !== false
+                var hasSchedule = !!dayKey && hasScheduleAtTime(d, dayKey, dateStr, checkTime)
+                var isSelectable = isDoctorAvailable && hasSchedule
+                var tag = ''
+                if (!isSelectable) tag = 'Unavailable'
+                else if (previousDoctorId && parseInt(d.user_id, 10) === previousDoctorId) tag = 'Previous Provider'
+                return { d: d, name: name, isSelectable: isSelectable, tag: tag }
+            })
+
+            enriched.sort(function (a, b) {
+                if (a.isSelectable !== b.isSelectable) return a.isSelectable ? -1 : 1
+                if ((a.tag === 'Previous Provider') !== (b.tag === 'Previous Provider')) return a.tag === 'Previous Provider' ? -1 : 1
+                var ai = a.d && a.d.user_id != null ? parseInt(a.d.user_id, 10) : 0
+                var bi = b.d && b.d.user_id != null ? parseInt(b.d.user_id, 10) : 0
+                return (isNaN(bi) ? 0 : bi) - (isNaN(ai) ? 0 : ai)
+            })
+
+            enriched = enriched.slice(0, 8)
+
             var html = ''
-            list.forEach(function (d) {
-                html += '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
-                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml([d.firstname, d.middlename, d.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() || ('Doctor #' + d.user_id)) + '</div>' +
-                    '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(d.specialization || '—') + '</div>' +
+            enriched.forEach(function (x) {
+                var d = x.d
+                var name = x.name
+                html += '<button type="button" class="w-full text-left px-3 py-2 border-b border-slate-100 last:border-0 flex items-start justify-between gap-3 ' + (x.isSelectable ? 'hover:bg-slate-50' : 'bg-slate-50/60 cursor-not-allowed') + '" ' + (x.isSelectable ? '' : 'disabled') + '>' +
+                    '<div class="min-w-0">' +
+                        '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml('Dr. ' + name) + '</div>' +
+                        '<div class="text-[0.72rem] text-slate-500">' + escapeHtml(d.specialization || '—') + '</div>' +
+                    '</div>' +
+                    (x.tag
+                        ? '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ' + (x.tag === 'Unavailable' ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-cyan-500/10 text-cyan-700 border border-cyan-200') + '">' + escapeHtml(x.tag) + '</span>'
+                        : '') +
                 '</button>'
             })
             doctorResults.innerHTML = html
@@ -610,7 +836,8 @@
             var buttons = doctorResults.querySelectorAll('button')
             Array.prototype.forEach.call(buttons, function (btn, idx) {
                 btn.addEventListener('click', function () {
-                    var chosen = list[idx]
+                    var chosen = enriched[idx] ? enriched[idx].d : null
+                    if (!chosen) return
                     setDoctorSelection(chosen)
                     if (doctorSearch) doctorSearch.value = [chosen.firstname, chosen.middlename, chosen.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() || ('Doctor #' + chosen.user_id)
                 })
@@ -625,7 +852,6 @@
             }
             doctorAvailableDaySet = {}
             doctorSchedules.forEach(function (s) {
-                if (s && s.is_available === false) return
                 var dayKey = s && s.day_of_week ? String(s.day_of_week).toLowerCase() : ''
                 if (dayKey) doctorAvailableDaySet[dayKey] = true
             })
@@ -776,8 +1002,13 @@
                 return
             }
 
+            var todayIso = new Date().toISOString().slice(0, 10)
+            var isToday = String(dateInput.value) === todayIso
             var daySchedules = doctorSchedules.filter(function (s) {
-                return String(s.day_of_week || '').toLowerCase() === dayKey && s.is_available !== false
+                if (!s) return false
+                if (String(s.day_of_week || '').toLowerCase() !== dayKey) return false
+                if (isToday && s.is_available === false) return false
+                return true
             })
 
             if (!daySchedules.length) {
@@ -850,7 +1081,7 @@
                 var btn = document.createElement('button')
                 btn.type = 'button'
                 btn.className =
-                    'px-3 py-2 rounded-xl text-[0.75rem] font-semibold border transition-colors ' +
+                    'w-full px-3 py-2 rounded-xl text-[0.75rem] font-semibold border transition-colors flex items-center justify-between ' +
                     (isBooked
                         ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
                         : (isSelected
@@ -1047,14 +1278,6 @@
             serviceSearch.addEventListener('input', function () {
                 showBookAppointmentError('')
                 showBookAppointmentSuccess('')
-
-                var q = String(serviceSearch.value || '').trim()
-                if (selectedService) {
-                    var currentName = String(selectedService.service_name || ('Service #' + selectedService.service_id)).trim()
-                    if (normalizeText(q) !== normalizeText(currentName)) {
-                        setServiceSelection(null)
-                    }
-                }
                 renderServiceResults()
             })
         }
@@ -1146,7 +1369,7 @@
 
         function setTypeButtonState(btn, isActive) {
             if (!btn) return
-            btn.classList.toggle('bg-white', isActive)
+            btn.classList.toggle('bg-cyan-500', isActive)
             btn.classList.toggle('text-slate-900', isActive)
             btn.classList.toggle('shadow-sm', isActive)
             btn.classList.toggle('border', isActive)
@@ -1258,13 +1481,13 @@
 
                 var patientId = patientInput ? parseInt(patientInput.value, 10) : 0
                 var doctorId = doctorInput ? parseInt(doctorInput.value, 10) : 0
-                var serviceId = serviceInput ? parseInt(serviceInput.value, 10) : 0
+                var serviceIds = selectedServiceIds()
                 var date = dateSelect && dateSelect.value ? dateSelect.value : (dateInput ? dateInput.value : '')
                 var time = timeInput ? timeInput.value : ''
                 var type = 'scheduled'
                 var reason = reasonInput ? reasonInput.value : ''
 
-                if (!patientId || !serviceId || !doctorId) {
+                if (!patientId || !doctorId || !serviceIds.length) {
                     showBookAppointmentError('Patient, service, and doctor are required.')
                     setBookSubmitting(false)
                     return
@@ -1287,7 +1510,7 @@
                 var body = {
                     patient_id: patientId,
                     doctor_id: doctorId,
-                    service_id: serviceId,
+                    service_ids: serviceIds,
                     appointment_type: type,
                     status: 'confirmed'
                 }
@@ -1328,7 +1551,9 @@
                         if (serviceSearch) serviceSearch.value = ''
                         if (doctorSearch) doctorSearch.value = ''
                         setPatientSelection(null)
-                        setServiceSelection(null)
+                        selectedServices = []
+                        syncServiceHiddenInput()
+                        renderSelectedServices()
                         setDoctorSelection(null)
                         if (dateInput) dateInput.value = ''
                         if (timeInput) timeInput.value = ''

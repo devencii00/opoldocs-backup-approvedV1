@@ -51,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('prescriptions', PrescriptionController::class);
     Route::apiResource('medicines', MedicineController::class);
     Route::apiResource('queues', QueueController::class);
+    Route::post('/queues/call-next', [QueueController::class, 'callNext']);
     Route::post('/queues/join', [QueueController::class, 'join']);
     Route::apiResource('transactions', TransactionController::class);
     Route::apiResource('walk-ins', WalkInController::class)->only(['index', 'show', 'store']);

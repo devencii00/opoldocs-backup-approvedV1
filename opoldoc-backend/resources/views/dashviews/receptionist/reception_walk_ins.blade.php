@@ -1,13 +1,25 @@
-<div class="bg-white border border-slate-200 rounded-[18px] p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)]">
-    <div class="flex items-center justify-between mb-3">
-        <div>
-            <h2 class="text-sm font-semibold text-slate-900">Create walk-in</h2>
-            <p class="text-xs text-slate-500">Register a walk-in based on personal information or an existing patient.</p>
-        </div>
-        <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Walk-ins</span>
+<div class="bg-white border border-slate-200 rounded-[18px] shadow-[0_2px_10px_rgba(15,23,42,0.04)] overflow-hidden">
+    <div class="grid grid-cols-2 border-b border-slate-200">
+      <button id="receptionWalkInTabAccount" type="button" class="px-4 py-3 text-xs font-semibold text-white bg-cyan-500 border-b-2 border-cyan-600">
+    Walk-in
+</button>
+<button id="receptionWalkInTabGuest" type="button" class="px-4 py-3 text-xs font-semibold text-slate-900 bg-white hover:bg-slate-50 border-l border-slate-200">
+    Guest walk-in
+</button>
     </div>
 
-    <div class="mb-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+    <div class="p-5 pb-0">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-900">Create walk-in</h2>
+                <p class="text-xs text-slate-500">Register a walk-in based on personal information or an existing patient.</p>
+            </div>
+            <span class="text-[0.7rem] text-slate-400 uppercase tracking-widest">Walk-ins</span>
+        </div>
+    </div>
+
+    <div id="receptionWalkInPanelGuest" class="hidden p-5 pt-4">
+    <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
         <div class="flex items-center justify-between mb-2">
             <div>
                 <h3 class="text-xs font-semibold text-slate-900">Walk-in without account</h3>
@@ -56,7 +68,9 @@
             Patient credentials are generated as <span class="font-semibold">patient{id}@mail.com</span> with an auto password.
         </p>
     </div>
+    </div>
 
+    <div id="receptionWalkInPanelAccount" class="p-5 pt-4">
     <div class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
         <div class="flex items-center justify-between mb-2">
             <div>
@@ -75,25 +89,25 @@
                 <div class="relative">
                     <input id="reception_patient_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search patient">
                     <input id="reception_appointment_patient_id" type="hidden" required>
-                    <div id="receptionPatientResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
+                    <div id="receptionPatientResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
                 </div>
                 <div id="receptionPatientPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
             <div class="min-w-0">
-                <label for="reception_appointment_service_id" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
+                <label for="reception_appointment_service_ids" class="block text-[0.7rem] text-slate-600 mb-1">Services</label>
                 <div class="relative">
                     <input id="reception_service_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search service">
-                    <input id="reception_appointment_service_id" type="hidden" required>
-                    <div id="receptionServiceResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
+                    <input id="reception_appointment_service_ids" type="hidden">
+                    <div id="receptionServiceResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
                 </div>
-                <div id="receptionServicePreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
+                <div id="receptionSelectedServices" class="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 max-h-24 overflow-y-auto overscroll-contain"></div>
             </div>
             <div class="min-w-0">
                 <label for="reception_appointment_doctor_id" class="block text-[0.7rem] text-slate-600 mb-1">Doctor</label>
                 <div class="relative">
                     <input id="reception_doctor_search" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Type to search doctor" disabled>
                     <input id="reception_appointment_doctor_id" type="hidden" required>
-                    <div id="receptionDoctorResults" class="hidden mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain"></div>
+                    <div id="receptionDoctorResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
                 </div>
                 <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
@@ -112,7 +126,7 @@
                 <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
                 <input id="reception_appointment_time" type="hidden" required>
                 <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
-                <div id="reception_time_slots" class="flex flex-wrap gap-2"></div>
+                <div id="reception_time_slots" class="max-h-72 overflow-y-auto overscroll-contain flex flex-col gap-2 pr-1"></div>
             </div>
             <div>
                 <label for="reception_appointment_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
@@ -125,14 +139,6 @@
 
             <input id="reception_appointment_type" type="hidden" value="walk_in">
 
-            <div class="md:col-span-3 flex items-center gap-2">
-                <label class="inline-flex items-center gap-2 text-[0.75rem] text-slate-600">
-                    <input id="reception_walkin_auto_queue" type="checkbox" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
-                    Auto add to queue
-                </label>
-                <span class="text-[0.7rem] text-slate-400">Queue entry will be created right after the visit is created.</span>
-            </div>
-
             <div class="md:col-span-3 flex justify-end">
                 <button id="receptionBookAppointmentSubmit" type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-[0.78rem] font-semibold hover:bg-cyan-700 transition-colors disabled:opacity-60 disabled:hover:bg-cyan-600">
                     <span id="receptionBookAppointmentSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
@@ -141,7 +147,54 @@
             </div>
         </form>
     </div>
+    </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var tabAccountBtn = document.getElementById('receptionWalkInTabAccount')
+        var tabGuestBtn = document.getElementById('receptionWalkInTabGuest')
+        var panelAccount = document.getElementById('receptionWalkInPanelAccount')
+        var panelGuest = document.getElementById('receptionWalkInPanelGuest')
+function setWalkInTab(tab) {
+    var isAccount = tab === 'account'
+    if (panelAccount) panelAccount.classList.toggle('hidden', !isAccount)
+    if (panelGuest) panelGuest.classList.toggle('hidden', isAccount)
+
+    if (tabAccountBtn) {
+        // Active tab (Account)
+        tabAccountBtn.classList.toggle('bg-cyan-500', isAccount)      // Cyan background
+        tabAccountBtn.classList.toggle('text-white', isAccount)       // White text
+        tabAccountBtn.classList.toggle('border-b-2', isAccount)       // Bottom border indicator
+        tabAccountBtn.classList.toggle('border-cyan-600', isAccount)  // Darker cyan border
+        // Inactive tab
+        tabAccountBtn.classList.toggle('bg-white', !isAccount)        // White background
+        tabAccountBtn.classList.toggle('text-slate-900', !isAccount)  // Dark text
+        tabAccountBtn.classList.toggle('hover:bg-slate-50', !isAccount) // Hover effect
+        tabAccountBtn.classList.toggle('border-b-0', !isAccount)      // No border when inactive
+        tabAccountBtn.classList.toggle('border-l', !isAccount)        // Left border separator
+        tabAccountBtn.classList.toggle('border-slate-200', !isAccount) // Border color
+    }
+    if (tabGuestBtn) {
+        // Active tab (Guest)
+        tabGuestBtn.classList.toggle('bg-cyan-500', !isAccount)       // Cyan background
+        tabGuestBtn.classList.toggle('text-white', !isAccount)        // White text
+        tabGuestBtn.classList.toggle('border-b-2', !isAccount)        // Bottom border indicator
+        tabGuestBtn.classList.toggle('border-cyan-600', !isAccount)   // Darker cyan border
+        // Inactive tab
+        tabGuestBtn.classList.toggle('bg-white', isAccount)           // White background
+        tabGuestBtn.classList.toggle('text-slate-900', isAccount)     // Dark text
+        tabGuestBtn.classList.toggle('hover:bg-slate-50', isAccount)  // Hover effect
+        tabGuestBtn.classList.toggle('border-b-0', isAccount)         // No border when inactive
+        tabGuestBtn.classList.toggle('border-l', isAccount)           // Left border separator
+        tabGuestBtn.classList.toggle('border-slate-200', isAccount)   // Border color
+    }
+}
+        if (tabAccountBtn) tabAccountBtn.addEventListener('click', function () { setWalkInTab('account') })
+        if (tabGuestBtn) tabGuestBtn.addEventListener('click', function () { setWalkInTab('guest') })
+        setWalkInTab('account')
+    })
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -284,9 +337,9 @@
         var patientResults = document.getElementById('receptionPatientResults')
         var patientPreview = document.getElementById('receptionPatientPreview')
         var serviceSearch = document.getElementById('reception_service_search')
-        var serviceSelect = document.getElementById('reception_appointment_service_id')
+        var serviceIdsInput = document.getElementById('reception_appointment_service_ids')
         var serviceResults = document.getElementById('receptionServiceResults')
-        var servicePreview = document.getElementById('receptionServicePreview')
+        var selectedServicesEl = document.getElementById('receptionSelectedServices')
         var doctorSearch = document.getElementById('reception_doctor_search')
         var doctorSelect = document.getElementById('reception_appointment_doctor_id')
         var doctorResults = document.getElementById('receptionDoctorResults')
@@ -300,7 +353,7 @@
         var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
         var availableDaysEl = document.getElementById('reception_available_days')
         var timeSlotsEl = document.getElementById('reception_time_slots')
-        var autoQueueInput = document.getElementById('reception_walkin_auto_queue')
+        var previousDoctorId = 0
         var services = []
         var doctors = []
         var servicesLoaded = false
@@ -314,10 +367,10 @@
         var doctorAvailableDaySet = {}
         var doctorAppointments = []
         var selectedSlotStart = null
-        var slotMinutes = 90
+        var slotMinutes = 60
         var patientSearchTimer = null
         var selectedPatient = null
-        var selectedService = null
+        var selectedServices = []
         var selectedDoctor = null
         var dateCursorFirstIso = null
         var dateCursorLastIso = null
@@ -382,6 +435,7 @@
         function setPatientSelection(patient) {
             selectedPatient = patient || null
             if (patientSelect) patientSelect.value = patient && patient.user_id ? String(patient.user_id) : ''
+            previousDoctorId = 0
 
             if (patientPreview) {
                 if (!patient) {
@@ -404,6 +458,28 @@
                 patientResults.innerHTML = ''
                 patientResults.classList.add('hidden')
             }
+
+            if (patient && patient.user_id) {
+                loadPreviousProvider(String(patient.user_id))
+            }
+        }
+
+        function loadPreviousProvider(patientId) {
+            if (!patientId || typeof apiFetch !== 'function') return
+            apiFetch("{{ url('/api/appointments') }}?patient_id=" + encodeURIComponent(patientId) + "&per_page=1&order=latest", { method: 'GET' })
+                .then(function (r) { return readResponse(r) })
+                .then(function (res) {
+                    if (!res.ok) return
+                    var list = res.data && Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : [])
+                    var last = list && list.length ? list[0] : null
+                    var docId = last && last.doctor_id != null ? parseInt(last.doctor_id, 10) : 0
+                    if (!docId || isNaN(docId)) return
+                    previousDoctorId = docId
+                    if (doctorSearch && doctorResults && !doctorResults.classList.contains('hidden')) {
+                        searchDoctors(String(doctorSearch.value || '').trim())
+                    }
+                })
+                .catch(function () {})
         }
 
         function renderPatientResults(items) {
@@ -471,33 +547,104 @@
             return String(service.service_name || service.name || '').trim()
         }
 
-        function setServiceSelection(service) {
-            selectedService = service || null
-            if (serviceSelect) serviceSelect.value = service && service.service_id ? String(service.service_id) : ''
+        function serviceKey(service) {
+            if (!service || service.service_id == null) return ''
+            return String(service.service_id)
+        }
 
-            if (servicePreview) {
-                if (!service) {
-                    servicePreview.textContent = ''
-                    servicePreview.classList.add('hidden')
-                } else {
-                    var parts = []
-                    parts.push('Service: ' + String(service.service_name || ''))
-                    if (service.price != null) parts.push('Price: ₱' + String(service.price))
-                    if (service.duration_minutes != null) parts.push('Duration: ' + String(service.duration_minutes) + ' min')
-                    servicePreview.textContent = parts.join(' • ')
-                    servicePreview.classList.remove('hidden')
-                }
+        function serviceGroup(service) {
+            if (!service) return ''
+            var name = String(service.service_name || '').trim()
+            if (!name) return ''
+            var parts = name.split(':')
+            var group = String(parts[0] || name).trim().toLowerCase()
+            return group
+        }
+
+        function selectedServiceIds() {
+            return (selectedServices || [])
+                .map(function (s) { return parseInt(s && s.service_id != null ? s.service_id : 0, 10) })
+                .filter(function (id) { return !!id && !isNaN(id) })
+        }
+
+        function syncServiceHiddenInput() {
+            if (!serviceIdsInput) return
+            var ids = selectedServiceIds()
+            serviceIdsInput.value = ids.join(',')
+        }
+
+        function renderSelectedServices() {
+            if (!selectedServicesEl) return
+            var list = Array.isArray(selectedServices) ? selectedServices : []
+            if (!list.length) {
+                selectedServicesEl.innerHTML = '<div class="text-[0.75rem] text-slate-500">No services selected.</div>'
+                return
             }
+
+            selectedServicesEl.innerHTML = list.map(function (s) {
+                var id = parseInt(s && s.service_id != null ? s.service_id : 0, 10)
+                var name = String(s && s.service_name ? s.service_name : '').trim() || 'Service'
+                var meta = []
+                if (s && s.duration_minutes != null) meta.push(String(s.duration_minutes) + ' min')
+                if (s && s.price != null) meta.push('₱' + String(s.price))
+                return '' +
+                    '<div class="flex items-center justify-between gap-2 py-1.5 border-b border-slate-200 last:border-0">' +
+                        '<div class="min-w-0">' +
+                            '<div class="text-[0.78rem] text-slate-800 font-semibold truncate">' + escapeHtml(name) + '</div>' +
+                            '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(id) + (meta.length ? ' • ' + escapeHtml(meta.join(' • ')) : '') + '</div>' +
+                        '</div>' +
+                        '<button type="button" class="reception-remove-service inline-flex items-center justify-center w-7 h-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-white" data-service-id="' + escapeHtml(id) + '">' +
+                            '<span class="material-symbols-outlined text-[18px] leading-none">close</span>' +
+                        '</button>' +
+                    '</div>'
+            }).join('')
+
+            var buttons = selectedServicesEl.querySelectorAll('.reception-remove-service')
+            Array.prototype.forEach.call(buttons, function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = parseInt(btn.getAttribute('data-service-id') || '0', 10)
+                    if (!id) return
+                    selectedServices = (selectedServices || []).filter(function (s) {
+                        return parseInt(s && s.service_id != null ? s.service_id : 0, 10) !== id
+                    })
+                    syncServiceHiddenInput()
+                    renderSelectedServices()
+                    filterDoctorsByService()
+                    searchServices(String(serviceSearch && serviceSearch.value ? serviceSearch.value : '').trim())
+                })
+            })
+        }
+
+        function addService(service) {
+            if (!service || service.service_id == null) return
+            var key = serviceKey(service)
+            if (!key) return
+            var exists = (selectedServices || []).some(function (s) { return serviceKey(s) === key })
+            if (exists) return
+
+            selectedServices = (selectedServices || []).concat([service])
+            syncServiceHiddenInput()
+            renderSelectedServices()
 
             if (serviceResults) {
                 serviceResults.innerHTML = ''
                 serviceResults.classList.add('hidden')
             }
+            if (serviceSearch) serviceSearch.value = ''
         }
 
         function renderServiceResults(items) {
             if (!serviceResults) return
             var list = Array.isArray(items) ? items : []
+
+            if (selectedServices && selectedServices.length) {
+                var base = serviceGroup(selectedServices[0])
+                if (base) {
+                    list = list.filter(function (s) {
+                        return serviceGroup(s) === base
+                    })
+                }
+            }
             if (!list.length) {
                 serviceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
                 serviceResults.classList.remove('hidden')
@@ -521,8 +668,7 @@
             Array.prototype.forEach.call(buttons, function (btn, idx) {
                 btn.addEventListener('click', function () {
                     var chosen = list[idx]
-                    setServiceSelection(chosen)
-                    if (serviceSearch) serviceSearch.value = serviceDisplayName(chosen)
+                    addService(chosen)
                     filterDoctorsByService()
                 })
             })
@@ -531,6 +677,7 @@
         function searchServices(query) {
             var q = normalizeText(query)
             var list = Array.isArray(services) ? services : []
+
             if (!q) {
                 if (!popularServicesLoaded) {
                     if (serviceResults) {
@@ -569,8 +716,27 @@
                     var parts = []
                     var name = [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
                     if (!name) name = 'Doctor #' + doctor.user_id
+                    var typeEl = document.getElementById('reception_appointment_type')
+                    var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+                    var dateStr = type === 'walk_in'
+                        ? new Date().toISOString().slice(0, 10)
+                        : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10))
+                    var dayKey = dayKeyFromDate(dateStr)
+                    var checkTime = type === 'walk_in'
+                        ? new Date().toTimeString().slice(0, 5)
+                        : (selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : '')
+                    var hasSchedule = !!dayKey && hasScheduleAtTime(doctor, dayKey, dateStr, checkTime)
+                    var categories = (selectedServices || [])
+                        .map(function (s) { return extractServiceCategory(s && s.service_name ? s.service_name : '') })
+                        .filter(function (c) { return !!c })
+                    var spec = doctor && doctor.specialization ? doctor.specialization : ''
+                    var matchesService = !categories.length || categories.every(function (c) { return specializationMatches(c, spec) })
+
                     parts.push('Name: ' + name)
                     if (doctor.specialization) parts.push('Specialization: ' + doctor.specialization)
+                    if (previousDoctorId && parseInt(doctor.user_id, 10) === previousDoctorId) parts.push('Previous Provider')
+                    parts.push('Availability: ' + ((doctor.is_available !== false && hasSchedule) ? 'Available' : 'Unavailable'))
+                    if (categories.length) parts.push('Service match: ' + (matchesService ? 'Yes' : 'No'))
                     doctorPreview.textContent = parts.join(' • ')
                     doctorPreview.classList.remove('hidden')
                 }
@@ -595,6 +761,34 @@
             }
         }
 
+        function doctorSchedulesForDay(doctor, dayKey, dateStr) {
+            var list = doctor && doctor.doctor_schedules && Array.isArray(doctor.doctor_schedules) ? doctor.doctor_schedules : []
+            var isToday = false
+            if (dateStr) {
+                var today = new Date().toISOString().slice(0, 10)
+                isToday = String(dateStr) === today
+            }
+            return list.filter(function (s) {
+                if (!s) return false
+                if (String(s.day_of_week || '').toLowerCase() !== String(dayKey || '').toLowerCase()) return false
+                if (isToday && s.is_available === false) return false
+                return true
+            })
+        }
+
+        function hasScheduleAtTime(doctor, dayKey, dateStr, hhmm) {
+            var slots = doctorSchedulesForDay(doctor, dayKey, dateStr)
+            if (!hhmm) return slots.length > 0
+            var t = minutesFromHHMM(String(hhmm || '').slice(0, 5))
+            if (isNaN(t)) return slots.length > 0
+            return slots.some(function (s) {
+                var st = minutesFromHHMM(String(s.start_time || '').slice(0, 5))
+                var en = minutesFromHHMM(String(s.end_time || '').slice(0, 5))
+                if (isNaN(st) || isNaN(en)) return false
+                return t >= st && t < en
+            })
+        }
+
         function renderDoctorResults(items) {
             if (!doctorResults) return
             var list = Array.isArray(items) ? items : []
@@ -603,14 +797,59 @@
                 doctorResults.classList.remove('hidden')
                 return
             }
-            var html = ''
-            list.forEach(function (d) {
+            var typeEl = document.getElementById('reception_appointment_type')
+            var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+            var dateStr = ''
+            if (type === 'walk_in') {
+                dateStr = new Date().toISOString().slice(0, 10)
+            } else {
+                dateStr = (dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10)
+            }
+            var dayKey = dayKeyFromDate(dateStr)
+            var checkTime = ''
+            if (type === 'walk_in') {
+                checkTime = new Date().toTimeString().slice(0, 5)
+            } else if (selectedSlotStart) {
+                checkTime = String(selectedSlotStart).slice(0, 5)
+            }
+
+            var enriched = list.map(function (d) {
                 var name = [d.firstname, d.middlename, d.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim()
                 if (!name) name = 'Doctor #' + d.user_id
-                var meta = [d.specialization].filter(Boolean).join(' • ')
-                html += '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">' +
-                    '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml(name) + '</div>' +
-                    '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(d.user_id) + (meta ? ' • ' + escapeHtml(meta) : '') + '</div>' +
+                var spec = d && d.specialization ? String(d.specialization) : ''
+                var isDoctorAvailable = d && d.is_available !== false
+                var hasSchedule = !!dayKey && hasScheduleAtTime(d, dayKey, dateStr, checkTime)
+                var isSelectable = isDoctorAvailable && hasSchedule
+                var tag = ''
+                if (!isSelectable) tag = 'Unavailable'
+                else if (previousDoctorId && parseInt(d.user_id, 10) === previousDoctorId) tag = 'Previous Provider'
+                return {
+                    d: d,
+                    name: name,
+                    spec: spec,
+                    isSelectable: isSelectable,
+                    tag: tag,
+                }
+            })
+
+            enriched.sort(function (a, b) {
+                if (a.isSelectable !== b.isSelectable) return a.isSelectable ? -1 : 1
+                if ((a.tag === 'Previous Provider') !== (b.tag === 'Previous Provider')) return a.tag === 'Previous Provider' ? -1 : 1
+                return normalizeText(a.name).localeCompare(normalizeText(b.name))
+            })
+
+            var html = ''
+            enriched.forEach(function (x) {
+                var d = x.d
+                var meta = [x.spec].filter(Boolean).join(' • ')
+                html += '<button type="button" class="w-full text-left px-3 py-2 border-b border-slate-100 last:border-0 flex items-start justify-between gap-3 ' + (x.isSelectable ? 'hover:bg-slate-50' : 'bg-slate-50/60 cursor-not-allowed') + '" ' + (x.isSelectable ? '' : 'disabled') + '>' +
+                    '<div class="min-w-0">' +
+                        '<div class="text-[0.78rem] text-slate-800 font-semibold">' + escapeHtml('Dr. ' + x.name) + '</div>' +
+                        '<div class="text-[0.72rem] text-slate-500">#' + escapeHtml(d.user_id) + (meta ? ' • ' + escapeHtml(meta) : '') + '</div>' +
+                    '</div>' +
+                    (x.tag
+                        ? '<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ' + (x.tag === 'Unavailable' ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-cyan-500/10 text-cyan-700 border border-cyan-200') + '">' + escapeHtml(x.tag) + '</span>'
+                        : '') +
                 '</button>'
             })
             doctorResults.innerHTML = html
@@ -619,7 +858,8 @@
             var buttons = doctorResults.querySelectorAll('button')
             Array.prototype.forEach.call(buttons, function (btn, idx) {
                 btn.addEventListener('click', function () {
-                    var chosen = list[idx]
+                    var chosen = enriched[idx] ? enriched[idx].d : null
+                    if (!chosen) return
                     setDoctorSelection(chosen)
                     if (doctorSearch) doctorSearch.value = doctorDisplayName(chosen)
                 })
@@ -628,36 +868,60 @@
 
         function filterDoctorsByService() {
             var list = Array.isArray(doctors) ? doctors : []
-            if (!selectedService) {
+            if (!selectedServices || !selectedServices.length) {
                 if (doctorSearch) doctorSearch.disabled = true
                 setDoctorSelection(null)
                 if (doctorSearch) doctorSearch.value = ''
                 if (doctorResults) doctorResults.classList.add('hidden')
                 return
             }
-            var category = extractServiceCategory(selectedService && selectedService.service_name ? selectedService.service_name : '')
+            var categories = (selectedServices || [])
+                .map(function (s) { return extractServiceCategory(s && s.service_name ? s.service_name : '') })
+                .filter(function (c) { return !!c })
+
             var filtered = list.filter(function (d) {
                 var spec = d && d.specialization ? d.specialization : ''
-                return specializationMatches(category, spec)
+                return categories.every(function (c) { return specializationMatches(c, spec) })
             })
             if (doctorSearch) doctorSearch.disabled = false
             if (filtered.length === 1) {
-                setDoctorSelection(filtered[0])
-                if (doctorSearch) doctorSearch.value = doctorDisplayName(filtered[0])
+                var candidate = filtered[0]
+                var typeEl = document.getElementById('reception_appointment_type')
+                var type = typeEl && typeEl.value ? String(typeEl.value) : 'walk_in'
+                var dateStr = type === 'walk_in'
+                    ? new Date().toISOString().slice(0, 10)
+                    : ((dateSelect && dateSelect.value) ? String(dateSelect.value) : new Date().toISOString().slice(0, 10))
+                var dayKey = dayKeyFromDate(dateStr)
+                var checkTime = type === 'walk_in' ? new Date().toTimeString().slice(0, 5) : (selectedSlotStart ? String(selectedSlotStart).slice(0, 5) : '')
+                var isSelectable = candidate && candidate.is_available !== false && !!dayKey && hasScheduleAtTime(candidate, dayKey, dateStr, checkTime)
+                if (isSelectable) {
+                    setDoctorSelection(candidate)
+                    if (doctorSearch) doctorSearch.value = doctorDisplayName(candidate)
+                } else {
+                    setDoctorSelection(null)
+                    if (doctorSearch) doctorSearch.value = ''
+                }
             } else {
-                setDoctorSelection(null)
-                if (doctorSearch) doctorSearch.value = ''
+                if (selectedDoctor) {
+                    var stillOk = filtered.some(function (d) { return String(d.user_id) === String(selectedDoctor.user_id) })
+                    if (!stillOk) {
+                        setDoctorSelection(null)
+                        if (doctorSearch) doctorSearch.value = ''
+                    }
+                }
             }
         }
 
         function searchDoctors(query) {
             var q = normalizeText(query)
             var list = Array.isArray(doctors) ? doctors : []
-            if (selectedService) {
-                var category = extractServiceCategory(selectedService && selectedService.service_name ? selectedService.service_name : '')
+            if (selectedServices && selectedServices.length) {
+                var categories = (selectedServices || [])
+                    .map(function (s) { return extractServiceCategory(s && s.service_name ? s.service_name : '') })
+                    .filter(function (c) { return !!c })
                 list = list.filter(function (d) {
                     var spec = d && d.specialization ? d.specialization : ''
-                    return specializationMatches(category, spec)
+                    return categories.every(function (c) { return specializationMatches(c, spec) })
                 })
             }
             if (!q) {
@@ -800,7 +1064,6 @@
             var days = {}
             doctorSchedules.forEach(function (s) {
                 if (!s) return
-                if (s.is_available === false) return
                 var k = String(s.day_of_week || '').toLowerCase()
                 if (!k) return
                 days[k] = true
@@ -878,8 +1141,13 @@
                 return
             }
 
+            var todayIso = new Date().toISOString().slice(0, 10)
+            var isToday = String(dateInput.value) === todayIso
             var daySchedules = doctorSchedules.filter(function (s) {
-                return String(s.day_of_week || '').toLowerCase() === dayKey && s.is_available !== false
+                if (!s) return false
+                if (String(s.day_of_week || '').toLowerCase() !== dayKey) return false
+                if (isToday && s.is_available === false) return false
+                return true
             })
 
             if (!daySchedules.length) {
@@ -952,7 +1220,7 @@
                 var btn = document.createElement('button')
                 btn.type = 'button'
                 btn.className =
-                    'px-3 py-2 rounded-xl text-[0.75rem] font-semibold border transition-colors ' +
+                    'w-full px-3 py-2 rounded-xl text-[0.75rem] font-semibold border transition-colors flex items-center justify-between ' +
                     (isBooked
                         ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
                         : (isSelected
@@ -1115,8 +1383,7 @@
         }
 
         function applyAppointmentTypeUI() {
-            if (typeInput) typeInput.value = 'walk_in'
-            var type = 'walk_in'
+            var type = typeInput && typeInput.value ? String(typeInput.value) : 'walk_in'
             var isWalkIn = type === 'walk_in'
             if (dateWrap) dateWrap.classList.toggle('hidden', isWalkIn)
             if (timeWrap) timeWrap.classList.toggle('hidden', isWalkIn)
@@ -1139,13 +1406,19 @@
                 if (dateInput) dateInput.value = ''
                 if (timeInput) timeInput.value = ''
                 selectedSlotStart = null
+            } else {
+                if (doctorSelect && doctorSelect.value && (!doctorSchedules || !doctorSchedules.length)) {
+                    clearAvailability()
+                    loadDoctorSchedulesAndAvailability(String(doctorSelect.value), null)
+                }
             }
             renderTimeSlots()
         }
 
         function setAppointmentType(nextType) {
-            if (typeInput) typeInput.value = 'walk_in'
+            if (typeInput) typeInput.value = nextType === 'scheduled' ? 'scheduled' : 'walk_in'
             applyAppointmentTypeUI()
+            syncTypeToggleUI()
         }
 
         if (typeScheduledBtn) typeScheduledBtn.addEventListener('click', function () { setAppointmentType('scheduled') })
@@ -1173,10 +1446,6 @@
         if (serviceSearch) {
             serviceSearch.addEventListener('input', function () {
                 var q = String(serviceSearch.value || '').trim()
-                if (selectedService) {
-                    setServiceSelection(null)
-                    filterDoctorsByService()
-                }
                 searchServices(q)
             })
             serviceSearch.addEventListener('focus', function () {
@@ -1227,6 +1496,8 @@
         })
 
         loadServicesAndDoctors()
+        syncServiceHiddenInput()
+        renderSelectedServices()
         if (typeInput && !typeInput.value) typeInput.value = 'walk_in'
         syncTypeToggleUI()
         applyAppointmentTypeUI()
@@ -1241,7 +1512,6 @@
 
                 var patientInput = document.getElementById('reception_appointment_patient_id')
                 var doctorInput = document.getElementById('reception_appointment_doctor_id')
-                var serviceInput = document.getElementById('reception_appointment_service_id')
                 var dateSelect = document.getElementById('reception_appointment_date_select')
                 var dateInput = document.getElementById('reception_appointment_date')
                 var timeInput = document.getElementById('reception_appointment_time')
@@ -1251,16 +1521,16 @@
 
                 var patientId = patientInput ? parseInt(patientInput.value, 10) : 0
                 var doctorId = doctorInput ? parseInt(doctorInput.value, 10) : 0
-                var serviceId = serviceInput ? parseInt(serviceInput.value, 10) : 0
+                var serviceIds = selectedServiceIds()
                 var date = dateSelect && dateSelect.value ? dateSelect.value : (dateInput ? dateInput.value : '')
                 var time = timeInput ? timeInput.value : ''
-                var type = 'walk_in'
+                var type = typeInput && typeInput.value ? String(typeInput.value) : 'walk_in'
                 var priority = priorityInput && priorityInput.value ? parseInt(priorityInput.value, 10) : null
                 var reason = reasonInput ? reasonInput.value : ''
-                var autoQueue = autoQueueInput ? !!autoQueueInput.checked : false
+                var autoQueue = true
 
-                if (!patientId || !serviceId || !doctorId) {
-                    showError('Patient, service, and doctor are required.')
+                if (!patientId || !serviceIds.length || !doctorId) {
+                    showError('Patient, services, and doctor are required.')
                     setSubmitting(false)
                     return
                 }
@@ -1282,7 +1552,7 @@
                 var body = {
                     patient_id: patientId,
                     doctor_id: doctorId,
-                    service_id: serviceId,
+                    service_ids: serviceIds,
                     appointment_type: type,
                     status: 'confirmed'
                 }
@@ -1309,7 +1579,7 @@
                     })
                     .then(function (result) {
                         if (!result.ok) {
-                            var message = 'Failed to create walk-in.'
+                            var message = 'Failed to create appointment.'
                             if (result.data && result.data.message) message = result.data.message
                             showError(message)
                             return
@@ -1317,18 +1587,19 @@
 
                         var created = result.data || {}
                         function afterQueue() {
-                            showSuccess('Walk-in has been created successfully.' + (autoQueue ? ' Queue entry created.' : ''))
+                            showSuccess((type === 'walk_in' ? 'Walk-in' : 'Appointment') + ' has been created successfully. Queue entry created.')
                             if (patientSearch) patientSearch.value = ''
                             if (serviceSearch) serviceSearch.value = ''
                             if (doctorSearch) doctorSearch.value = ''
                             setPatientSelection(null)
-                            setServiceSelection(null)
+                            selectedServices = []
+                            syncServiceHiddenInput()
+                            renderSelectedServices()
                             setDoctorSelection(null)
                             if (dateInput) dateInput.value = ''
                             if (timeInput) timeInput.value = ''
                             if (priorityInput) priorityInput.value = ''
                             if (reasonInput) reasonInput.value = ''
-                            if (autoQueueInput) autoQueueInput.checked = false
                             if (typeInput) typeInput.value = 'walk_in'
                             syncTypeToggleUI()
                             applyAppointmentTypeUI()
@@ -1349,7 +1620,7 @@
                         }
                     })
                     .catch(function () {
-                        showError('Network error while creating walk-in.')
+                        showError('Network error while creating appointment.')
                     })
                     .finally(function () {
                         setSubmitting(false)

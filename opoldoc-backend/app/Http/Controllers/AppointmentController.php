@@ -31,6 +31,7 @@ class AppointmentController extends Controller
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date'],
             'search' => ['nullable', 'string'],
+            'order' => ['nullable', 'in:latest,oldest'],
         ]);
 
         $query = Appointment::with(['patient', 'doctor', 'queue', 'services']);
@@ -112,6 +113,16 @@ class AppointmentController extends Controller
             }
         }
 
+        $order = (string) $request->query('order', 'oldest');
+
+        if ($order === 'latest') {
+            return $query
+                ->orderByRaw('appointment_datetime IS NULL ASC')
+                ->orderByDesc('appointment_datetime')
+                ->orderByDesc('appointment_id')
+                ->paginate($perPage);
+        }
+
         return $query
             ->orderByRaw('appointment_datetime IS NULL ASC')
             ->orderBy('appointment_datetime')
@@ -135,7 +146,9 @@ class AppointmentController extends Controller
             'status' => ['nullable', 'in:pending,confirmed,completed,cancelled,no_show'],
             'reason_for_visit' => ['nullable', 'string'],
             'priority_level' => ['nullable', 'integer'],
-            'service_id' => [$isPatient ? 'required' : 'nullable', 'exists:services,service_id'],
+            'service_id' => ['nullable', 'exists:services,service_id'],
+            'service_ids' => ['nullable', 'array'],
+            'service_ids.*' => ['integer', 'exists:services,service_id'],
         ]);
 
         $doctor = User::query()->find((int) $data['doctor_id']);
@@ -172,16 +185,52 @@ class AppointmentController extends Controller
             ], 422);
         }
 
-        $serviceId = $data['service_id'] ?? null;
-        unset($data['service_id']);
+        $serviceIds = [];
+        if (array_key_exists('service_ids', $data) && is_array($data['service_ids'])) {
+            $serviceIds = array_values(array_filter(array_map(fn ($v) => (int) $v, $data['service_ids']), fn ($v) => $v > 0));
+        }
+        if (array_key_exists('service_id', $data) && $data['service_id']) {
+            $serviceIds[] = (int) $data['service_id'];
+        }
+        $serviceIds = array_values(array_unique($serviceIds));
 
-        $service = null;
-        if ($serviceId) {
-            $service = Service::query()->find((int) $serviceId);
-            if (! $service || $service->is_active === false) {
+        if ($isPatient && ! count($serviceIds)) {
+            return response()->json([
+                'message' => 'Service is required.',
+                'code' => 'SERVICE_REQUIRED',
+            ], 422);
+        }
+
+        unset($data['service_id'], $data['service_ids']);
+
+        $services = collect();
+        if (count($serviceIds)) {
+            $services = Service::query()
+                ->whereIn('service_id', $serviceIds)
+                ->get();
+
+            $inactive = $services->firstWhere('is_active', false);
+            if ($inactive) {
                 return response()->json([
                     'message' => 'Selected service is inactive.',
                     'code' => 'SERVICE_INACTIVE',
+                ], 422);
+            }
+
+            $serviceGroups = $services
+                ->map(function (Service $service) {
+                    $serviceName = (string) ($service->service_name ?? '');
+                    $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                    return trim($serviceCategory);
+                })
+                ->filter(fn ($v) => (string) $v !== '')
+                ->unique()
+                ->values();
+
+            if ($serviceGroups->count() > 1) {
+                return response()->json([
+                    'message' => 'All selected services must match the first chosen service.',
+                    'code' => 'SERVICE_GROUP_MISMATCH',
                 ], 422);
             }
         }
@@ -200,10 +249,14 @@ class AppointmentController extends Controller
             $dayKey = strtolower($dt->format('D'));
             $timeValue = $dt->format('H:i:s');
 
+            $isToday = $dt->toDateString() === now()->toDateString();
+
             $daySchedules = DoctorSchedule::query()
                 ->where('doctor_id', $doctorId)
                 ->where('day_of_week', $dayKey)
-                ->where('is_available', true)
+                ->when($isToday, function ($q) {
+                    $q->where('is_available', true);
+                })
                 ->orderBy('start_time')
                 ->get();
 
@@ -214,7 +267,7 @@ class AppointmentController extends Controller
                 ], 422);
             }
 
-            $slotMinutes = 90;
+            $slotMinutes = 60;
             $intervals = [];
 
             foreach ($daySchedules as $row) {
@@ -317,24 +370,29 @@ class AppointmentController extends Controller
                 }
             }
 
-            if ($serviceId) {
+            if (count($serviceIds)) {
                 $doctor = User::query()->find($doctorId);
 
-                if ($service && $doctor) {
-                    $serviceName = (string) ($service->service_name ?? '');
-                    $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                if ($doctor) {
                     $doctorSpec = strtolower(trim((string) ($doctor->specialization ?? '')));
-
-                    $serviceCategory = trim($serviceCategory);
                     $doctorSpec = trim($doctorSpec);
 
-                    if ($serviceCategory !== '' && $doctorSpec !== '') {
-                        $matches = str_contains($doctorSpec, $serviceCategory) || str_contains($serviceCategory, $doctorSpec);
-                        if (! $matches) {
-                            return response()->json([
-                                'message' => 'Selected doctor does not match the chosen service.',
-                                'code' => 'SPECIALIZATION_MISMATCH',
-                            ], 422);
+                    if ($doctorSpec !== '') {
+                        foreach ($services as $service) {
+                            $serviceName = (string) ($service->service_name ?? '');
+                            $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                            $serviceCategory = trim($serviceCategory);
+                            if ($serviceCategory === '') {
+                                continue;
+                            }
+
+                            $matches = str_contains($doctorSpec, $serviceCategory) || str_contains($serviceCategory, $doctorSpec);
+                            if (! $matches) {
+                                return response()->json([
+                                    'message' => 'Selected doctor does not match the chosen service.',
+                                    'code' => 'SPECIALIZATION_MISMATCH',
+                                ], 422);
+                            }
                         }
                     }
                 }
@@ -367,10 +425,10 @@ class AppointmentController extends Controller
             $data['appointment_datetime'] = now();
         }
 
-        $appointment = DB::transaction(function () use ($data, $serviceId) {
+        $appointment = DB::transaction(function () use ($data, $serviceIds) {
             $appointment = Appointment::create($data);
-            if ($serviceId) {
-                $appointment->services()->sync([(int) $serviceId]);
+            if (count($serviceIds)) {
+                $appointment->services()->sync(array_map(fn ($v) => (int) $v, $serviceIds));
             }
             return $appointment;
         });
@@ -420,7 +478,83 @@ class AppointmentController extends Controller
             'reason_for_visit' => ['sometimes', 'nullable', 'string'],
             'priority_level' => ['sometimes', 'integer'],
             'check_in_time' => ['sometimes', 'nullable', 'date'],
+            'service_id' => ['sometimes', 'nullable', 'exists:services,service_id'],
+            'service_ids' => ['sometimes', 'array'],
+            'service_ids.*' => ['integer', 'exists:services,service_id'],
         ]);
+
+        $serviceIds = null;
+        if (array_key_exists('service_ids', $data) || array_key_exists('service_id', $data)) {
+            $ids = [];
+            if (array_key_exists('service_ids', $data) && is_array($data['service_ids'])) {
+                $ids = array_values(array_filter(array_map(fn ($v) => (int) $v, $data['service_ids']), fn ($v) => $v > 0));
+            }
+            if (array_key_exists('service_id', $data) && $data['service_id']) {
+                $ids[] = (int) $data['service_id'];
+            }
+            $ids = array_values(array_unique($ids));
+            unset($data['service_id'], $data['service_ids']);
+
+            $services = collect();
+            if (count($ids)) {
+                $services = Service::query()
+                    ->whereIn('service_id', $ids)
+                    ->get();
+
+                $inactive = $services->firstWhere('is_active', false);
+                if ($inactive) {
+                    return response()->json([
+                        'message' => 'Selected service is inactive.',
+                        'code' => 'SERVICE_INACTIVE',
+                    ], 422);
+                }
+
+                $serviceGroups = $services
+                    ->map(function (Service $service) {
+                        $serviceName = (string) ($service->service_name ?? '');
+                        $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                        return trim($serviceCategory);
+                    })
+                    ->filter(fn ($v) => (string) $v !== '')
+                    ->unique()
+                    ->values();
+
+                if ($serviceGroups->count() > 1) {
+                    return response()->json([
+                        'message' => 'All selected services must match the first chosen service.',
+                        'code' => 'SERVICE_GROUP_MISMATCH',
+                    ], 422);
+                }
+
+                $doctorIdForCheck = array_key_exists('doctor_id', $data) ? (int) $data['doctor_id'] : (int) $appointment->doctor_id;
+                $doctor = User::query()->find($doctorIdForCheck);
+                if ($doctor) {
+                    $doctorSpec = strtolower(trim((string) ($doctor->specialization ?? '')));
+                    $doctorSpec = trim($doctorSpec);
+
+                    if ($doctorSpec !== '') {
+                        foreach ($services as $service) {
+                            $serviceName = (string) ($service->service_name ?? '');
+                            $serviceCategory = strtolower(trim(explode(':', $serviceName, 2)[0] ?? $serviceName));
+                            $serviceCategory = trim($serviceCategory);
+                            if ($serviceCategory === '') {
+                                continue;
+                            }
+
+                            $matches = str_contains($doctorSpec, $serviceCategory) || str_contains($serviceCategory, $doctorSpec);
+                            if (! $matches) {
+                                return response()->json([
+                                    'message' => 'Selected doctor does not match the chosen service.',
+                                    'code' => 'SPECIALIZATION_MISMATCH',
+                                ], 422);
+                            }
+                        }
+                    }
+                }
+            }
+
+            $serviceIds = $ids;
+        }
 
         if (array_key_exists('doctor_id', $data)) {
             $doctor = User::query()->find((int) $data['doctor_id']);
@@ -438,7 +572,12 @@ class AppointmentController extends Controller
             }
         }
 
-        $appointment->update($data);
+        DB::transaction(function () use ($appointment, $data, $serviceIds) {
+            $appointment->update($data);
+            if ($serviceIds !== null) {
+                $appointment->services()->sync(array_map(fn ($v) => (int) $v, $serviceIds));
+            }
+        });
 
         $appointment->refresh();
 
