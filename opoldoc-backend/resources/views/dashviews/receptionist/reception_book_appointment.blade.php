@@ -48,9 +48,15 @@
             </div>
             <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
         </div>
-        <div id="receptionAppointmentDateWrap" class="self-start">
+        <div id="receptionAppointmentDateWrap" class="self-start relative">
             <label for="reception_appointment_date" class="block text-[0.7rem] text-slate-600 mb-1">Date</label>
-            <select id="reception_appointment_date_select" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required disabled>
+            <button id="receptionAppointmentDateTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
+                Select a doctor first
+            </button>
+            <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                <div id="receptionAppointmentDateList" class="max-h-56 overflow-y-auto overscroll-contain snap-y snap-mandatory"></div>
+            </div>
+            <select id="reception_appointment_date_select" class="hidden" required disabled>
                 <option value="">Select a doctor first</option>
             </select>
             <div class="mt-1 flex items-center justify-between">
@@ -59,11 +65,16 @@
             </div>
             <input id="reception_appointment_date" type="date" class="hidden" tabindex="-1">
         </div>
-        <div id="receptionAppointmentTimeWrap" class="self-start">
+        <div id="receptionAppointmentTimeWrap" class="self-start relative">
             <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
             <input id="reception_appointment_time" type="hidden" required>
             <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
-            <div id="reception_time_slots" class="max-h-72 overflow-y-auto overscroll-contain flex flex-col gap-2 pr-1"></div>
+            <button id="receptionTimeSlotTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
+                Select a date first
+            </button>
+            <div id="receptionTimeSlotOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                <div id="reception_time_slots" class="max-h-44 overflow-y-auto overscroll-contain flex flex-col gap-2 p-2"></div>
+            </div>
         </div>
         <input id="reception_appointment_type" type="hidden" value="scheduled">
         <div class="md:col-span-3">
@@ -94,43 +105,53 @@
         <div id="receptionManageAppointmentError" class="hidden mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[0.75rem] text-red-700"></div>
         <div id="receptionManageAppointmentSuccess" class="hidden mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[0.75rem] text-emerald-700"></div>
 
-        <form id="receptionManageAppointmentForm" class="grid gap-3 grid-cols-1 md:grid-cols-4 items-start mb-3">
-            <div>
-                <label for="reception_manage_appointment_id" class="block text-[0.7rem] text-slate-600 mb-1">Appointment</label>
-                <input id="reception_manage_appointment_search" type="text" class="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search appointment">
-                <select id="reception_manage_appointment_id" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required>
-                    <option value="">Select an appointment</option>
+        <div class="grid gap-3 grid-cols-1 md:grid-cols-4 items-start mb-4">
+            <div class="md:col-span-2 min-w-0">
+                <label for="receptionManageApptSearch" class="block text-[0.7rem] text-slate-600 mb-1">Search</label>
+                <input id="receptionManageApptSearch" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="Search by patient or doctor">
+            </div>
+            <div class="min-w-0">
+                <label for="receptionManageServiceSearch" class="block text-[0.7rem] text-slate-600 mb-1">Service</label>
+                <div class="relative">
+                    <input id="receptionManageServiceSearch" type="text" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" placeholder="All services" autocomplete="off">
+                    <input id="receptionManageServiceId" type="hidden">
+                    <div id="receptionManageServiceResults" class="hidden absolute left-0 right-0 top-full mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-sm max-h-64 overflow-y-auto overscroll-contain z-50"></div>
+                </div>
+            </div>
+            <div class="min-w-0">
+                <label for="receptionManageSort" class="block text-[0.7rem] text-slate-600 mb-1">Sort by date</label>
+                <select id="receptionManageSort" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
+                    <option value="latest">Latest first</option>
+                    <option value="oldest">Oldest first</option>
                 </select>
             </div>
-            <div>
-                <label for="reception_manage_action" class="block text-[0.7rem] text-slate-600 mb-1">Action</label>
-                <select id="reception_manage_action" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                    <option value="fetch">🔍 Fetch details</option>
-                    <option value="check_in">✅ Mark check-in (now)</option>
-                    <option value="cancel">❌ Cancel appointment</option>
-                    <option value="complete">✅ Mark completed</option>
-                </select>
-            </div>
-            <div>
-                <label for="reception_manage_status" class="block text-[0.7rem] text-slate-600 mb-1">New status (optional)</label>
-                <select id="reception_manage_status" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none">
-                    <option value="">Use action default</option>
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="no_show">No show</option>
-                </select>
-            </div>
-            <div class="flex justify-end">
-                <button id="receptionManageAppointmentSubmit" type="submit" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-[0.78rem] font-semibold hover:bg-slate-800 transition-colors w-full disabled:opacity-60 disabled:hover:bg-slate-900">
-                    <span id="receptionManageAppointmentSpinner" class="hidden w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                    <span id="receptionManageAppointmentSubmitLabel">Apply</span>
-                </button>
-            </div>
-        </form>
+        </div>
 
-        <pre id="receptionManageAppointmentResult" class="hidden text-[0.68rem] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 overflow-x-auto"></pre>
+        <div class="rounded-2xl border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-slate-50 text-slate-600">
+                        <tr>
+                            <th class="text-left px-3 py-2 font-semibold">Date</th>
+                            <th class="text-left px-3 py-2 font-semibold">Time</th>
+                            <th class="text-left px-3 py-2 font-semibold">Patient</th>
+                            <th class="text-left px-3 py-2 font-semibold">Age</th>
+                            <th class="text-left px-3 py-2 font-semibold">Contact</th>
+                            <th class="text-left px-3 py-2 font-semibold">Service</th>
+                            <th class="text-left px-3 py-2 font-semibold">Doctor</th>
+                            <th class="text-right px-3 py-2 font-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="receptionManageAppointmentTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+            <div id="receptionManageAppointmentTableFooter" class="px-3 py-2 text-[0.72rem] text-slate-500 bg-white border-t border-slate-100 flex items-center justify-between">
+                <div id="receptionManageAppointmentMeta">Showing latest 10 booked appointments.</div>
+                <button id="receptionManageAppointmentRefresh" type="button" class="text-cyan-700 font-semibold hover:text-cyan-800">Refresh</button>
+            </div>
+        </div>
+
+        <pre id="receptionManageAppointmentResult" class="hidden mt-3 text-[0.68rem] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 overflow-x-auto"></pre>
     </div>
 </div>
 
@@ -224,8 +245,13 @@ function setAppointmentTab(tab) {
         var dateLoadMore = document.getElementById('reception_appointment_date_load_more')
         var dateRangeHint = document.getElementById('reception_appointment_date_range_hint')
         var dateWrap = document.getElementById('receptionAppointmentDateWrap')
+        var dateTrigger = document.getElementById('receptionAppointmentDateTrigger')
+        var dateOverlay = document.getElementById('receptionAppointmentDateOverlay')
+        var dateList = document.getElementById('receptionAppointmentDateList')
         var timeInput = document.getElementById('reception_appointment_time')
         var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
+        var timeTrigger = document.getElementById('receptionTimeSlotTrigger')
+        var timeOverlay = document.getElementById('receptionTimeSlotOverlay')
         var availableDaysEl = document.getElementById('reception_available_days')
         var timeSlotsEl = document.getElementById('reception_time_slots')
         var services = []
@@ -521,6 +547,14 @@ function setAppointmentTab(tab) {
             if (dateInput) dateInput.value = ''
             if (availableDaysEl) availableDaysEl.textContent = ''
             if (timeSlotsEl) timeSlotsEl.innerHTML = ''
+            syncDateRollerFromSelect()
+            closeDateOverlay()
+
+            if (timeTrigger) {
+                timeTrigger.disabled = true
+                timeTrigger.textContent = 'Select a date first'
+            }
+            closeTimeOverlay()
         }
 
         function serviceKey(service) {
@@ -634,8 +668,7 @@ function setAppointmentTab(tab) {
             if (q) {
                 list = list.filter(function (s) {
                     var name = normalizeText(s && s.service_name ? s.service_name : '')
-                    var desc = normalizeText(s && s.description ? s.description : '')
-                    return name.indexOf(q) !== -1 || desc.indexOf(q) !== -1
+                    return wordPrefixMatch(name, q)
                 })
             }
             list.sort(function (a, b) {
@@ -767,7 +800,7 @@ function setAppointmentTab(tab) {
 
             if (q) {
                 list = list.filter(function (d) {
-                    return normalizeText(doctorLabel(d)).indexOf(q) !== -1
+                    return wordPrefixMatch(doctorLabel(d), q)
                 })
             }
 
@@ -926,6 +959,57 @@ function setAppointmentTab(tab) {
                 dateLoadMore.classList.toggle('opacity-60', dateLoadMore.disabled)
                 dateLoadMore.classList.toggle('cursor-not-allowed', dateLoadMore.disabled)
             }
+
+            syncDateRollerFromSelect()
+        }
+
+        function friendlyDateLabelFromIso(iso) {
+            var datePart = String(iso || '').slice(0, 10)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart || 'Select a date'
+            var d = new Date(datePart + 'T00:00:00')
+            if (isNaN(d.getTime())) return datePart
+            var parts = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: '2-digit' })
+            return parts + ' · ' + datePart
+        }
+
+        function closeDateOverlay() {
+            if (dateOverlay) dateOverlay.classList.add('hidden')
+        }
+
+        function closeTimeOverlay() {
+            if (timeOverlay) timeOverlay.classList.add('hidden')
+        }
+
+        function syncDateRollerFromSelect() {
+            if (!dateSelect || !dateTrigger) return
+            dateTrigger.disabled = !!dateSelect.disabled
+
+            var selected = dateSelect.value ? String(dateSelect.value) : ''
+            if (dateSelect.disabled) {
+                dateTrigger.textContent = 'Select a doctor first'
+            } else if (selected) {
+                dateTrigger.textContent = friendlyDateLabelFromIso(selected)
+            } else {
+                dateTrigger.textContent = 'Select a date'
+            }
+
+            if (!dateList) return
+            var html = ''
+            var opts = Array.prototype.slice.call(dateSelect.options || [])
+            var usable = opts.filter(function (o) { return o && o.value })
+            if (!usable.length) {
+                html = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No dates available.</div>'
+            } else {
+                html = usable.map(function (o) {
+                    var isActive = selected && String(o.value) === selected
+                    return (
+                        '<button type="button" class="w-full text-left px-3 py-2 text-[0.78rem] snap-start ' +
+                        (isActive ? 'bg-cyan-50 text-cyan-800 font-semibold' : 'text-slate-700 hover:bg-slate-50') +
+                        '" data-date="' + escapeHtml(o.value) + '">' + escapeHtml(o.textContent || o.value) + '</button>'
+                    )
+                }).join('')
+            }
+            dateList.innerHTML = html
         }
 
         function populateAllowedDates() {
@@ -951,6 +1035,7 @@ function setAppointmentTab(tab) {
                     dateRangeHint.textContent = ''
                     dateRangeHint.classList.add('hidden')
                 }
+                syncDateRollerFromSelect()
                 return
             }
 
@@ -963,6 +1048,7 @@ function setAppointmentTab(tab) {
                 none.textContent = 'No available dates in range'
                 dateSelect.appendChild(none)
             }
+            syncDateRollerFromSelect()
         }
 
         function hhmmFromMinutes(mins) {
@@ -980,24 +1066,49 @@ function setAppointmentTab(tab) {
             timeSlotsEl.innerHTML = ''
 
             if (!doctorSelect || !doctorSelect.value) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Select a doctor first'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Select a doctor to load time slots.</div>'
                 return
             }
             if (!dateInput || !dateInput.value) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Select a date first'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Select a date to load time slots.</div>'
                 return
             }
             if (!doctorSchedules.length) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'No schedules found'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">No schedules found for this doctor.</div>'
                 return
             }
 
             var dayKey = dayKeyFromDate(dateInput.value)
             if (!dayKey) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Invalid date'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Invalid date selected.</div>'
                 return
             }
             if (doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length && !doctorAvailableDaySet[dayKey]) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Doctor not available'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Doctor is not available on this day.</div>'
                 return
             }
@@ -1012,6 +1123,11 @@ function setAppointmentTab(tab) {
             })
 
             if (!daySchedules.length) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'No available slots'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Doctor has no available slots on this day.</div>'
                 return
             }
@@ -1067,8 +1183,18 @@ function setAppointmentTab(tab) {
             })
 
             if (!slots.length) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'No time slots available'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">No time slots available for this day.</div>'
                 return
+            }
+
+            if (timeTrigger) {
+                timeTrigger.disabled = false
+                timeTrigger.textContent = selectedSlotStart ? ('Selected: ' + formatTime12h(selectedSlotStart)) : 'Select a time slot'
             }
 
             slots.forEach(function (slot) {
@@ -1092,11 +1218,41 @@ function setAppointmentTab(tab) {
                 btn.addEventListener('click', function () {
                     selectedSlotStart = startHHMM
                     if (timeInput) timeInput.value = startHHMM
+                    closeTimeOverlay()
                     renderTimeSlots()
                 })
                 timeSlotsEl.appendChild(btn)
             })
         }
+
+        if (timeTrigger) {
+            timeTrigger.addEventListener('click', function () {
+                if (timeTrigger.disabled) return
+                if (!timeOverlay) return
+                renderTimeSlots()
+                timeOverlay.classList.toggle('hidden')
+            })
+        }
+
+        document.addEventListener('click', function (e) {
+            if (dateOverlay && !dateOverlay.classList.contains('hidden')) {
+                if (!dateWrap || (!dateWrap.contains(e.target) && !dateOverlay.contains(e.target))) {
+                    closeDateOverlay()
+                }
+            }
+            if (timeOverlay && !timeOverlay.classList.contains('hidden')) {
+                if (!timeWrap || (!timeWrap.contains(e.target) && !timeOverlay.contains(e.target))) {
+                    closeTimeOverlay()
+                }
+            }
+        })
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDateOverlay()
+                closeTimeOverlay()
+            }
+        })
 
         function loadDoctorSchedulesAndAvailability(doctorId, dateStr) {
             if (!doctorId || typeof apiFetch !== 'function') return
@@ -1325,6 +1481,9 @@ function setAppointmentTab(tab) {
             var doctorId = doctorSelect ? doctorSelect.value : ''
             var dateStr = dateSelect ? dateSelect.value : (dateInput ? dateInput.value : '')
             if (dateInput) dateInput.value = dateStr || ''
+            syncDateRollerFromSelect()
+            closeDateOverlay()
+            closeTimeOverlay()
             if (!doctorId || !dateStr) {
                 renderTimeSlots()
                 return
@@ -1340,6 +1499,7 @@ function setAppointmentTab(tab) {
                     appendAllowedDates(60)
                 })
             }
+            syncDateRollerFromSelect()
         } else if (dateInput) {
             dateInput.addEventListener('change', function () {
                 showBookAppointmentError('')
@@ -1360,6 +1520,26 @@ function setAppointmentTab(tab) {
                     return
                 }
                 loadDoctorAppointments(doctorId, dateStr)
+            })
+        }
+
+        if (dateTrigger) {
+            dateTrigger.addEventListener('click', function () {
+                if (!dateSelect || dateSelect.disabled) return
+                if (!dateOverlay) return
+                syncDateRollerFromSelect()
+                dateOverlay.classList.toggle('hidden')
+            })
+        }
+
+        if (dateList) {
+            dateList.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('button[data-date]') : null
+                if (!btn || !dateSelect) return
+                var iso = btn.getAttribute('data-date') || ''
+                if (!iso) return
+                dateSelect.value = iso
+                dateSelect.dispatchEvent(new Event('change', { bubbles: true }))
             })
         }
 
@@ -1571,16 +1751,21 @@ function setAppointmentTab(tab) {
             })
         }
 
-        var manageForm = document.getElementById('receptionManageAppointmentForm')
         var manageError = document.getElementById('receptionManageAppointmentError')
         var manageSuccess = document.getElementById('receptionManageAppointmentSuccess')
         var manageResult = document.getElementById('receptionManageAppointmentResult')
-        var manageSubmit = document.getElementById('receptionManageAppointmentSubmit')
-        var manageSpinner = document.getElementById('receptionManageAppointmentSpinner')
-        var manageLabel = document.getElementById('receptionManageAppointmentSubmitLabel')
-        var manageSearchInput = document.getElementById('reception_manage_appointment_search')
-        var manageIdSelect = document.getElementById('reception_manage_appointment_id')
+        var manageSearchInput = document.getElementById('receptionManageApptSearch')
+        var manageServiceSearch = document.getElementById('receptionManageServiceSearch')
+        var manageServiceId = document.getElementById('receptionManageServiceId')
+        var manageServiceResults = document.getElementById('receptionManageServiceResults')
+        var manageSortSelect = document.getElementById('receptionManageSort')
+        var manageTableBody = document.getElementById('receptionManageAppointmentTableBody')
+        var manageMeta = document.getElementById('receptionManageAppointmentMeta')
+        var manageRefreshBtn = document.getElementById('receptionManageAppointmentRefresh')
         var manageSearchTimer = null
+        var manageServices = []
+        var manageServicesLoaded = false
+        var manageServicesLoading = false
 
         var confirmOverlay = document.getElementById('receptionConfirmOverlay')
         var confirmMessage = document.getElementById('receptionConfirmMessage')
@@ -1589,9 +1774,11 @@ function setAppointmentTab(tab) {
         var confirmResolver = null
 
         function setManageSubmitting(isSubmitting) {
-            if (manageSubmit) manageSubmit.disabled = !!isSubmitting
-            if (manageSpinner) manageSpinner.classList.toggle('hidden', !isSubmitting)
-            if (manageLabel) manageLabel.textContent = isSubmitting ? 'Applying…' : 'Apply'
+            var disabled = !!isSubmitting
+            if (manageSearchInput) manageSearchInput.disabled = disabled
+            if (manageServiceSearch) manageServiceSearch.disabled = disabled
+            if (manageSortSelect) manageSortSelect.disabled = disabled
+            if (manageRefreshBtn) manageRefreshBtn.disabled = disabled
         }
 
         function confirmAction(message) {
@@ -1662,103 +1849,258 @@ function setAppointmentTab(tab) {
             manageResult.classList.remove('hidden')
         }
 
-        function appointmentLabel(appt) {
-            if (!appt) return ''
-            var id = appt.appointment_id != null ? appt.appointment_id : ''
-            var patient = appt.patient || null
-            var doctor = appt.doctor || null
-            var pName = patient ? [patient.firstname, patient.middlename, patient.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() : ''
-            var dName = doctor ? [doctor.firstname, doctor.middlename, doctor.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' ').trim() : ''
-            var when = appt.appointment_datetime ? String(appt.appointment_datetime).replace('T', ' ').slice(0, 16) : 'Queue request'
-            return '#' + id + ' — ' + (pName || 'Patient') + ' · ' + (dName || 'Doctor') + ' · ' + when
+        function wordPrefixMatch(value, query) {
+            var v = normalizeText(value || '')
+            var q = normalizeText(query || '')
+            if (!q) return true
+            if (!v) return false
+            if (v.indexOf(q) === 0) return true
+            return v.split(/\s+/).some(function (part) { return part.indexOf(q) === 0 })
         }
 
-        function renderManageAppointmentOptions(list) {
-            if (!manageIdSelect) return
-            var current = manageIdSelect.value
-            manageIdSelect.innerHTML = '<option value="">Select an appointment</option>' + (list || []).slice(0, 50).map(function (a) {
-                return '<option value="' + escapeHtml(a.appointment_id) + '">' + escapeHtml(appointmentLabel(a)) + '</option>'
-            }).join('')
-            if (current) manageIdSelect.value = current
+        function patientFullName(patient) {
+            if (!patient) return ''
+            return [patient.firstname, patient.middlename, patient.lastname]
+                .filter(function (v) { return String(v || '').trim() !== '' })
+                .join(' ')
+                .trim()
         }
 
-        function loadManageAppointmentOptions(search) {
-            if (typeof apiFetch !== 'function') return
-            var url = "{{ url('/api/appointments') }}" + '?per_page=50'
-            if (search) {
-                url += '&search=' + encodeURIComponent(search)
+        function ageFromBirthdate(dateStr) {
+            var raw = String(dateStr || '').slice(0, 10)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return ''
+            var now = new Date()
+            var y = parseInt(raw.slice(0, 4), 10)
+            var m = parseInt(raw.slice(5, 7), 10) - 1
+            var d = parseInt(raw.slice(8, 10), 10)
+            var dob = new Date(y, m, d)
+            if (isNaN(dob.getTime())) return ''
+            var age = now.getFullYear() - dob.getFullYear()
+            var monthDiff = now.getMonth() - dob.getMonth()
+            if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+                age -= 1
             }
-            apiFetch(url, { method: 'GET' })
+            return age < 0 ? '' : String(age)
+        }
+
+        function safeIsoParts(iso) {
+            var raw = String(iso || '').replace('T', ' ')
+            if (raw.length >= 16) raw = raw.slice(0, 16)
+            var datePart = raw.slice(0, 10)
+            var timePart = raw.slice(11, 16)
+            return { date: datePart, time: timePart }
+        }
+
+        function serviceSummary(appt) {
+            var services = appt && Array.isArray(appt.services) ? appt.services : []
+            var names = services
+                .map(function (s) { return String((s && s.service_name) ? s.service_name : '').trim() })
+                .filter(function (v) { return v !== '' })
+            if (!names.length) return '—'
+            return names.join(', ')
+        }
+
+        function renderManageServiceResults() {
+            if (!manageServiceResults || !manageServiceSearch) return
+            var q = String(manageServiceSearch.value || '').trim()
+            var list = Array.isArray(manageServices) ? manageServices : []
+            var filtered = list.filter(function (s) {
+                var name = s && s.service_name ? String(s.service_name) : ''
+                return wordPrefixMatch(name, q)
+            })
+            filtered = filtered.slice(0, 25)
+            if (!filtered.length) {
+                manageServiceResults.innerHTML = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No services found.</div>'
+            } else {
+                manageServiceResults.innerHTML = filtered.map(function (s) {
+                    var id = s.service_id != null ? s.service_id : ''
+                    var name = s.service_name != null ? s.service_name : ('Service #' + id)
+                    return '<button type="button" class="w-full text-left px-3 py-2 hover:bg-slate-50 text-[0.78rem] text-slate-700" data-service-id="' + escapeHtml(id) + '">' + escapeHtml(name) + '</button>'
+                }).join('')
+            }
+            manageServiceResults.classList.remove('hidden')
+        }
+
+        function setManageServiceSelection(service) {
+            if (manageServiceId) manageServiceId.value = service && service.service_id != null ? String(service.service_id) : ''
+            if (manageServiceSearch) {
+                manageServiceSearch.value = service && service.service_name ? String(service.service_name) : ''
+                if (!service) manageServiceSearch.placeholder = 'All services'
+            }
+            if (manageServiceResults) manageServiceResults.classList.add('hidden')
+        }
+
+        function loadManageServices() {
+            if (manageServicesLoaded || manageServicesLoading || typeof apiFetch !== 'function') return
+            manageServicesLoading = true
+            apiFetch("{{ url('/api/services') }}?per_page=100", { method: 'GET' })
                 .then(function (response) { return readResponse(response) })
                 .then(function (result) {
                     if (!result.ok) return
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
-                    renderManageAppointmentOptions(raw || [])
+                    manageServices = raw || []
+                    manageServicesLoaded = true
                 })
                 .catch(function () {})
+                .finally(function () {
+                    manageServicesLoading = false
+                })
+        }
+
+        function renderManageAppointments(list) {
+            if (!manageTableBody) return
+            var rows = Array.isArray(list) ? list : []
+            if (!rows.length) {
+                manageTableBody.innerHTML = '<tr><td colspan="8" class="px-3 py-6 text-center text-[0.78rem] text-slate-500">No appointments found.</td></tr>'
+                return
+            }
+            manageTableBody.innerHTML = rows.map(function (appt) {
+                var id = appt && appt.appointment_id != null ? appt.appointment_id : ''
+                var when = safeIsoParts(appt && appt.appointment_datetime ? appt.appointment_datetime : '')
+                var p = appt ? appt.patient : null
+                var d = appt ? appt.doctor : null
+                var patientName = patientFullName(p) || ('Patient #' + (p && p.user_id != null ? p.user_id : ''))
+                var doctorName = patientFullName(d) || ('Doctor #' + (d && d.user_id != null ? d.user_id : ''))
+                var age = ageFromBirthdate(p && p.birthdate ? p.birthdate : '')
+                var contact = p && p.contact_number ? String(p.contact_number) : '—'
+                var serviceText = serviceSummary(appt)
+                var status = appt && appt.status ? String(appt.status) : ''
+                var statusBadge = status ? ('<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[0.68rem] border border-slate-200 bg-slate-50 text-slate-700">' + escapeHtml(status) + '</span>') : ''
+                return (
+                    '<tr>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(when.date || '—') + statusBadge + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(when.time ? formatTime12h(when.time) : '—') + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem]">' + escapeHtml(patientName) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(age || '—') + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(contact) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[14rem]">' + escapeHtml(serviceText) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem]">' + escapeHtml(doctorName) + '</td>' +
+                        '<td class="px-3 py-2 text-right whitespace-nowrap">' +
+                            '<div class="inline-flex items-center gap-1">' +
+                                '<button type="button" data-action="view" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold">View</button>' +
+                                '<button type="button" data-action="check_in" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold">Check-in</button>' +
+                                '<button type="button" data-action="complete" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 font-semibold">Complete</button>' +
+                                '<button type="button" data-action="cancel" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 font-semibold">Cancel</button>' +
+                            '</div>' +
+                        '</td>' +
+                    '</tr>'
+                )
+            }).join('')
+        }
+
+        function loadManageAppointments() {
+            if (typeof apiFetch !== 'function') return
+            showManageError('')
+            showManageSuccess('')
+            showManageResult(null)
+            setManageSubmitting(true)
+
+            var url = "{{ url('/api/appointments') }}" + '?per_page=10&status=confirmed&appointment_type=scheduled'
+            var order = manageSortSelect && manageSortSelect.value ? String(manageSortSelect.value) : 'latest'
+            url += '&order=' + encodeURIComponent(order === 'oldest' ? 'oldest' : 'latest')
+
+            var search = manageSearchInput ? normalizeText(manageSearchInput.value) : ''
+            if (search) url += '&search=' + encodeURIComponent(search)
+
+            var serviceId = manageServiceId && manageServiceId.value ? parseInt(manageServiceId.value, 10) : 0
+            if (serviceId) url += '&service_id=' + encodeURIComponent(serviceId)
+
+            apiFetch(url, { method: 'GET' })
+                .then(function (response) { return readResponse(response) })
+                .then(function (result) {
+                    if (!result.ok) {
+                        var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to load appointments.'
+                        showManageError(msg)
+                        renderManageAppointments([])
+                        return
+                    }
+                    var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
+                    renderManageAppointments(raw || [])
+                    if (manageMeta) manageMeta.textContent = 'Showing latest 10 booked appointments.'
+                })
+                .catch(function () {
+                    showManageError('Network error while loading appointments.')
+                    renderManageAppointments([])
+                })
+                .finally(function () {
+                    setManageSubmitting(false)
+                })
+        }
+
+        if (manageServiceSearch) {
+            manageServiceSearch.addEventListener('focus', function () {
+                loadManageServices()
+                renderManageServiceResults()
+            })
+            manageServiceSearch.addEventListener('input', function () {
+                if (manageServiceId && manageServiceId.value) {
+                    var picked = manageServices.find(function (s) { return String(s.service_id) === String(manageServiceId.value) }) || null
+                    var pickedName = picked && picked.service_name ? String(picked.service_name) : ''
+                    if (normalizeText(manageServiceSearch.value) !== normalizeText(pickedName)) {
+                        setManageServiceSelection(null)
+                        loadManageAppointments()
+                    }
+                }
+                loadManageServices()
+                renderManageServiceResults()
+            })
+        }
+
+        if (manageServiceResults) {
+            manageServiceResults.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('button[data-service-id]') : null
+                if (!btn) return
+                var id = btn.getAttribute('data-service-id')
+                var picked = manageServices.find(function (s) { return String(s.service_id) === String(id) }) || null
+                setManageServiceSelection(picked)
+                loadManageAppointments()
+            })
         }
 
         if (manageSearchInput) {
             manageSearchInput.addEventListener('input', function () {
                 if (manageSearchTimer) clearTimeout(manageSearchTimer)
                 manageSearchTimer = setTimeout(function () {
-                    loadManageAppointmentOptions(normalizeText(manageSearchInput.value))
+                    loadManageAppointments()
                 }, 250)
             })
         }
 
-        loadManageAppointmentOptions('')
+        if (manageSortSelect) {
+            manageSortSelect.addEventListener('change', function () {
+                loadManageAppointments()
+            })
+        }
 
-        if (manageForm) {
-            manageForm.addEventListener('submit', function (e) {
-                e.preventDefault()
+        if (manageRefreshBtn) {
+            manageRefreshBtn.addEventListener('click', function () {
+                loadManageAppointments()
+            })
+        }
+
+        if (manageTableBody) {
+            manageTableBody.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('button[data-action][data-id]') : null
+                if (!btn) return
+                var action = btn.getAttribute('data-action') || ''
+                var id = parseInt(btn.getAttribute('data-id') || '0', 10)
+                if (!id) return
 
                 showManageError('')
                 showManageSuccess('')
-                showManageResult(null)
                 setManageSubmitting(true)
 
-                var idInput = document.getElementById('reception_manage_appointment_id')
-                var actionInput = document.getElementById('reception_manage_action')
-                var statusInput = document.getElementById('reception_manage_status')
+                var url = "{{ url('/api/appointments') }}/" + encodeURIComponent(id)
 
-                var appointmentId = idInput ? parseInt(idInput.value, 10) : 0
-                var action = actionInput ? actionInput.value : 'fetch'
-                var status = statusInput ? statusInput.value : ''
-
-                if (!appointmentId) {
-                    showManageError('Appointment ID is required.')
-                    setManageSubmitting(false)
-                    return
-                }
-
-                if (typeof apiFetch !== 'function') {
-                    showManageError('API client is not available.')
-                    setManageSubmitting(false)
-                    return
-                }
-
-                var url = "{{ url('/api/appointments') }}/" + encodeURIComponent(appointmentId)
-
-                if (action === 'fetch') {
+                if (action === 'view') {
                     apiFetch(url, { method: 'GET' })
-                        .then(function (response) {
-                            return response.json().then(function (data) {
-                                return { ok: response.ok, status: response.status, data: data }
-                            }).catch(function () {
-                                return { ok: response.ok, status: response.status, data: null }
-                            })
-                        })
+                        .then(function (response) { return readResponse(response) })
                         .then(function (result) {
                             if (!result.ok) {
-                                var message = 'Failed to fetch appointment.'
-                                if (result.data && result.data.message) {
-                                    message = result.data.message
-                                }
-                                showManageError(message)
+                                var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to fetch appointment.'
+                                showManageError(msg)
                                 return
                             }
-
                             showManageSuccess('Appointment details loaded.')
                             showManageResult(result.data)
                         })
@@ -1768,66 +2110,60 @@ function setAppointmentTab(tab) {
                         .finally(function () {
                             setManageSubmitting(false)
                         })
-
                     return
                 }
 
                 var body = {}
-
+                var confirmText = 'Apply this action?'
                 if (action === 'check_in') {
                     body.check_in_time = new Date().toISOString()
-                    if (status) {
-                        body.status = status
-                    }
+                    confirmText = 'Mark this appointment as checked-in now?'
                 } else if (action === 'cancel') {
-                    body.status = status || 'cancelled'
+                    body.status = 'cancelled'
+                    confirmText = 'Cancel this appointment?'
                 } else if (action === 'complete') {
-                    body.status = status || 'completed'
+                    body.status = 'completed'
+                    confirmText = 'Mark this appointment as completed?'
+                } else {
+                    setManageSubmitting(false)
+                    return
                 }
 
-                var confirmMessageText = 'Apply this action?'
-                if (action === 'cancel') confirmMessageText = 'Cancel this appointment?'
-                if (action === 'complete') confirmMessageText = 'Mark this appointment as completed?'
-                if (action === 'check_in') confirmMessageText = 'Mark this appointment as checked-in now?'
-
-                confirmAction(confirmMessageText)
+                confirmAction(confirmText)
                     .then(function (confirmed) {
                         if (!confirmed) return
                         return apiFetch(url, {
                             method: 'PUT',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(body)
                         })
-                            .then(function (response) {
-                                return response.json().then(function (data) {
-                                    return { ok: response.ok, status: response.status, data: data }
-                                }).catch(function () {
-                                    return { ok: response.ok, status: response.status, data: null }
-                                })
-                            })
+                            .then(function (response) { return readResponse(response) })
                             .then(function (result) {
                                 if (!result.ok) {
-                                    var message = 'Failed to update appointment.'
-                                    if (result.data && result.data.message) {
-                                        message = result.data.message
-                                    }
-                                    showManageError(message)
+                                    var msg = (result.data && result.data.message) ? String(result.data.message) : 'Failed to update appointment.'
+                                    showManageError(msg)
                                     return
                                 }
-
                                 showManageSuccess('Appointment has been updated.')
                                 showManageResult(result.data)
+                                loadManageAppointments()
                             })
-                            .catch(function () {
-                                showManageError('Network error while updating appointment.')
-                            })
+                    })
+                    .catch(function () {
+                        showManageError('Network error while updating appointment.')
                     })
                     .finally(function () {
                         setManageSubmitting(false)
                     })
             })
         }
+
+        document.addEventListener('click', function (e) {
+            if (!manageServiceResults || !manageServiceSearch) return
+            if (manageServiceSearch.contains(e.target) || manageServiceResults.contains(e.target)) return
+            manageServiceResults.classList.add('hidden')
+        })
+
+        loadManageAppointments()
     })
 </script>

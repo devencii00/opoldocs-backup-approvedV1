@@ -176,14 +176,47 @@ class QueueController extends Controller
             'appointment_id' => ['required', 'exists:appointments,appointment_id'],
         ]);
 
-        if (Queue::where('appointment_id', $data['appointment_id'])->exists()) {
+        $queueAt = now();
+        $date = $queueAt->toDateString();
+        $appointment = Appointment::query()
+            ->with(['patient'])
+            ->find((int) $data['appointment_id']);
+
+        if (! $appointment) {
+            return response()->json([
+                'message' => 'Appointment not found.',
+            ], 404);
+        }
+
+        $duplicateAppointment = Queue::query()
+            ->where('appointment_id', (int) $data['appointment_id'])
+            ->whereDate('queue_datetime', $date)
+            ->whereIn('status', ['waiting', 'serving'])
+            ->exists();
+
+        if ($duplicateAppointment) {
             return response()->json([
                 'message' => 'This appointment is already in the queue.',
             ], 422);
         }
 
-        $queueAt = now();
-        $date = $queueAt->toDateString();
+        $patientId = (int) ($appointment->patient_id ?? 0);
+        if ($patientId > 0) {
+            $duplicatePatient = Queue::query()
+                ->whereDate('queue_datetime', $date)
+                ->whereIn('status', ['waiting', 'serving'])
+                ->whereHas('appointment', function ($q) use ($patientId) {
+                    $q->where('patient_id', $patientId);
+                })
+                ->exists();
+
+            if ($duplicatePatient) {
+                return response()->json([
+                    'message' => 'This patient is already in the queue.',
+                ], 422);
+            }
+        }
+
         $max = Queue::whereDate('queue_datetime', $date)->max('queue_number');
         $queueNumber = ((int) $max) + 1;
 

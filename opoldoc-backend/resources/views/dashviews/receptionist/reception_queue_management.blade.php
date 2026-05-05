@@ -359,6 +359,15 @@
             return String(value == null ? '' : value).toLowerCase().replace(/\s+/g, ' ').trim()
         }
 
+        function wordPrefixMatch(value, query) {
+            var v = normalizeText(value || '')
+            var q = normalizeText(query || '')
+            if (!q) return true
+            if (!v) return false
+            if (v.indexOf(q) === 0) return true
+            return v.split(/\s+/).some(function (part) { return part.indexOf(q) === 0 })
+        }
+
         function appointmentLabel(appt) {
             if (!appt) return ''
             var id = appt.appointment_id != null ? appt.appointment_id : ''
@@ -479,21 +488,21 @@
         })
 
         function applyReceptionQueueFilters() {
-            var query = searchInput ? searchInput.value.toLowerCase().trim() : ''
+            var query = searchInput ? normalizeText(searchInput.value) : ''
 
             rows.forEach(function (row) {
                 var number = ((row.getAttribute('data-queue-code') || '') + ' ' + (row.getAttribute('data-queue-number') || '')).trim()
-                var patient = row.getAttribute('data-patient') || ''
-                var doctor = row.getAttribute('data-doctor') || ''
-                var date = row.getAttribute('data-date') || ''
+                var patient = normalizeText(row.getAttribute('data-patient') || '')
+                var doctor = normalizeText(row.getAttribute('data-doctor') || '')
+                var date = normalizeText(row.getAttribute('data-date') || '')
 
                 var matches = true
                 if (query) {
                     matches =
                         ('#' + number).indexOf(query) !== -1 ||
-                        patient.indexOf(query) !== -1 ||
-                        doctor.indexOf(query) !== -1 ||
-                        date.indexOf(query) !== -1
+                        wordPrefixMatch(patient, query) ||
+                        wordPrefixMatch(doctor, query) ||
+                        date.indexOf(query) === 0
                 }
 
                 row.style.display = matches ? '' : 'none'

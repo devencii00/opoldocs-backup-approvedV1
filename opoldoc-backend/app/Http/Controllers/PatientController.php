@@ -44,13 +44,14 @@ class PatientController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('email', 'like', '%'.$search.'%')
-                    ->orWhere('firstname', 'like', '%'.$search.'%')
-                    ->orWhere('lastname', 'like', '%'.$search.'%')
-                    ->orWhere('middlename', 'like', '%'.$search.'%')
-                    ->orWhere('contact_number', 'like', '%'.$search.'%')
-                    ->orWhere('address', 'like', '%'.$search.'%');
+            $prefix = $search.'%';
+            $query->where(function ($q) use ($search, $prefix) {
+                $q->where('email', 'like', $prefix)
+                    ->orWhere('firstname', 'like', $prefix)
+                    ->orWhere('lastname', 'like', $prefix)
+                    ->orWhere('middlename', 'like', $prefix)
+                    ->orWhere('contact_number', 'like', $prefix)
+                    ->orWhere('address', 'like', $prefix);
 
                 if (is_numeric($search)) {
                     $q->orWhere('user_id', (int) $search);

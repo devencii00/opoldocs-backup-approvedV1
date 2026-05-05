@@ -8,6 +8,7 @@ use App\Models\DoctorSchedule;
 use App\Models\LogEntry;
 use App\Models\MedicalBackground;
 use App\Models\Message;
+use App\Models\Queue;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class AppointmentController extends Controller
             'end_date' => ['nullable', 'date'],
             'search' => ['nullable', 'string'],
             'order' => ['nullable', 'in:latest,oldest'],
+            'service_id' => ['nullable', 'integer', 'exists:services,service_id'],
         ]);
 
         $query = Appointment::with(['patient', 'doctor', 'queue', 'services']);
@@ -56,30 +58,38 @@ class AppointmentController extends Controller
             $query->where('status', $request->query('status'));
         }
 
+        if ($request->filled('service_id')) {
+            $serviceId = (int) $request->query('service_id');
+            $query->whereHas('services', function ($q) use ($serviceId) {
+                $q->where('services.service_id', $serviceId);
+            });
+        }
+
         $search = trim((string) $request->query('search', ''));
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('reason_for_visit', 'like', '%'.$search.'%');
+            $prefix = $search.'%';
+            $query->where(function ($q) use ($search, $prefix) {
+                $q->where('reason_for_visit', 'like', $prefix);
 
                 if (is_numeric($search)) {
                     $q->orWhere('appointment_id', (int) $search);
                 }
 
-                $q->orWhereHas('patient', function ($p) use ($search) {
-                    $p->where('email', 'like', '%'.$search.'%')
-                        ->orWhere('firstname', 'like', '%'.$search.'%')
-                        ->orWhere('lastname', 'like', '%'.$search.'%')
-                        ->orWhere('middlename', 'like', '%'.$search.'%')
-                        ->orWhere('contact_number', 'like', '%'.$search.'%');
+                $q->orWhereHas('patient', function ($p) use ($prefix) {
+                    $p->where('email', 'like', $prefix)
+                        ->orWhere('firstname', 'like', $prefix)
+                        ->orWhere('lastname', 'like', $prefix)
+                        ->orWhere('middlename', 'like', $prefix)
+                        ->orWhere('contact_number', 'like', $prefix);
                 });
 
-                $q->orWhereHas('doctor', function ($d) use ($search) {
-                    $d->where('email', 'like', '%'.$search.'%')
-                        ->orWhere('firstname', 'like', '%'.$search.'%')
-                        ->orWhere('lastname', 'like', '%'.$search.'%')
-                        ->orWhere('middlename', 'like', '%'.$search.'%')
-                        ->orWhere('license_number', 'like', '%'.$search.'%')
-                        ->orWhere('specialization', 'like', '%'.$search.'%');
+                $q->orWhereHas('doctor', function ($d) use ($prefix) {
+                    $d->where('email', 'like', $prefix)
+                        ->orWhere('firstname', 'like', $prefix)
+                        ->orWhere('lastname', 'like', $prefix)
+                        ->orWhere('middlename', 'like', $prefix)
+                        ->orWhere('license_number', 'like', $prefix)
+                        ->orWhere('specialization', 'like', $prefix);
                 });
             });
         }
@@ -177,6 +187,27 @@ class AppointmentController extends Controller
 
             $data['patient_id'] = $targetPatientId;
             $data['appointment_type'] = 'scheduled';
+        }
+
+        if ($isReceptionist && $data['appointment_type'] === 'walk_in') {
+            $patientId = (int) ($data['patient_id'] ?? 0);
+            if ($patientId > 0) {
+                $date = now()->toDateString();
+                $alreadyQueued = Queue::query()
+                    ->whereDate('queue_datetime', $date)
+                    ->whereIn('status', ['waiting', 'serving'])
+                    ->whereHas('appointment', function ($q) use ($patientId) {
+                        $q->where('patient_id', $patientId);
+                    })
+                    ->exists();
+
+                if ($alreadyQueued) {
+                    return response()->json([
+                        'message' => 'This patient is already in the queue.',
+                        'code' => 'PATIENT_ALREADY_IN_QUEUE',
+                    ], 422);
+                }
+            }
         }
 
         if ($data['appointment_type'] === 'scheduled' && ! $queueRequest && empty($data['appointment_datetime'])) {

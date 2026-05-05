@@ -111,9 +111,15 @@
                 </div>
                 <div id="receptionDoctorPreview" class="hidden mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[0.78rem] text-slate-700 break-words"></div>
             </div>
-            <div id="receptionAppointmentDateWrap" class="self-start">
+            <div id="receptionAppointmentDateWrap" class="self-start relative">
                 <label for="reception_appointment_date" class="block text-[0.7rem] text-slate-600 mb-1">Date</label>
-                <select id="reception_appointment_date_select" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none" required disabled>
+                <button id="receptionAppointmentDateTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
+                    Select a doctor first
+                </button>
+                <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                    <div id="receptionAppointmentDateList" class="max-h-56 overflow-y-auto overscroll-contain snap-y snap-mandatory"></div>
+                </div>
+                <select id="reception_appointment_date_select" class="hidden" required disabled>
                     <option value="">Select a doctor first</option>
                 </select>
                 <div class="mt-1 flex items-center justify-between">
@@ -122,11 +128,16 @@
                 </div>
                 <input id="reception_appointment_date" type="date" class="hidden" tabindex="-1">
             </div>
-            <div id="receptionAppointmentTimeWrap" class="self-start">
+            <div id="receptionAppointmentTimeWrap" class="self-start relative">
                 <label class="block text-[0.7rem] text-slate-600 mb-1">Time slot</label>
                 <input id="reception_appointment_time" type="hidden" required>
                 <div id="reception_available_days" class="mb-1 text-[0.7rem] text-slate-500"></div>
-                <div id="reception_time_slots" class="max-h-72 overflow-y-auto overscroll-contain flex flex-col gap-2 pr-1"></div>
+                <button id="receptionTimeSlotTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
+                    Select a date first
+                </button>
+                <div id="receptionTimeSlotOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                    <div id="reception_time_slots" class="max-h-44 overflow-y-auto overscroll-contain flex flex-col gap-2 p-2"></div>
+                </div>
             </div>
             <div>
                 <label for="reception_appointment_priority" class="block text-[0.7rem] text-slate-600 mb-1">Priority level (optional)</label>
@@ -349,8 +360,13 @@ function setWalkInTab(tab) {
         var dateLoadMore = document.getElementById('reception_appointment_date_load_more')
         var dateRangeHint = document.getElementById('reception_appointment_date_range_hint')
         var dateWrap = document.getElementById('receptionAppointmentDateWrap')
+        var dateTrigger = document.getElementById('receptionAppointmentDateTrigger')
+        var dateOverlay = document.getElementById('receptionAppointmentDateOverlay')
+        var dateList = document.getElementById('receptionAppointmentDateList')
         var timeInput = document.getElementById('reception_appointment_time')
         var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
+        var timeTrigger = document.getElementById('receptionTimeSlotTrigger')
+        var timeOverlay = document.getElementById('receptionTimeSlotOverlay')
         var availableDaysEl = document.getElementById('reception_available_days')
         var timeSlotsEl = document.getElementById('reception_time_slots')
         var previousDoctorId = 0
@@ -396,6 +412,15 @@ function setWalkInTab(tab) {
 
         function normalizeText(value) {
             return String(value || '').trim().toLowerCase()
+        }
+
+        function wordPrefixMatch(value, query) {
+            var v = normalizeText(value || '')
+            var q = normalizeText(query || '')
+            if (!q) return true
+            if (!v) return false
+            if (v.indexOf(q) === 0) return true
+            return v.split(/\s+/).some(function (part) { return part.indexOf(q) === 0 })
         }
 
         function extractServiceCategory(serviceName) {
@@ -691,7 +716,7 @@ function setWalkInTab(tab) {
             }
             var filtered = list.filter(function (s) {
                 var name = normalizeText(s && s.service_name ? s.service_name : '')
-                return name.indexOf(q) !== -1
+                return wordPrefixMatch(name, q)
             })
             renderServiceResults(filtered.slice(0, 10))
         }
@@ -931,7 +956,7 @@ function setWalkInTab(tab) {
             var filtered = list.filter(function (d) {
                 var name = normalizeText([d.firstname, d.middlename, d.lastname].filter(function (v) { return String(v || '').trim() !== '' }).join(' '))
                 var spec = normalizeText(d && d.specialization ? d.specialization : '')
-                return name.indexOf(q) !== -1 || spec.indexOf(q) !== -1
+                return wordPrefixMatch(name, q) || wordPrefixMatch(spec, q)
             })
             renderDoctorResults(filtered.slice(0, 30))
         }
@@ -1020,6 +1045,57 @@ function setWalkInTab(tab) {
                 dateRangeHint.textContent = dateCursorFirstIso + ' → ' + dateCursorLastIso
                 dateRangeHint.classList.remove('hidden')
             }
+
+            syncDateRollerFromSelect()
+        }
+
+        function friendlyDateLabelFromIso(iso) {
+            var datePart = String(iso || '').slice(0, 10)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart || 'Select a date'
+            var d = new Date(datePart + 'T00:00:00')
+            if (isNaN(d.getTime())) return datePart
+            var parts = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: '2-digit' })
+            return parts + ' · ' + datePart
+        }
+
+        function closeDateOverlay() {
+            if (dateOverlay) dateOverlay.classList.add('hidden')
+        }
+
+        function closeTimeOverlay() {
+            if (timeOverlay) timeOverlay.classList.add('hidden')
+        }
+
+        function syncDateRollerFromSelect() {
+            if (!dateSelect || !dateTrigger) return
+            dateTrigger.disabled = !!dateSelect.disabled
+
+            var selected = dateSelect.value ? String(dateSelect.value) : ''
+            if (dateSelect.disabled) {
+                dateTrigger.textContent = 'Select a doctor first'
+            } else if (selected) {
+                dateTrigger.textContent = friendlyDateLabelFromIso(selected)
+            } else {
+                dateTrigger.textContent = 'Select a date'
+            }
+
+            if (!dateList) return
+            var html = ''
+            var opts = Array.prototype.slice.call(dateSelect.options || [])
+            var usable = opts.filter(function (o) { return o && o.value })
+            if (!usable.length) {
+                html = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No dates available.</div>'
+            } else {
+                html = usable.map(function (o) {
+                    var isActive = selected && String(o.value) === selected
+                    return (
+                        '<button type="button" class="w-full text-left px-3 py-2 text-[0.78rem] snap-start ' +
+                        (isActive ? 'bg-cyan-50 text-cyan-800 font-semibold' : 'text-slate-700 hover:bg-slate-50') +
+                        '" data-date="' + escapeHtml(o.value) + '">' + escapeHtml(o.textContent || o.value) + '</button>'
+                    )
+                }).join('')
+            }
+            dateList.innerHTML = html
         }
 
         function populateAllowedDates() {
@@ -1043,6 +1119,7 @@ function setWalkInTab(tab) {
                     dateRangeHint.textContent = ''
                     dateRangeHint.classList.add('hidden')
                 }
+                syncDateRollerFromSelect()
                 return
             }
             appendAllowedDates(60)
@@ -1053,6 +1130,7 @@ function setWalkInTab(tab) {
                 none.textContent = 'No available dates in range'
                 dateSelect.appendChild(none)
             }
+            syncDateRollerFromSelect()
         }
 
         function renderAvailableDays() {
@@ -1090,11 +1168,18 @@ function setWalkInTab(tab) {
                     dateSelect.disabled = true
                 }
             }
+            syncDateRollerFromSelect()
             if (dateLoadMore) dateLoadMore.classList.add('hidden')
             if (dateRangeHint) {
                 dateRangeHint.textContent = ''
                 dateRangeHint.classList.add('hidden')
             }
+
+            if (timeTrigger) {
+                timeTrigger.disabled = true
+                timeTrigger.textContent = 'Select a date first'
+            }
+            closeTimeOverlay()
         }
 
         function hhmmFromMinutes(mins) {
@@ -1114,29 +1199,59 @@ function setWalkInTab(tab) {
             var typeInput = document.getElementById('reception_appointment_type')
             var apptType = typeInput && typeInput.value ? typeInput.value : 'walk_in'
             if (apptType === 'walk_in') {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Walk-in does not require a time slot'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Walk-in visits do not require a time slot.</div>'
                 return
             }
 
             if (!doctorSelect || !doctorSelect.value) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Select a doctor first'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Select a doctor to load time slots.</div>'
                 return
             }
             if (!dateInput || !dateInput.value) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Select a date first'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Select a date to load time slots.</div>'
                 return
             }
             if (!doctorSchedules.length) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'No schedules found'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">No schedules found for this doctor.</div>'
                 return
             }
 
             var dayKey = dayKeyFromDate(dateInput.value)
             if (!dayKey) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Invalid date'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Invalid date selected.</div>'
                 return
             }
             if (doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length && !doctorAvailableDaySet[dayKey]) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'Doctor not available'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Doctor is not available on this day.</div>'
                 return
             }
@@ -1151,6 +1266,11 @@ function setWalkInTab(tab) {
             })
 
             if (!daySchedules.length) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'No available slots'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">Doctor has no available slots on this day.</div>'
                 return
             }
@@ -1206,8 +1326,18 @@ function setWalkInTab(tab) {
             })
 
             if (!slots.length) {
+                if (timeTrigger) {
+                    timeTrigger.disabled = true
+                    timeTrigger.textContent = 'No time slots available'
+                }
+                closeTimeOverlay()
                 timeSlotsEl.innerHTML = '<div class="text-[0.7rem] text-slate-400">No time slots available for this day.</div>'
                 return
+            }
+
+            if (timeTrigger) {
+                timeTrigger.disabled = false
+                timeTrigger.textContent = selectedSlotStart ? ('Selected: ' + formatTime12h(selectedSlotStart)) : 'Select a time slot'
             }
 
             slots.forEach(function (slot) {
@@ -1231,6 +1361,7 @@ function setWalkInTab(tab) {
                 btn.addEventListener('click', function () {
                     selectedSlotStart = startHHMM
                     if (timeInput) timeInput.value = startHHMM
+                    closeTimeOverlay()
                     renderTimeSlots()
                 })
                 timeSlotsEl.appendChild(btn)
@@ -1298,6 +1429,9 @@ function setWalkInTab(tab) {
             showSuccess('')
             selectedSlotStart = null
             if (timeInput) timeInput.value = ''
+            syncDateRollerFromSelect()
+            closeDateOverlay()
+            closeTimeOverlay()
             if (!doctorSelect || !doctorSelect.value) {
                 renderTimeSlots()
                 return
@@ -1474,6 +1608,36 @@ function setWalkInTab(tab) {
                     appendAllowedDates(60)
                 })
             }
+            syncDateRollerFromSelect()
+        }
+
+        if (dateTrigger) {
+            dateTrigger.addEventListener('click', function () {
+                if (!dateSelect || dateSelect.disabled) return
+                if (!dateOverlay) return
+                syncDateRollerFromSelect()
+                dateOverlay.classList.toggle('hidden')
+            })
+        }
+
+        if (dateList) {
+            dateList.addEventListener('click', function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest('button[data-date]') : null
+                if (!btn || !dateSelect) return
+                var iso = btn.getAttribute('data-date') || ''
+                if (!iso) return
+                dateSelect.value = iso
+                dateSelect.dispatchEvent(new Event('change', { bubbles: true }))
+            })
+        }
+
+        if (timeTrigger) {
+            timeTrigger.addEventListener('click', function () {
+                if (timeTrigger.disabled) return
+                if (!timeOverlay) return
+                renderTimeSlots()
+                timeOverlay.classList.toggle('hidden')
+            })
         }
 
         document.addEventListener('click', function (e) {
@@ -1492,6 +1656,23 @@ function setWalkInTab(tab) {
                 if (!(doctorResults.contains(target) || (doctorSearch && doctorSearch.contains(target)))) {
                     doctorResults.classList.add('hidden')
                 }
+            }
+            if (dateOverlay && !dateOverlay.classList.contains('hidden')) {
+                if (!dateWrap || (!dateWrap.contains(target) && !dateOverlay.contains(target))) {
+                    closeDateOverlay()
+                }
+            }
+            if (timeOverlay && !timeOverlay.classList.contains('hidden')) {
+                if (!timeWrap || (!timeWrap.contains(target) && !timeOverlay.contains(target))) {
+                    closeTimeOverlay()
+                }
+            }
+        })
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeDateOverlay()
+                closeTimeOverlay()
             }
         })
 
