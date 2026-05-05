@@ -54,7 +54,7 @@
             <button id="receptionAppointmentDateTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
                 Select a doctor first
             </button>
-            <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 bottom-full mb-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+            <div id="receptionAppointmentDateOverlay" class="hidden fixed z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
                 <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100">
                     <button id="receptionDatePrev" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">‹</button>
                     <div id="receptionDateMonthLabel" class="text-[0.78rem] font-semibold text-slate-800"></div>
@@ -1000,7 +1000,12 @@ function setAppointmentTab(tab) {
         }
 
         function closeDateOverlay() {
-            if (dateOverlay) dateOverlay.classList.add('hidden')
+            if (dateOverlay) {
+                dateOverlay.classList.add('hidden')
+                dateOverlay.style.left = ''
+                dateOverlay.style.top = ''
+                dateOverlay.style.width = ''
+            }
         }
 
         function closeTimeOverlay() {
@@ -1542,19 +1547,59 @@ function setAppointmentTab(tab) {
 
         renderDatePicker()
 
+        function positionDateOverlay() {
+            if (!dateOverlay || !dateTrigger) return
+            if (dateOverlay.classList.contains('hidden')) return
+
+            var triggerRect = dateTrigger.getBoundingClientRect()
+            var margin = 8
+
+            dateOverlay.style.width = Math.max(220, Math.floor(triggerRect.width)) + 'px'
+            dateOverlay.style.left = '0px'
+            dateOverlay.style.top = '0px'
+
+            window.requestAnimationFrame(function () {
+                if (!dateOverlay || dateOverlay.classList.contains('hidden')) return
+
+                var overlayRect = dateOverlay.getBoundingClientRect()
+                var maxLeft = Math.max(margin, window.innerWidth - overlayRect.width - margin)
+                var left = Math.min(Math.max(triggerRect.left, margin), maxLeft)
+
+                var top = triggerRect.top - overlayRect.height - margin
+                if (top < margin) {
+                    top = triggerRect.bottom + margin
+                }
+                if (top + overlayRect.height > window.innerHeight - margin) {
+                    top = Math.max(margin, window.innerHeight - overlayRect.height - margin)
+                }
+
+                dateOverlay.style.left = Math.floor(left) + 'px'
+                dateOverlay.style.top = Math.floor(top) + 'px'
+            })
+        }
+
         if (dateTrigger) {
             dateTrigger.addEventListener('click', function () {
                 if (dateTrigger.disabled) return
                 if (!dateOverlay) return
                 renderDatePicker()
                 dateOverlay.classList.toggle('hidden')
+                positionDateOverlay()
             })
         }
+
+        window.addEventListener('resize', function () {
+            positionDateOverlay()
+        })
+        window.addEventListener('scroll', function () {
+            positionDateOverlay()
+        }, true)
 
         if (datePrevBtn) {
             datePrevBtn.addEventListener('click', function () {
                 datePickerMonth = new Date(datePickerMonth.getFullYear(), datePickerMonth.getMonth() - 1, 1)
                 renderDatePicker()
+                positionDateOverlay()
             })
         }
 
@@ -1562,6 +1607,7 @@ function setAppointmentTab(tab) {
             dateNextBtn.addEventListener('click', function () {
                 datePickerMonth = new Date(datePickerMonth.getFullYear(), datePickerMonth.getMonth() + 1, 1)
                 renderDatePicker()
+                positionDateOverlay()
             })
         }
 
