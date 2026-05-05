@@ -50,19 +50,26 @@
         </div>
         <div id="receptionAppointmentDateWrap" class="self-start relative">
             <label for="reception_appointment_date" class="block text-[0.7rem] text-slate-600 mb-1">Date</label>
+            <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
             <button id="receptionAppointmentDateTrigger" type="button" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 text-left focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none disabled:opacity-60" disabled>
                 Select a doctor first
             </button>
-            <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                <div id="receptionAppointmentDateList" class="max-h-56 overflow-y-auto overscroll-contain snap-y snap-mandatory"></div>
+            <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 bottom-full mb-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+                <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                    <button id="receptionDatePrev" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">‹</button>
+                    <div id="receptionDateMonthLabel" class="text-[0.78rem] font-semibold text-slate-800"></div>
+                    <button id="receptionDateNext" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">›</button>
+                </div>
+                <div class="p-3">
+                    <div class="grid grid-cols-7 gap-1 text-[0.68rem] text-slate-400 mb-2">
+                        <div class="text-center">Sun</div><div class="text-center">Mon</div><div class="text-center">Tue</div><div class="text-center">Wed</div><div class="text-center">Thu</div><div class="text-center">Fri</div><div class="text-center">Sat</div>
+                    </div>
+                    <div id="receptionAppointmentDateGrid" class="grid grid-cols-7 gap-1"></div>
+                </div>
             </div>
             <select id="reception_appointment_date_select" class="hidden" required disabled>
                 <option value="">Select a doctor first</option>
             </select>
-            <div class="mt-1 flex items-center justify-between">
-                <button type="button" id="reception_appointment_date_load_more" class="hidden text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800">Load more dates</button>
-                <div id="reception_appointment_date_range_hint" class="hidden text-[0.7rem] text-slate-400"></div>
-            </div>
             <input id="reception_appointment_date" type="date" class="hidden" tabindex="-1">
         </div>
         <div id="receptionAppointmentTimeWrap" class="self-start relative">
@@ -126,30 +133,30 @@
                 </select>
             </div>
         </div>
-
-        <div class="rounded-2xl border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-xs">
-                    <thead class="bg-slate-50 text-slate-600">
-                        <tr>
-                            <th class="text-left px-3 py-2 font-semibold">Date</th>
-                            <th class="text-left px-3 py-2 font-semibold">Time</th>
-                            <th class="text-left px-3 py-2 font-semibold">Patient</th>
-                            <th class="text-left px-3 py-2 font-semibold">Age</th>
-                            <th class="text-left px-3 py-2 font-semibold">Contact</th>
-                            <th class="text-left px-3 py-2 font-semibold">Service</th>
-                            <th class="text-left px-3 py-2 font-semibold">Doctor</th>
-                            <th class="text-right px-3 py-2 font-semibold">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="receptionManageAppointmentTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
-                </table>
-            </div>
-            <div id="receptionManageAppointmentTableFooter" class="px-3 py-2 text-[0.72rem] text-slate-500 bg-white border-t border-slate-100 flex items-center justify-between">
-                <div id="receptionManageAppointmentMeta">Showing latest 10 booked appointments.</div>
-                <button id="receptionManageAppointmentRefresh" type="button" class="text-cyan-700 font-semibold hover:text-cyan-800">Refresh</button>
-            </div>
-        </div>
+<div class="w-full" style="display:grid;">
+<div class="rounded-2xl border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto overflow-y-auto max-h-[28rem] show-scrollbar">
+        <table class="text-xs" style="min-width:700px;width:100%;table-layout:auto;">
+            <thead class="bg-slate-50 text-slate-600 sticky top-0">
+                <tr>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Date</th>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Time</th>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Patient</th>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Age</th>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Contact</th>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Service</th>
+                    <th class="text-left px-3 py-2 font-semibold whitespace-nowrap">Doctor</th>
+                    <th class="text-right px-3 py-2 font-semibold whitespace-nowrap">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="receptionManageAppointmentTableBody" class="divide-y divide-slate-100 bg-white"></tbody>
+        </table>
+    </div>
+    <div id="receptionManageAppointmentTableFooter" class="px-3 py-2 text-[0.72rem] text-slate-500 bg-white border-t border-slate-100 flex items-center justify-between">
+        <div id="receptionManageAppointmentMeta">Showing latest 10 booked appointments.</div>
+        <button id="receptionManageAppointmentRefresh" type="button" class="text-cyan-700 font-semibold hover:text-cyan-800">Refresh</button>
+    </div>
+</div>
 
         <pre id="receptionManageAppointmentResult" class="hidden mt-3 text-[0.68rem] text-slate-600 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 overflow-x-auto"></pre>
     </div>
@@ -247,7 +254,10 @@ function setAppointmentTab(tab) {
         var dateWrap = document.getElementById('receptionAppointmentDateWrap')
         var dateTrigger = document.getElementById('receptionAppointmentDateTrigger')
         var dateOverlay = document.getElementById('receptionAppointmentDateOverlay')
-        var dateList = document.getElementById('receptionAppointmentDateList')
+        var dateGrid = document.getElementById('receptionAppointmentDateGrid')
+        var datePrevBtn = document.getElementById('receptionDatePrev')
+        var dateNextBtn = document.getElementById('receptionDateNext')
+        var dateMonthLabel = document.getElementById('receptionDateMonthLabel')
         var timeInput = document.getElementById('reception_appointment_time')
         var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
         var timeTrigger = document.getElementById('receptionTimeSlotTrigger')
@@ -493,6 +503,33 @@ function setAppointmentTab(tab) {
             return keys[d.getDay()] || ''
         }
 
+        function normalizeDayKey(raw) {
+            var v = String(raw == null ? '' : raw).trim().toLowerCase()
+            if (!v) return ''
+            if (/^\d+$/.test(v)) {
+                var n = parseInt(v, 10)
+                var keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+                return keys[n] || ''
+            }
+            var map = {
+                sun: 'sun', sunday: 'sun',
+                mon: 'mon', monday: 'mon',
+                tue: 'tue', tues: 'tue', tuesday: 'tue',
+                wed: 'wed', wednesday: 'wed',
+                thu: 'thu', thur: 'thu', thurs: 'thu', thursday: 'thu',
+                fri: 'fri', friday: 'fri',
+                sat: 'sat', saturday: 'sat'
+            }
+            if (map[v]) return map[v]
+            var s3 = v.slice(0, 3)
+            return map[s3] || ''
+        }
+
+        function dayLabelFromKey(key) {
+            var map = { sun: 'Sun', mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat' }
+            return map[String(key || '').toLowerCase()] || String(key || '')
+        }
+
         function minutesFromHHMM(timeStr) {
             var t = String(timeStr || '').slice(0, 5)
             if (!/^\d{2}:\d{2}$/.test(t)) return NaN
@@ -531,13 +568,8 @@ function setAppointmentTab(tab) {
             selectedSlotStart = null
             if (timeInput) timeInput.value = ''
             if (dateSelect) {
-                if (selectedDoctor && selectedDoctor.user_id) {
-                    dateSelect.innerHTML = '<option value="">Loading available dates…</option>'
-                    dateSelect.disabled = false
-                } else {
-                    dateSelect.innerHTML = '<option value="">Select a doctor first</option>'
-                    dateSelect.disabled = true
-                }
+                dateSelect.innerHTML = '<option value="">Select a date</option>'
+                dateSelect.disabled = true
             }
             if (dateLoadMore) dateLoadMore.classList.add('hidden')
             if (dateRangeHint) {
@@ -545,9 +577,13 @@ function setAppointmentTab(tab) {
                 dateRangeHint.classList.add('hidden')
             }
             if (dateInput) dateInput.value = ''
-            if (availableDaysEl) availableDaysEl.textContent = ''
+            if (availableDaysEl) availableDaysEl.textContent = '\u00A0'
             if (timeSlotsEl) timeSlotsEl.innerHTML = ''
-            syncDateRollerFromSelect()
+            datePickerMonth = (function () {
+                var now = new Date()
+                return new Date(now.getFullYear(), now.getMonth(), 1)
+            })()
+            renderDatePicker()
             closeDateOverlay()
 
             if (timeTrigger) {
@@ -719,7 +755,7 @@ function setAppointmentTab(tab) {
             }
             return list.filter(function (s) {
                 if (!s) return false
-                if (String(s.day_of_week || '').toLowerCase() !== String(dayKey || '').toLowerCase()) return false
+                if (normalizeDayKey(s.day_of_week) !== normalizeDayKey(dayKey)) return false
                 if (isToday && s.is_available === false) return false
                 return true
             })
@@ -777,8 +813,8 @@ function setAppointmentTab(tab) {
                 if (Array.isArray(embedded) && embedded.length) {
                     doctorSchedules = embedded.slice()
                     renderAvailableDays()
-                    populateAllowedDates()
-                    if (dateSelect) dateSelect.disabled = false
+                    if (dateSelect) dateSelect.disabled = true
+                    renderDatePicker()
                 }
                 loadDoctorSchedulesAndAvailability(doctor.user_id, dateInput ? dateInput.value : '')
                 applyAppointmentTypeUI()
@@ -880,17 +916,17 @@ function setAppointmentTab(tab) {
         function renderAvailableDays() {
             if (!availableDaysEl) return
             if (!doctorSchedules.length) {
-                availableDaysEl.textContent = ''
+                availableDaysEl.textContent = '\u00A0'
                 return
             }
             doctorAvailableDaySet = {}
             doctorSchedules.forEach(function (s) {
-                var dayKey = s && s.day_of_week ? String(s.day_of_week).toLowerCase() : ''
+                var dayKey = normalizeDayKey(s && s.day_of_week != null ? s.day_of_week : '')
                 if (dayKey) doctorAvailableDaySet[dayKey] = true
             })
             var order = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
             var keys = Object.keys(doctorAvailableDaySet).sort(function (a, b) { return order.indexOf(a) - order.indexOf(b) })
-            availableDaysEl.textContent = keys.length ? ('Available days: ' + keys.join(', ')) : ''
+            availableDaysEl.textContent = keys.length ? ('Available days: ' + keys.map(dayLabelFromKey).join(', ')) : '\u00A0'
         }
 
         function formatDateIso(d) {
@@ -960,16 +996,7 @@ function setAppointmentTab(tab) {
                 dateLoadMore.classList.toggle('cursor-not-allowed', dateLoadMore.disabled)
             }
 
-            syncDateRollerFromSelect()
-        }
-
-        function friendlyDateLabelFromIso(iso) {
-            var datePart = String(iso || '').slice(0, 10)
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart || 'Select a date'
-            var d = new Date(datePart + 'T00:00:00')
-            if (isNaN(d.getTime())) return datePart
-            var parts = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: '2-digit' })
-            return parts + ' · ' + datePart
+            renderDatePicker()
         }
 
         function closeDateOverlay() {
@@ -980,75 +1007,98 @@ function setAppointmentTab(tab) {
             if (timeOverlay) timeOverlay.classList.add('hidden')
         }
 
-        function syncDateRollerFromSelect() {
-            if (!dateSelect || !dateTrigger) return
-            dateTrigger.disabled = !!dateSelect.disabled
+        var datePickerMonth = (function () {
+            var now = new Date()
+            return new Date(now.getFullYear(), now.getMonth(), 1)
+        })()
 
-            var selected = dateSelect.value ? String(dateSelect.value) : ''
-            if (dateSelect.disabled) {
+        function isoFromDate(d) {
+            var yr = d.getFullYear()
+            var mo = String(d.getMonth() + 1).padStart(2, '0')
+            var da = String(d.getDate()).padStart(2, '0')
+            return yr + '-' + mo + '-' + da
+        }
+
+        function friendlyDateLabelFromIso(iso) {
+            var datePart = String(iso || '').slice(0, 10)
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart || 'Select a date'
+            var d = new Date(datePart + 'T00:00:00')
+            if (isNaN(d.getTime())) return datePart
+            return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: '2-digit', year: 'numeric' })
+        }
+
+        function syncDatePickerUI() {
+            if (!dateTrigger) return
+            var allowedKeys = doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length ? doctorAvailableDaySet : null
+            var doctorId = doctorSelect && doctorSelect.value ? String(doctorSelect.value) : ''
+            var enabled = !!doctorId && !!allowedKeys
+            dateTrigger.disabled = !enabled
+
+            var selected = dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : ''
+            if (!enabled) {
                 dateTrigger.textContent = 'Select a doctor first'
             } else if (selected) {
                 dateTrigger.textContent = friendlyDateLabelFromIso(selected)
             } else {
                 dateTrigger.textContent = 'Select a date'
             }
-
-            if (!dateList) return
-            var html = ''
-            var opts = Array.prototype.slice.call(dateSelect.options || [])
-            var usable = opts.filter(function (o) { return o && o.value })
-            if (!usable.length) {
-                html = '<div class="px-3 py-2 text-[0.75rem] text-slate-500">No dates available.</div>'
-            } else {
-                html = usable.map(function (o) {
-                    var isActive = selected && String(o.value) === selected
-                    return (
-                        '<button type="button" class="w-full text-left px-3 py-2 text-[0.78rem] snap-start ' +
-                        (isActive ? 'bg-cyan-50 text-cyan-800 font-semibold' : 'text-slate-700 hover:bg-slate-50') +
-                        '" data-date="' + escapeHtml(o.value) + '">' + escapeHtml(o.textContent || o.value) + '</button>'
-                    )
-                }).join('')
-            }
-            dateList.innerHTML = html
         }
 
-        function populateAllowedDates() {
-            if (!dateSelect) return
-            dateSelect.innerHTML = ''
-
-            var placeholder = document.createElement('option')
-            placeholder.value = ''
-            placeholder.textContent = 'Select a date'
-            dateSelect.appendChild(placeholder)
-
-            resetDateCursor()
+        function renderDatePicker() {
+            syncDatePickerUI()
+            if (!dateGrid || !dateMonthLabel) return
 
             var allowedKeys = doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length ? doctorAvailableDaySet : null
+            var doctorId = doctorSelect && doctorSelect.value ? String(doctorSelect.value) : ''
+            if (!doctorId) {
+                dateMonthLabel.textContent = ''
+                dateGrid.innerHTML = '<div class="col-span-7 text-[0.75rem] text-slate-500 py-2">Select a doctor first.</div>'
+                return
+            }
             if (!allowedKeys) {
-                var opt = document.createElement('option')
-                opt.value = ''
-                opt.textContent = 'No available schedule days'
-                dateSelect.appendChild(opt)
-                dateSelect.disabled = false
-                if (dateLoadMore) dateLoadMore.classList.add('hidden')
-                if (dateRangeHint) {
-                    dateRangeHint.textContent = ''
-                    dateRangeHint.classList.add('hidden')
-                }
-                syncDateRollerFromSelect()
+                dateMonthLabel.textContent = ''
+                dateGrid.innerHTML = '<div class="col-span-7 text-[0.75rem] text-slate-500 py-2">No available schedule days.</div>'
                 return
             }
 
-            appendAllowedDates(60)
+            var year = datePickerMonth.getFullYear()
+            var month = datePickerMonth.getMonth()
+            var first = new Date(year, month, 1)
+            var firstDow = first.getDay()
+            var daysIn = new Date(year, month + 1, 0).getDate()
 
-            if (dateSelect) dateSelect.disabled = false
-            if (dateSelect && dateSelect.options && dateSelect.options.length <= 1) {
-                var none = document.createElement('option')
-                none.value = ''
-                none.textContent = 'No available dates in range'
-                dateSelect.appendChild(none)
+            dateMonthLabel.textContent = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+
+            var today = new Date()
+            today.setHours(0, 0, 0, 0)
+
+            var selectedIso = dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : ''
+            var keys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+            var cells = []
+            for (var i = 0; i < firstDow; i++) cells.push('')
+            for (var day = 1; day <= daysIn; day++) {
+                var d = new Date(year, month, day)
+                var iso = isoFromDate(d)
+                var dayKey = keys[d.getDay()] || ''
+                var allowed = !!allowedKeys[dayKey]
+                var notPast = d.getTime() >= today.getTime()
+                var enabled = allowed && notPast
+                var selected = selectedIso && selectedIso === iso
+                var base =
+                    'w-full aspect-square rounded-lg text-[0.75rem] font-semibold border transition-colors flex items-center justify-center'
+                var cls = base + ' ' + (enabled
+                    ? (selected ? 'bg-cyan-600 text-white border-cyan-600' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50')
+                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
+                cells.push('<button type="button" class="' + cls + '" data-date="' + iso + '"' + (enabled ? '' : ' disabled') + '>' + day + '</button>')
             }
-            syncDateRollerFromSelect()
+
+            var total = Math.ceil(cells.length / 7) * 7
+            while (cells.length < total) cells.push('')
+
+            dateGrid.innerHTML = cells.map(function (html) {
+                return html ? html : '<div></div>'
+            }).join('')
         }
 
         function hhmmFromMinutes(mins) {
@@ -1117,7 +1167,7 @@ function setAppointmentTab(tab) {
             var isToday = String(dateInput.value) === todayIso
             var daySchedules = doctorSchedules.filter(function (s) {
                 if (!s) return false
-                if (String(s.day_of_week || '').toLowerCase() !== dayKey) return false
+                if (normalizeDayKey(s.day_of_week) !== normalizeDayKey(dayKey)) return false
                 if (isToday && s.is_available === false) return false
                 return true
             })
@@ -1267,10 +1317,10 @@ function setAppointmentTab(tab) {
                         showBookAppointmentError(msg)
                         if ((!doctorSchedules || !doctorSchedules.length) && dateSelect) {
                             dateSelect.innerHTML = '<option value=\"\">Failed to load schedules</option>'
-                            dateSelect.disabled = false
+                            dateSelect.disabled = true
                         }
                         renderAvailableDays()
-                        populateAllowedDates()
+                        renderDatePicker()
                         renderTimeSlots()
                         return
                     }
@@ -1278,8 +1328,8 @@ function setAppointmentTab(tab) {
                     var raw = result.data && Array.isArray(result.data.data) ? result.data.data : (Array.isArray(result.data) ? result.data : [])
                     doctorSchedules = raw || []
                     renderAvailableDays()
-                    populateAllowedDates()
-                    if (dateSelect) dateSelect.disabled = false
+                    if (dateSelect) dateSelect.disabled = true
+                    renderDatePicker()
                     if (dateStr) {
                         loadDoctorAppointments(doctorId, dateStr)
                     } else {
@@ -1290,10 +1340,10 @@ function setAppointmentTab(tab) {
                     showBookAppointmentError('Network error while loading doctor schedules.')
                     if ((!doctorSchedules || !doctorSchedules.length) && dateSelect) {
                         dateSelect.innerHTML = '<option value=\"\">Network error loading schedules</option>'
-                        dateSelect.disabled = false
+                        dateSelect.disabled = true
                     }
                     renderAvailableDays()
-                    populateAllowedDates()
+                    renderDatePicker()
                     renderTimeSlots()
                 })
         }
@@ -1479,9 +1529,8 @@ function setAppointmentTab(tab) {
             selectedSlotStart = null
             if (timeInput) timeInput.value = ''
             var doctorId = doctorSelect ? doctorSelect.value : ''
-            var dateStr = dateSelect ? dateSelect.value : (dateInput ? dateInput.value : '')
-            if (dateInput) dateInput.value = dateStr || ''
-            syncDateRollerFromSelect()
+            var dateStr = dateInput && dateInput.value ? String(dateInput.value).slice(0, 10) : ''
+            renderDatePicker()
             closeDateOverlay()
             closeTimeOverlay()
             if (!doctorId || !dateStr) {
@@ -1491,55 +1540,39 @@ function setAppointmentTab(tab) {
             loadDoctorAppointments(doctorId, dateStr)
         }
 
-        if (dateSelect) {
-            dateSelect.addEventListener('change', onDateChanged)
-            if (dateLoadMore) {
-                dateLoadMore.addEventListener('click', function () {
-                    if (dateLoadMore.disabled) return
-                    appendAllowedDates(60)
-                })
-            }
-            syncDateRollerFromSelect()
-        } else if (dateInput) {
-            dateInput.addEventListener('change', function () {
-                showBookAppointmentError('')
-                showBookAppointmentSuccess('')
-                selectedSlotStart = null
-                if (timeInput) timeInput.value = ''
-                var doctorId = doctorSelect ? doctorSelect.value : ''
-                var dateStr = dateInput.value
-                if (!doctorId || !dateStr) {
-                    renderTimeSlots()
-                    return
-                }
-                var dayKey = dayKeyFromDate(dateStr)
-                if (dayKey && doctorAvailableDaySet && Object.keys(doctorAvailableDaySet).length && !doctorAvailableDaySet[dayKey]) {
-                    showBookAppointmentError('Doctor is not available on the selected date.')
-                    dateInput.value = ''
-                    renderTimeSlots()
-                    return
-                }
-                loadDoctorAppointments(doctorId, dateStr)
-            })
-        }
+        renderDatePicker()
 
         if (dateTrigger) {
             dateTrigger.addEventListener('click', function () {
-                if (!dateSelect || dateSelect.disabled) return
+                if (dateTrigger.disabled) return
                 if (!dateOverlay) return
-                syncDateRollerFromSelect()
+                renderDatePicker()
                 dateOverlay.classList.toggle('hidden')
             })
         }
 
-        if (dateList) {
-            dateList.addEventListener('click', function (e) {
+        if (datePrevBtn) {
+            datePrevBtn.addEventListener('click', function () {
+                datePickerMonth = new Date(datePickerMonth.getFullYear(), datePickerMonth.getMonth() - 1, 1)
+                renderDatePicker()
+            })
+        }
+
+        if (dateNextBtn) {
+            dateNextBtn.addEventListener('click', function () {
+                datePickerMonth = new Date(datePickerMonth.getFullYear(), datePickerMonth.getMonth() + 1, 1)
+                renderDatePicker()
+            })
+        }
+
+        if (dateGrid) {
+            dateGrid.addEventListener('click', function (e) {
                 var btn = e.target && e.target.closest ? e.target.closest('button[data-date]') : null
-                if (!btn || !dateSelect) return
+                if (!btn || !dateInput) return
                 var iso = btn.getAttribute('data-date') || ''
                 if (!iso) return
-                dateSelect.value = iso
-                dateSelect.dispatchEvent(new Event('change', { bubbles: true }))
+                dateInput.value = iso
+                onDateChanged()
             })
         }
 
@@ -1662,7 +1695,7 @@ function setAppointmentTab(tab) {
                 var patientId = patientInput ? parseInt(patientInput.value, 10) : 0
                 var doctorId = doctorInput ? parseInt(doctorInput.value, 10) : 0
                 var serviceIds = selectedServiceIds()
-                var date = dateSelect && dateSelect.value ? dateSelect.value : (dateInput ? dateInput.value : '')
+                var date = (dateInput && dateInput.value ? dateInput.value : (dateSelect && dateSelect.value ? dateSelect.value : ''))
                 var time = timeInput ? timeInput.value : ''
                 var type = 'scheduled'
                 var reason = reasonInput ? reasonInput.value : ''
@@ -1970,11 +2003,11 @@ function setAppointmentTab(tab) {
                     '<tr>' +
                         '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(when.date || '—') + statusBadge + '</td>' +
                         '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(when.time ? formatTime12h(when.time) : '—') + '</td>' +
-                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem]">' + escapeHtml(patientName) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem] whitespace-nowrap">' + escapeHtml(patientName) + '</td>' +
                         '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(age || '—') + '</td>' +
                         '<td class="px-3 py-2 text-slate-700 whitespace-nowrap">' + escapeHtml(contact) + '</td>' +
-                        '<td class="px-3 py-2 text-slate-700 min-w-[14rem]">' + escapeHtml(serviceText) + '</td>' +
-                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem]">' + escapeHtml(doctorName) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[14rem] whitespace-nowrap">' + escapeHtml(serviceText) + '</td>' +
+                        '<td class="px-3 py-2 text-slate-700 min-w-[12rem] whitespace-nowrap">' + escapeHtml(doctorName) + '</td>' +
                         '<td class="px-3 py-2 text-right whitespace-nowrap">' +
                             '<div class="inline-flex items-center gap-1">' +
                                 '<button type="button" data-action="view" data-id="' + escapeHtml(id) + '" class="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 font-semibold">View</button>' +

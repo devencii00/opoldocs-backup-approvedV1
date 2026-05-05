@@ -14,3 +14,41 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+    scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+* {
+    scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.show-scrollbar {
+    scrollbar-width: auto;
+}
+
+.show-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.show-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.45);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.show-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}

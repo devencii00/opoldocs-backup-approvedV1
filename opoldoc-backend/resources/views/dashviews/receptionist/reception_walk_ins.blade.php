@@ -117,11 +117,22 @@
                     Select a doctor first
                 </button>
                 <div id="receptionAppointmentDateOverlay" class="hidden absolute left-0 right-0 top-full mt-1 z-50 rounded-xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
-                    <div id="receptionAppointmentDateList" class="max-h-56 overflow-y-auto overscroll-contain snap-y snap-mandatory"></div>
+                    <div class="flex items-center justify-between px-3 py-2 border-b border-slate-100">
+                        <button id="receptionDatePrev" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">‹</button>
+                        <div id="receptionDateMonthLabel" class="text-[0.78rem] font-semibold text-slate-800"></div>
+                        <button id="receptionDateNext" type="button" class="px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold">›</button>
+                    </div>
+                    <div class="p-3">
+                        <div class="grid grid-cols-7 gap-1 text-[0.68rem] text-slate-400 mb-2">
+                            <div class="text-center">Sun</div><div class="text-center">Mon</div><div class="text-center">Tue</div><div class="text-center">Wed</div><div class="text-center">Thu</div><div class="text-center">Fri</div><div class="text-center">Sat</div>
+                        </div>
+                        <div id="receptionAppointmentDateGrid" class="grid grid-cols-7 gap-1"></div>
+                    </div>
                 </div>
                 <select id="reception_appointment_date_select" class="hidden" required disabled>
                     <option value="">Select a doctor first</option>
                 </select>
+                <div class="mb-1 text-[0.7rem] text-slate-500">&nbsp;</div>
                 <div class="mt-1 flex items-center justify-between">
                     <button type="button" id="reception_appointment_date_load_more" class="hidden text-[0.72rem] font-semibold text-cyan-700 hover:text-cyan-800">Load more dates</button>
                     <div id="reception_appointment_date_range_hint" class="hidden text-[0.7rem] text-slate-400"></div>
@@ -362,7 +373,10 @@ function setWalkInTab(tab) {
         var dateWrap = document.getElementById('receptionAppointmentDateWrap')
         var dateTrigger = document.getElementById('receptionAppointmentDateTrigger')
         var dateOverlay = document.getElementById('receptionAppointmentDateOverlay')
-        var dateList = document.getElementById('receptionAppointmentDateList')
+        var dateGrid = document.getElementById('receptionAppointmentDateGrid')
+        var datePrevBtn = document.getElementById('receptionDatePrev')
+        var dateNextBtn = document.getElementById('receptionDateNext')
+        var dateMonthLabel = document.getElementById('receptionDateMonthLabel')
         var timeInput = document.getElementById('reception_appointment_time')
         var timeWrap = document.getElementById('receptionAppointmentTimeWrap')
         var timeTrigger = document.getElementById('receptionTimeSlotTrigger')
